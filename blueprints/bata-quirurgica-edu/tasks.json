@@ -160,7 +160,7 @@
       "infra/lib/budget-stack.ts",
       "infra/test/stacks.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T6",
