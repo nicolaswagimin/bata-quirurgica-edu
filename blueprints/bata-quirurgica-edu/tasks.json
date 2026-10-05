@@ -192,7 +192,7 @@
       "services/api/test/emu/rules.test.ts",
       "services/api/test/emu/repos.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T1",
