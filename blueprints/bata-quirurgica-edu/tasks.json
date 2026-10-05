@@ -95,7 +95,7 @@
       "apps/web/test/unit/overlay-math.test.ts",
       "apps/web/e2e/ar-spike.spec.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T4",
