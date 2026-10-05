@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* Design tokens — the single source of truth (blueprint §7). Components use the generated
+   utilities (bg-primary, text-ink, border-border, ...) and never raw hex values.
+   test/unit/contrast.test.ts parses the --color-* lines below. Light mode only. */
+@theme {
+  --color-bg: #ffffff;
+  --color-surface: #f5faf8;
+  --color-primary: #127a5f;
+  --color-primary-strong: #0e5e49;
+  --color-primary-soft: #e3f3ec;
+  --color-ink: #10201b;
+  --color-muted: #55665f;
+  --color-border: #d5e3dd;
+  --color-xp: #f2b705;
+  --color-streak: #f2711c;
+  --color-success: #1e9e5a;
+  --color-danger: #c93c3c;
+  --color-info: #2563eb;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+
+  --radius-card: 12px;
+  --radius-pill: 999px;
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

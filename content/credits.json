@@ -1,0 +1,12 @@
+{
+  "assets": [
+    {
+      "id": "maniqui-procedural",
+      "title": "Maniquí y bata procedurales (marcador de posición)",
+      "author": "Proyecto Bata Quirúrgica Edu",
+      "sourceUrl": null,
+      "license": "Creado por el proyecto; mismo licenciamiento del repositorio",
+      "modifications": "Geometría construida con primitivas de three.js mientras se integra el modelo definitivo."
+    }
+  ]
+}

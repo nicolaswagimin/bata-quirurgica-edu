@@ -1,0 +1,53 @@
+{
+  "note": "PDFs se descargan manualmente a content/kb/pdfs/ (carpeta ignorada por git). EN 13795 y AORN no se ingieren (derechos de autor); EN 13795 solo se cita como referencia técnica.",
+  "documents": [
+    {
+      "id": "who-safe-surgery-2009",
+      "title": "WHO Guidelines for Safe Surgery 2009: Safe Surgery Saves Lives",
+      "org": "OMS",
+      "year": 2009,
+      "file": "who-safe-surgery-2009.pdf",
+      "language": "en"
+    },
+    {
+      "id": "who-surgical-safety-checklist-2009",
+      "title": "WHO Surgical Safety Checklist",
+      "org": "OMS",
+      "year": 2009,
+      "file": "who-surgical-safety-checklist-2009.pdf",
+      "language": "en"
+    },
+    {
+      "id": "who-ssi-guidelines-2018",
+      "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+      "org": "OMS",
+      "year": 2018,
+      "file": "who-ssi-guidelines-2018.pdf",
+      "language": "en"
+    },
+    {
+      "id": "cdc-ssi-guideline-2017",
+      "title": "CDC Guideline for the Prevention of Surgical Site Infection",
+      "org": "CDC",
+      "year": 2017,
+      "file": "cdc-ssi-guideline-2017.pdf",
+      "language": "en"
+    },
+    {
+      "id": "cdc-disinfection-sterilization-2008",
+      "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+      "org": "CDC",
+      "year": 2008,
+      "file": "cdc-disinfection-sterilization-2008.pdf",
+      "language": "en"
+    },
+    {
+      "id": "minsalud-resolucion-3100-2019",
+      "title": "Resolución 3100 de 2019 (procedimientos y condiciones de inscripción y habilitación de servicios de salud)",
+      "org": "MinSalud Colombia",
+      "year": 2019,
+      "file": "minsalud-resolucion-3100-2019.pdf",
+      "language": "es"
+    }
+  ]
+}

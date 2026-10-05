@@ -1,0 +1,537 @@
+[
+  {
+    "id": "E1-T1",
+    "title": "Add shared schemas, gamification rules and token contrast test",
+    "epic": "01-plataforma",
+    "dependencies": [],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `pnpm install --frozen-lockfile` runs after the Bootstrap block THE SYSTEM SHALL exit 0 without modifying `pnpm-lock.yaml`.",
+      "WHEN `pnpm lint` and `pnpm typecheck` run from the project root with `blueprints/` present THE SYSTEM SHALL exit 0 for both.",
+      "WHEN `packages/shared/test/schemas.test.ts` parses `content/questions/seed.json`, `content/protocolos/bata-pasos.json`, `content/credits.json`, `content/kb/sources.json` and `content/legal/privacidad.json` with their schemas THE SYSTEM SHALL accept all five, and SHALL reject a seed question whose `correctOptionIds` names an option id that does not exist.",
+      "WHEN `levelForXp` receives 0, 49, 50, 200 and 450 THE SYSTEM SHALL return 1, 1, 2, 3 and 4.",
+      "WHEN `nextStreak` receives a last active date equal to yesterday, today or two days ago THE SYSTEM SHALL return the streak plus one, the same streak, and 1 respectively, and `bogotaDate(new Date('2026-01-01T04:59:00Z'))` SHALL return `2025-12-31`.",
+      "WHEN `apps/web/test/unit/contrast.test.ts` reads the `--color-*` tokens from `apps/web/src/styles.css` THE SYSTEM SHALL assert a contrast ratio of at least 4.5:1 for ink, muted, primary, primary-strong, danger and info on bg, for bg on primary and for ink on xp, and of at least 3:1 for success on bg."
+    ],
+    "verify": [
+      "pnpm install --frozen-lockfile",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm --filter @bata/shared exec vitest run test/schemas.test.ts test/gamification.test.ts",
+      "pnpm --filter @bata/web exec vitest run test/unit/contrast.test.ts"
+    ],
+    "checkpoint": "step-01-foundation",
+    "files": [
+      "packages/shared/src/schemas.ts",
+      "packages/shared/src/gamification.ts",
+      "packages/shared/test/schemas.test.ts",
+      "packages/shared/test/gamification.test.ts",
+      "apps/web/test/unit/contrast.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T2",
+    "title": "Build web shell, router, Firebase Auth client and public pages",
+    "epic": "01-plataforma",
+    "dependencies": ["E1-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `pnpm --filter @bata/web build` runs THE SYSTEM SHALL exit 0 and write `apps/web/dist/index.html`.",
+      "WHEN the smoke spec opens `/login`, `/registro` and `/privacidad` on the `vite preview` server THE SYSTEM SHALL answer HTTP 200 and render exactly one `h1` on each page.",
+      "WHEN an anonymous visitor opens `/` or `/perfil` THE SYSTEM SHALL redirect to `/login`.",
+      "WHEN `/registro` is submitted with the consent checkbox unchecked THE SYSTEM SHALL show the field error `Debes aceptar la política de tratamiento de datos para continuar` and SHALL send no request to Firebase Auth.",
+      "WHEN `/login` renders THE SYSTEM SHALL expose inputs labelled `Correo electrónico` and `Contraseña` and a button named `Iniciar sesión`.",
+      "WHEN `/privacidad` renders THE SYSTEM SHALL show every section heading from `content/legal/privacidad.json` and the text `Ninguna imagen ni video se envía a ningún servidor`."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web typecheck",
+      "pnpm --filter @bata/web build",
+      "test -f apps/web/dist/index.html",
+      "pnpm --filter @bata/web exec playwright test e2e/smoke.spec.ts",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-02-web-shell",
+    "files": [
+      "apps/web/src/main.tsx",
+      "apps/web/src/router.tsx",
+      "apps/web/src/lib/firebase.tsx",
+      "apps/web/src/routes/public-pages.tsx",
+      "apps/web/e2e/smoke.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T3",
+    "title": "Spike the AR mirror: camera, PoseLandmarker, FPS, privacy",
+    "epic": "01-plataforma",
+    "dependencies": ["E1-T2"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `pnpm --filter @bata/web run mediapipe:prepare` runs THE SYSTEM SHALL exit 0 and leave `apps/web/public/mediapipe/pose_landmarker_lite.task` and the directory `apps/web/public/mediapipe/wasm/` on disk.",
+      "WHEN `computeGownAnchor` receives shoulders (landmarks 11 and 12) and hips (landmarks 23 and 24) in normalized coordinates THE SYSTEM SHALL return a center between them, a width proportional to the shoulder width and a rotation equal to the shoulder angle, and SHALL return `null` when any of the four landmarks has visibility below 0.5.",
+      "WHEN `FpsMonitor` records frames below 12 fps for 5 continuous seconds THE SYSTEM SHALL report `lowPerformance: true`, and SHALL report `false` when the drop lasts less than 5 seconds.",
+      "WHEN a signed-in user opens `/bata-ar` in Chromium with a fake camera THE SYSTEM SHALL show the status text `Detectando` in the element `[data-testid=ar-status]` within 30 seconds.",
+      "WHEN the AR session runs for 5 seconds after reaching `Detectando` THE SYSTEM SHALL issue zero requests whose method is not GET and zero requests to any origin other than the page origin.",
+      "WHEN `getUserMedia` rejects THE SYSTEM SHALL show the message `No pudimos acceder a la cámara` with a link to `/bata-3d`."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web run mediapipe:prepare",
+      "test -f apps/web/public/mediapipe/pose_landmarker_lite.task",
+      "test -d apps/web/public/mediapipe/wasm",
+      "pnpm --filter @bata/web exec vitest run test/unit/overlay-math.test.ts",
+      "pnpm exec firebase emulators:exec --project demo-bata --only auth \"pnpm --filter @bata/web exec playwright test e2e/ar-spike.spec.ts\"",
+      "pnpm --filter @bata/web typecheck"
+    ],
+    "checkpoint": "step-03-ar-spike",
+    "files": [
+      "apps/web/src/ar/pose.ts",
+      "apps/web/src/ar/overlay-math.ts",
+      "apps/web/src/routes/bata-ar.tsx",
+      "apps/web/test/unit/overlay-math.test.ts",
+      "apps/web/e2e/ar-spike.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T4",
+    "title": "Add API handler kit, CORS error envelope and token authorizer",
+    "epic": "01-plataforma",
+    "dependencies": ["E1-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `errorResponse` builds any error THE SYSTEM SHALL return the status mapped to its code, the body `{ \"error\": { \"code\", \"message\" } }`, and the headers `Access-Control-Allow-Origin` equal to `WEB_ORIGIN`, `Access-Control-Allow-Headers: Authorization,Content-Type` and `Vary: Origin`.",
+      "WHEN `parseJsonBody` receives malformed JSON or a body that fails its zod schema THE SYSTEM SHALL throw an `HttpError` with status 422 and code `VALIDATION_ERROR`.",
+      "WHEN the authorizer receives `Bearer <token>` that the injected verifier accepts THE SYSTEM SHALL return an Allow policy for every method and path of the calling API stage (`<api-arn>/v1/*/*`) whose context carries `uid`, `role` and `groupId` as strings.",
+      "WHEN the authorizer receives a missing, non-Bearer or rejected token THE SYSTEM SHALL throw `Error('Unauthorized')` so API Gateway answers 401.",
+      "WHEN the verified token has no `role` claim THE SYSTEM SHALL put `role: 'student'` in the context, and SHALL put `role: 'admin'` only when the token carries the custom claim `role === 'admin'`.",
+      "WHEN the `notImplemented` handler exported by `services/api/src/handlers/entry.ts` is invoked THE SYSTEM SHALL return 501 with code `NOT_IMPLEMENTED` and the CORS headers."
+    ],
+    "verify": [
+      "pnpm --filter @bata/api exec vitest run test/unit/base.test.ts",
+      "pnpm --filter @bata/api typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-04-api-base",
+    "files": [
+      "services/api/src/lib/http.ts",
+      "services/api/src/lib/config.ts",
+      "services/api/src/lib/identity.ts",
+      "services/api/src/handlers/entry.ts",
+      "services/api/test/unit/base.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T5",
+    "title": "Define CDK stacks: web, REST API with streaming, budget",
+    "epic": "01-plataforma",
+    "dependencies": ["E1-T4"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `pnpm --filter @bata/infra run synth` runs with the `infra/cdk.json` defaults THE SYSTEM SHALL exit 0 and write `infra/cdk.out/bata-api-dev.template.json`, `infra/cdk.out/bata-web-dev.template.json` and `infra/cdk.out/bata-budget-dev.template.json`.",
+      "WHEN the assertion tests inspect `bata-api-dev` THE SYSTEM SHALL find each of DEFAULT_4XX, DEFAULT_5XX, UNAUTHORIZED, ACCESS_DENIED, THROTTLED, QUOTA_EXCEEDED, EXPIRED_TOKEN, INVALID_SIGNATURE and MISSING_AUTHENTICATION_TOKEN as an `AWS::ApiGateway::GatewayResponse` whose `Access-Control-Allow-Origin` is `'http://localhost:5173'` and whose `Vary` is `'Origin'`.",
+      "WHEN the assertion tests inspect the REST API THE SYSTEM SHALL find on `POST /assistant/chat` an `AWS_PROXY` integration with `ResponseTransferMode` `STREAM` and `TimeoutInMillis` 60000, a TOKEN authorizer with a 300-second result TTL, stage `v1` throttling of rate 50 and burst 100, and method throttling of rate 5 and burst 10 on `POST /assistant/chat` and `POST /assistant/transcribe`.",
+      "WHEN `assistantReservedConcurrency` is 5 THE SYSTEM SHALL set `ReservedConcurrentExecutions: 5` on the chat and transcribe functions, and WHEN it is 0 THE SYSTEM SHALL omit that property.",
+      "WHEN the assertion tests list every `AWS::Lambda::Function` in `bata-api-dev` THE SYSTEM SHALL find none with `VpcConfig`, all with runtime `nodejs24.x` and architecture `arm64`, each pointing at `index.<name>` (in `Handler`, or in the `DD_LAMBDA_HANDLER` variable when the Datadog construct wraps it) where `<name>` is one of the `export const` names parsed from `services/api/src/handlers/entry.ts`, and exactly one IAM policy statement granting `bedrock:InvokeModel`, on `arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0`.",
+      "WHEN the assertion tests inspect `bata-web-dev` and `bata-budget-dev` THE SYSTEM SHALL find a bucket with all four public-access blocks true served by CloudFront through origin access control with 403 and 404 mapped to `/index.html` with status 200, and a monthly 20 USD cost budget with ACTUAL notifications at 5, 10 and 20 USD."
+    ],
+    "verify": [
+      "pnpm --filter @bata/infra exec vitest run test/stacks.test.ts",
+      "pnpm --filter @bata/infra run synth",
+      "test -f infra/cdk.out/bata-api-dev.template.json",
+      "test -f infra/cdk.out/bata-web-dev.template.json",
+      "test -f infra/cdk.out/bata-budget-dev.template.json",
+      "pnpm --filter @bata/infra typecheck"
+    ],
+    "checkpoint": "step-05-infra",
+    "files": [
+      "infra/bin/app.ts",
+      "infra/lib/web-stack.ts",
+      "infra/lib/api-stack.ts",
+      "infra/lib/budget-stack.ts",
+      "infra/test/stacks.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E1-T6",
+    "title": "Add Firestore repositories, quotas and rules tests",
+    "epic": "01-plataforma",
+    "dependencies": ["E1-T4"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN an authenticated client reads its own `users/{uid}` or `progress/{uid}/missions/{missionId}` THE SYSTEM SHALL allow it, and WHEN it reads another user's THE SYSTEM SHALL deny it.",
+      "WHEN any client attempts a write to any collection, or a read of `questionKeys`, `quotas`, `groups`, `kbChunks` or `kbDocuments` THE SYSTEM SHALL deny it.",
+      "WHEN a signed-in client reads a `draft` question while `appConfig/flags.showDraftQuestions` is false or missing THE SYSTEM SHALL deny it and SHALL allow it when the flag is true, and SHALL always allow signed-in clients to read `validated` questions.",
+      "WHEN `consumeQuota` is applied to a quota holding 30 chat requests in the current hour, 100 chat requests in the current day, or 30 stt requests in the current hour THE SYSTEM SHALL return `allowed: false`, and SHALL reset the hourly counter once 3600 seconds have passed since its window start.",
+      "WHEN `consumeQuotaTx` runs 31 times for one user and kind `chat` against the emulator THE SYSTEM SHALL allow the first 30 and reject the 31st, leaving `quotas/{uid}.chatHourCount` at 30.",
+      "WHEN `deleteUserData` runs for a user with a profile, attempts, mission progress, a leaderboard entry and a quota doc THE SYSTEM SHALL leave none of those documents in the emulator."
+    ],
+    "verify": [
+      "pnpm --filter @bata/api exec vitest run test/unit/quota.test.ts",
+      "pnpm exec firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/api exec vitest run --config vitest.emu.config.ts test/emu/rules.test.ts test/emu/repos.test.ts\"",
+      "pnpm --filter @bata/api typecheck",
+      "pnpm lint"
+    ],
+    "checkpoint": "step-06-data-layer",
+    "files": [
+      "services/api/src/lib/repos.ts",
+      "services/api/src/lib/quota.ts",
+      "services/api/test/unit/quota.test.ts",
+      "services/api/test/emu/rules.test.ts",
+      "services/api/test/emu/repos.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T1",
+    "title": "Add profile, consent, group join, account deletion, set-admin",
+    "epic": "02-producto",
+    "dependencies": ["E1-T6"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `POST /me` arrives with `{ displayName, consent: { policyVersion: POLICY_VERSION, accepted: true } }` THE SYSTEM SHALL create `users/{uid}` with role `student`, xp 0, level 1, streakDays 0, `consent.policyVersion` and `consent.acceptedAt`, and respond 201 with the profile.",
+      "WHEN `POST /me` arrives without consent, with `accepted: false` or with a different `policyVersion` THE SYSTEM SHALL respond 422 `VALIDATION_ERROR` and create no document.",
+      "WHEN `POST /me` or `POST /me/group` carries a `groupCode` that matches a group THE SYSTEM SHALL set `groupId` on `users/{uid}` and `leaderboard/{uid}`, and WHEN no group matches THE SYSTEM SHALL respond 404 `NOT_FOUND`.",
+      "WHEN `GET /me` is called by a user without a profile THE SYSTEM SHALL respond 404 `NOT_FOUND`, and by a user with a profile THE SYSTEM SHALL respond 200 with it.",
+      "WHEN `DELETE /me` is called THE SYSTEM SHALL delete `users/{uid}`, everything under `progress/{uid}`, `leaderboard/{uid}`, `quotas/{uid}` and the Firebase Auth user, and respond 204.",
+      "WHEN `setAdmin(email)` runs against the emulator THE SYSTEM SHALL set the custom claim `role: 'admin'` on that Auth user and `role: 'admin'` on `users/{uid}` when it exists, and `pnpm --filter @bata/api run set-admin -- --help` SHALL print `Uso: set-admin <correo>`."
+    ],
+    "verify": [
+      "pnpm exec firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/api exec vitest run --config vitest.emu.config.ts test/emu/me.test.ts\"",
+      "pnpm --filter @bata/api run set-admin -- --help | grep -q 'Uso: set-admin <correo>'",
+      "pnpm --filter @bata/api typecheck"
+    ],
+    "checkpoint": "step-07-profile",
+    "files": [
+      "services/api/src/routes/me.ts",
+      "services/api/src/handlers/entry.ts",
+      "services/api/scripts/set-admin.ts",
+      "services/api/test/emu/me.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T2",
+    "title": "Add seed script, transactional quiz answers and local API",
+    "epic": "02-producto",
+    "dependencies": ["E2-T1"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `seed` runs twice against the emulator THE SYSTEM SHALL leave exactly one `missions` doc per mission and one `questions` doc plus one `questionKeys` doc per question listed in `content/questions/seed.json`, every question with status `draft`.",
+      "WHEN `POST /quiz/answer` receives the correct option ids for a question for the first time THE SYSTEM SHALL respond 200 with `correct: true`, `xpAwarded` equal to the question's `xp`, `totalXp`, `level` computed by `levelForXp`, `streakDays`, `explanation` and `source`, and SHALL write one attempt and update `leaderboard/{uid}`.",
+      "WHEN the same user answers the same question correctly a second time THE SYSTEM SHALL respond `xpAwarded: 0` and leave `users/{uid}.xp` unchanged.",
+      "WHEN the answer is wrong THE SYSTEM SHALL respond `correct: false` and `xpAwarded: 0`, and no response SHALL ever include `correctOptionIds`.",
+      "WHEN a user answers correctly on consecutive America/Bogota days THE SYSTEM SHALL increase `streakDays` by one per day, and SHALL reset it to 1 after a day without a correct answer.",
+      "WHEN `pnpm --filter @bata/api run dev:smoke` runs inside the emulators THE SYSTEM SHALL start the local API on 127.0.0.1:3001, receive 200 `{ \"ok\": true }` from `/v1/health` and exit 0."
+    ],
+    "verify": [
+      "pnpm exec firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/api exec vitest run --config vitest.emu.config.ts test/emu/quiz.test.ts\"",
+      "pnpm exec firebase emulators:exec --project demo-bata --only firestore \"pnpm --filter @bata/api run seed && pnpm --filter @bata/api run seed\"",
+      "pnpm exec firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/api run dev:smoke\"",
+      "pnpm --filter @bata/api typecheck"
+    ],
+    "checkpoint": "step-08-quiz-api",
+    "files": [
+      "services/api/scripts/seed.ts",
+      "services/api/src/routes/quiz.ts",
+      "services/api/src/handlers/entry.ts",
+      "services/api/scripts/dev-server.ts",
+      "services/api/test/emu/quiz.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T3",
+    "title": "Build mission map, onboarding consent and quiz UI",
+    "epic": "02-producto",
+    "dependencies": ["E2-T2", "E1-T3"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN a signed-in user without a profile opens `/` THE SYSTEM SHALL show the consent form, prefilled as accepted when `/registro` stored the acceptance, and on submit SHALL call `POST /me` and then render the mission map.",
+      "WHEN a user with a profile opens `/` THE SYSTEM SHALL list the seeded missions by `order` with their titles and show the XP pill, the level and the streak count from `users/{uid}`.",
+      "WHEN the user answers a question in `/mision/$missionId` THE SYSTEM SHALL show `¡Correcto!` or `Incorrecto`, the explanation, the source (`org`, `title`, `year`, `section`) and the XP gained, and the XP pill SHALL show the new total.",
+      "WHEN a question has status `draft` THE SYSTEM SHALL show the badge `Borrador` next to its prompt.",
+      "WHEN an API call receives 401 again after a forced token refresh THE SYSTEM SHALL sign the user out and show `Tu sesión expiró, vuelve a iniciar sesión`."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web typecheck",
+      "pnpm --filter @bata/web run mediapipe:prepare",
+      "pnpm test:e2e:emu"
+    ],
+    "checkpoint": "step-09-quiz-ui",
+    "files": [
+      "apps/web/src/lib/api.ts",
+      "apps/web/src/routes/home.tsx",
+      "apps/web/src/routes/mision.tsx",
+      "apps/web/e2e/quiz.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T4",
+    "title": "Build realtime ranking and profile page",
+    "epic": "02-producto",
+    "dependencies": ["E2-T3"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `/ranking` is open and another user's XP changes in `leaderboard` THE SYSTEM SHALL update the list without a reload, ordered by `xp` descending, showing at most 20 rows.",
+      "WHEN the user belongs to a group THE SYSTEM SHALL offer a `Mi grupo` tab listing only leaderboard entries with that `groupId`.",
+      "WHEN the ranking has no entries THE SYSTEM SHALL show `Aún no hay puntajes. ¡Responde tu primera misión!`.",
+      "WHEN the user submits an existing 6-character code in `/perfil` THE SYSTEM SHALL call `POST /me/group` and show `Te uniste al grupo`, and WHEN the code does not exist THE SYSTEM SHALL show `No encontramos un grupo con ese código`.",
+      "WHEN the user confirms `Eliminar mi cuenta` THE SYSTEM SHALL call `DELETE /me`, sign out and land on `/login`, and a later login with the same credentials SHALL fail."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web typecheck",
+      "pnpm test:e2e:emu"
+    ],
+    "checkpoint": "step-10-ranking-profile",
+    "files": [
+      "apps/web/src/routes/ranking.tsx",
+      "apps/web/src/routes/perfil.tsx",
+      "apps/web/e2e/ranking.spec.ts",
+      "apps/web/e2e/perfil.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T5",
+    "title": "Build didactic 3D mode and credits page",
+    "epic": "02-producto",
+    "dependencies": ["E1-T2"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN a signed-in user opens `/bata-3d` THE SYSTEM SHALL render a WebGL canvas with the procedural mannequin and gown and a list `Colocación` with every `donning` step of `content/protocolos/bata-pasos.json` in `order`.",
+      "WHEN the user presses `Siguiente` THE SYSTEM SHALL advance to the next step and announce its title in an `aria-live` region, and the `Retiro` tab SHALL switch the list to the `doffing` steps.",
+      "WHEN the user activates the hotspot button `Zona estéril frontal` THE SYSTEM SHALL show its description from `content/protocolos/bata-pasos.json`.",
+      "WHEN `/creditos` is opened without signing in THE SYSTEM SHALL list every asset in `content/credits.json` with title, author, license and modifications.",
+      "WHEN `prefers-reduced-motion: reduce` is emulated THE SYSTEM SHALL change steps without animation, exposing `data-animate=\"false\"` on the 3D container."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web typecheck",
+      "pnpm exec firebase emulators:exec --project demo-bata --only auth \"pnpm --filter @bata/web exec playwright test e2e/bata-3d.spec.ts\""
+    ],
+    "checkpoint": "step-11-3d-mode",
+    "files": [
+      "apps/web/src/three/steps.ts",
+      "apps/web/src/three/mannequin.tsx",
+      "apps/web/src/routes/bata-3d.tsx",
+      "apps/web/src/routes/creditos.tsx",
+      "apps/web/e2e/bata-3d.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E2-T6",
+    "title": "Complete AR mirror overlay and model-viewer space view",
+    "epic": "02-producto",
+    "dependencies": ["E1-T3", "E2-T5"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `gownGeometry` receives an anchor THE SYSTEM SHALL return the gown outline and the positions of the five hotspots `cuello`, `punos`, `zona-esteril`, `mangas` and `cierre-posterior` in canvas pixels, scaled by the shoulder width and rotated by the shoulder angle.",
+      "WHEN `gownGeometry` receives `null` THE SYSTEM SHALL return no shapes, and `/bata-ar` SHALL show `Colócate de frente a la cámara, con hombros y caderas visibles`.",
+      "WHEN the user activates a hotspot chip on `/bata-ar` THE SYSTEM SHALL show that hotspot's description from `content/protocolos/bata-pasos.json`.",
+      "WHEN the FPS monitor reports low performance THE SYSTEM SHALL show `Tu dispositivo va lento con la cámara. Prueba el modo 3D` with a link to `/bata-3d`.",
+      "WHEN `/bata-espacio` opens THE SYSTEM SHALL define the `model-viewer` custom element with `ar-modes=\"webxr scene-viewer quick-look\"`, and WHEN `/models/bata.glb` is absent THE SYSTEM SHALL show `El modelo 3D definitivo aún no está disponible` with a link to `/bata-3d`.",
+      "WHEN the complete AR session runs for 5 seconds THE SYSTEM SHALL still issue zero requests whose method is not GET and zero requests to any origin other than the page origin."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web exec vitest run test/unit/gown-overlay.test.ts",
+      "pnpm --filter @bata/web run mediapipe:prepare",
+      "pnpm exec firebase emulators:exec --project demo-bata --only auth \"pnpm --filter @bata/web exec playwright test e2e/ar-full.spec.ts e2e/ar-spike.spec.ts\"",
+      "pnpm --filter @bata/web typecheck"
+    ],
+    "checkpoint": "step-12-ar-full",
+    "files": [
+      "apps/web/src/ar/gown-overlay.ts",
+      "apps/web/src/routes/bata-ar.tsx",
+      "apps/web/src/routes/bata-espacio.tsx",
+      "apps/web/test/unit/gown-overlay.test.ts",
+      "apps/web/e2e/ar-full.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T1",
+    "title": "Add knowledge base chunking, embeddings and retrieval",
+    "epic": "03-asistente-operacion",
+    "dependencies": ["E1-T6"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `chunkPages` receives pages of text THE SYSTEM SHALL emit chunks of at most 800 characters that overlap the previous chunk of the same page by 150 characters and keep that page number.",
+      "WHEN `embedText` runs with an injected Bedrock client THE SYSTEM SHALL send `modelId` `amazon.titan-embed-text-v2:0` with body `{ inputText, dimensions: 1024, normalize: true }` and return the 1024-number `embedding`.",
+      "WHEN `retrieveContext` runs against the in-memory retriever with deterministic vectors THE SYSTEM SHALL return at most 5 chunks ordered by ascending cosine distance and drop every chunk whose distance exceeds `KB_MAX_DISTANCE`.",
+      "WHEN no chunk passes the distance threshold THE SYSTEM SHALL return an empty list.",
+      "WHEN the Firestore retriever runs against a fake collection THE SYSTEM SHALL call `findNearest` with `vectorField: 'embedding'`, `limit: 5`, `distanceMeasure: 'COSINE'` and `distanceResultField: 'distance'`.",
+      "WHEN `pnpm --filter @bata/api run ingest-kb -- --dry-run` runs with no PDFs in `content/kb/pdfs/` THE SYSTEM SHALL print one line `faltante: <id>` per source in `content/kb/sources.json`, including `faltante: who-safe-surgery-2009`, and `ingestKb` in dry-run mode SHALL call neither the injected Bedrock client nor the injected Firestore (asserted in `kb.test.ts`)."
+    ],
+    "verify": [
+      "pnpm --filter @bata/api exec vitest run test/unit/kb.test.ts",
+      "pnpm --filter @bata/api run ingest-kb -- --dry-run | grep -q 'faltante: who-safe-surgery-2009'",
+      "pnpm --filter @bata/api typecheck"
+    ],
+    "checkpoint": "step-13-knowledge-base",
+    "files": [
+      "services/api/src/lib/kb.ts",
+      "services/api/scripts/ingest-kb.ts",
+      "services/api/test/unit/kb.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T2",
+    "title": "Add streaming chat and transcription endpoints with quotas",
+    "epic": "03-asistente-operacion",
+    "dependencies": ["E3-T1", "E1-T5"],
+    "priority": "p0",
+    "acceptance": [
+      "WHEN `handleChatStream` serves a valid request with retrieved context THE SYSTEM SHALL write the metadata prelude (JSON with `statusCode` 200, `Content-Type: application/x-ndjson; charset=utf-8` and the CORS headers) followed by 8 null bytes, then NDJSON lines: one or more `delta`, one `citations` whose items carry `n`, `title`, `org` and `section`, and one `done` with `latencyMs`.",
+      "WHEN the user's chat quota is exhausted THE SYSTEM SHALL answer 429 with `{ \"error\": { \"code\": \"QUOTA_EXCEEDED\" } }` and the CORS headers, record `assistant.quota_rejections`, and SHALL call neither Groq nor the retriever.",
+      "WHEN retrieval returns no chunk THE SYSTEM SHALL stream `No encuentro respaldo en las normativas cargadas.` as the only `delta`, an empty `citations` and `done` without calling Groq, and WHEN the request has no authorizer context, more than 10 messages, or a message longer than 2000 characters THE SYSTEM SHALL answer 401 `UNAUTHORIZED` or 422 `VALIDATION_ERROR` with the CORS headers.",
+      "WHEN Groq streams normally THE SYSTEM SHALL call it with `temperature` 0.2, `max_completion_tokens` 700 and `stream: true` and record `groq.ttft_ms`, `groq.total_ms`, `groq.completion_tokens` and `kb.retrieval_ms`, and WHEN Groq fails mid-stream THE SYSTEM SHALL emit `{ \"type\": \"error\", \"code\": \"UPSTREAM_ERROR\" }` and end the stream.",
+      "WHEN `handleTranscribe` receives valid audio THE SYSTEM SHALL call Groq transcription with model `whisper-large-v3-turbo` and `language: 'es'` and answer 200 `{ text }`, WHEN the decoded audio exceeds 2 MB THE SYSTEM SHALL answer 413 `PAYLOAD_TOO_LARGE`, and WHEN the stt quota is exhausted THE SYSTEM SHALL answer 429 without calling Groq.",
+      "WHEN `pnpm --filter @bata/infra run check:bundle` bundles `services/api/src/handlers/entry.ts` with esbuild and loads the output in plain Node THE SYSTEM SHALL find `authorizer`, `me`, `quiz`, `chat`, `transcribe` and `admin` exported as functions, print `Bundle OK`, and exit 0."
+    ],
+    "verify": [
+      "pnpm --filter @bata/api exec vitest run test/unit/assistant.test.ts",
+      "pnpm --filter @bata/infra run check:bundle",
+      "pnpm --filter @bata/api typecheck",
+      "pnpm lint",
+      "pnpm --filter @bata/infra run synth"
+    ],
+    "checkpoint": "step-14-assistant-api",
+    "files": [
+      "services/api/src/routes/assistant.ts",
+      "services/api/src/lib/assistant-deps.ts",
+      "services/api/src/lib/metrics.ts",
+      "services/api/src/handlers/entry.ts",
+      "services/api/test/unit/assistant.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T3",
+    "title": "Build assistant avatar, streaming panel, mic and TTS",
+    "epic": "03-asistente-operacion",
+    "dependencies": ["E3-T2", "E1-T2"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `readNdjson` receives a body split at arbitrary byte boundaries THE SYSTEM SHALL yield each complete stream event exactly once and in order, holding a trailing partial line until it completes.",
+      "WHEN `pickRecorderMimeType` runs with `audio/webm;codecs=opus` supported THE SYSTEM SHALL choose `audio/webm` and otherwise `audio/mp4`, and `pickSpanishVoice` SHALL return the `es-CO` voice when present, else the first voice whose `lang` starts with `es`, else `null`.",
+      "WHEN a signed-in user is on any authenticated route THE SYSTEM SHALL show the assistant avatar button fixed at the top-left corner, above the content, with a bounding box that does not intersect the navigation.",
+      "WHEN the user sends a question and the API streams NDJSON THE SYSTEM SHALL render the deltas progressively inside an `aria-live=\"polite\"` region and then the numbered citations list.",
+      "WHEN `/assistant/chat` answers 401 or 429 THE SYSTEM SHALL show `Tu sesión expiró, vuelve a iniciar sesión` or `Alcanzaste el límite de mensajes; intenta más tarde` respectively.",
+      "WHEN the speak toggle is on and a response completes THE SYSTEM SHALL call `speechSynthesis.speak` once while the answer text stays visible."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web exec vitest run test/unit/assistant-client.test.ts",
+      "pnpm exec firebase emulators:exec --project demo-bata --only auth \"pnpm --filter @bata/web exec playwright test e2e/assistant.spec.ts\"",
+      "pnpm --filter @bata/web typecheck"
+    ],
+    "checkpoint": "step-15-assistant-ui",
+    "files": [
+      "apps/web/src/assistant/assistant-panel.tsx",
+      "apps/web/src/assistant/stream.ts",
+      "apps/web/src/assistant/voice.ts",
+      "apps/web/test/unit/assistant-client.test.ts",
+      "apps/web/e2e/assistant.spec.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T4",
+    "title": "Add admin API and pages for questions and groups",
+    "epic": "03-asistente-operacion",
+    "dependencies": ["E2-T2", "E1-T2"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN a user whose authorizer context role is `student` calls any `/admin/*` route THE SYSTEM SHALL respond 403 `FORBIDDEN` and change nothing.",
+      "WHEN an admin calls `POST /admin/questions` with a valid question and its `correctOptionIds` THE SYSTEM SHALL create the question with status `draft` and `createdBy` equal to the admin uid plus its `questionKeys` doc, and `PUT /admin/questions/{id}` SHALL update both and set status back to `draft`.",
+      "WHEN an admin calls `POST /admin/questions/{id}/validate` THE SYSTEM SHALL set status `validated`, `validatedBy` and `validatedAt`, and `GET /admin/questions` SHALL include `correctOptionIds` for each question.",
+      "WHEN an admin calls `POST /admin/groups` with a name THE SYSTEM SHALL create a group whose `joinCode` is 6 characters from `A-Z0-9` and unique, and respond 201 with `{ groupId, joinCode }`.",
+      "WHEN an admin calls `GET /admin/groups/{groupId}/progress` THE SYSTEM SHALL return each member's `displayName`, `xp`, `level`, `streakDays` and completed mission count, ordered by `xp` descending.",
+      "WHEN `pnpm --filter @bata/web typecheck` and `pnpm --filter @bata/web build` run with `admin-preguntas.tsx` and `admin-grupos.tsx` present THE SYSTEM SHALL exit 0 for both."
+    ],
+    "verify": [
+      "pnpm exec firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/api exec vitest run --config vitest.emu.config.ts test/emu/admin.test.ts\"",
+      "pnpm --filter @bata/api typecheck",
+      "pnpm --filter @bata/web typecheck",
+      "pnpm --filter @bata/web build"
+    ],
+    "checkpoint": "step-16-admin",
+    "files": [
+      "services/api/src/routes/admin.ts",
+      "services/api/src/handlers/entry.ts",
+      "services/api/test/emu/admin.test.ts",
+      "apps/web/src/routes/admin-preguntas.tsx",
+      "apps/web/src/routes/admin-grupos.tsx"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T5",
+    "title": "Wire Datadog RUM and Lambda distribution metrics",
+    "epic": "03-asistente-operacion",
+    "dependencies": ["E3-T3", "E3-T2"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `buildRumConfig` receives an empty `VITE_DD_CLIENT_TOKEN` THE SYSTEM SHALL return `null`, and with a token THE SYSTEM SHALL return service `bata-web`, the env and version, `sessionReplaySampleRate: 0` and `trackUserInteractions: true`.",
+      "WHEN the window event `bata:assistant-first-token` fires with `detail.elapsedMs` THE SYSTEM SHALL call `addAction('assistant_e2e_ms', { ms: elapsedMs })` on the RUM API it was given.",
+      "WHEN the DogStatsD sink emits `groq.ttft_ms` with value 123 and the tag `model:openai/gpt-oss-120b` THE SYSTEM SHALL send the UDP datagram `groq.ttft_ms:123|d|#model:openai/gpt-oss-120b,stage:test` to 127.0.0.1:8125, asserted with a local UDP socket.",
+      "WHEN `DD_LAMBDA_HANDLER` is set THE SYSTEM SHALL select the datadog-lambda-js sink and call `sendDistributionMetric(name, value, 'key:value', ...)`, and otherwise THE SYSTEM SHALL select the DogStatsD sink.",
+      "WHEN `pnpm --filter @bata/api typecheck` checks a call with a metric name outside `groq.ttft_ms`, `groq.total_ms`, `groq.completion_tokens`, `kb.retrieval_ms`, `bedrock.embed_ms`, `assistant.quota_rejections` and `stt.latency_ms` marked `@ts-expect-error` THE SYSTEM SHALL exit 0, proving the name parameter rejects it."
+    ],
+    "verify": [
+      "pnpm --filter @bata/web exec vitest run test/unit/observability.test.ts",
+      "pnpm --filter @bata/api exec vitest run test/unit/metrics.test.ts",
+      "pnpm --filter @bata/api typecheck",
+      "pnpm --filter @bata/web typecheck",
+      "pnpm --filter @bata/web build"
+    ],
+    "checkpoint": "step-17-observability",
+    "files": [
+      "apps/web/src/lib/observability.ts",
+      "apps/web/src/main.tsx",
+      "apps/web/test/unit/observability.test.ts",
+      "services/api/src/lib/metrics.ts",
+      "services/api/test/unit/metrics.test.ts"
+    ],
+    "status": "pending"
+  },
+  {
+    "id": "E3-T6",
+    "title": "Add CI workflow, guarded deploy script and full gate",
+    "epic": "03-asistente-operacion",
+    "dependencies": ["E3-T5", "E3-T4", "E2-T6", "E2-T4"],
+    "priority": "p1",
+    "acceptance": [
+      "WHEN `infra/test/ci-workflow.test.ts` reads `.github/workflows/ci.yml` and `.nvmrc` THE SYSTEM SHALL find `node-version-file: .nvmrc` with `.nvmrc` equal to `24`, `java-version: '21'` and the commands `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:emu`, `pnpm synth`, `pnpm --filter @bata/web run mediapipe:prepare`, `pnpm test:e2e` and `pnpm test:e2e:emu`.",
+      "WHEN `infra/test/ci-workflow.test.ts` reads `scripts/deploy.sh` THE SYSTEM SHALL find `-c stage=prod` on every line that contains `cdk deploy` or `cdk synth`, and an `--apply` guard that exits 2 when `ALERT_EMAIL` or `FIREBASE_PROJECT_ID` is empty or `apps/web/.env.production` is missing.",
+      "WHEN `bash -n scripts/deploy.sh` runs THE SYSTEM SHALL exit 0.",
+      "WHEN `bash scripts/deploy.sh --dry-run` runs THE SYSTEM SHALL print the numbered deploy plan, run `cdk synth` with `-c stage=prod`, and exit 0 without invoking `aws` or `cdk deploy`.",
+      "WHEN `bash scripts/deploy.sh` runs without `--apply` or `--dry-run` THE SYSTEM SHALL print usage and exit 2.",
+      "WHEN the full gate runs (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:emu`, `pnpm synth`, `pnpm test:e2e`, `pnpm test:e2e:emu`) THE SYSTEM SHALL exit 0 for every command."
+    ],
+    "verify": [
+      "pnpm --filter @bata/infra exec vitest run test/ci-workflow.test.ts",
+      "bash -n scripts/deploy.sh",
+      "bash scripts/deploy.sh --dry-run",
+      "bash scripts/deploy.sh; test $? -eq 2",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm test",
+      "pnpm test:emu",
+      "pnpm synth",
+      "pnpm test:e2e",
+      "pnpm test:e2e:emu"
+    ],
+    "checkpoint": "step-18-ci-deploy",
+    "files": [
+      ".github/workflows/ci.yml",
+      "scripts/deploy.sh",
+      "infra/test/ci-workflow.test.ts"
+    ],
+    "status": "pending"
+  }
+]

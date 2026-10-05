@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Clients NEVER write. Every write goes through the API (firebase-admin bypasses these rules).
+// questionKeys, quotas, groups, kbDocuments and kbChunks are server-only (default deny below).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function draftsVisible() {
+      return exists(/databases/$(database)/documents/appConfig/flags)
+        && get(/databases/$(database)/documents/appConfig/flags).data.showDraftQuestions == true;
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /progress/{uid}/{document=**} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /leaderboard/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /missions/{missionId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /questions/{questionId} {
+      allow read: if signedIn() && (resource.data.status == 'validated' || draftsVisible());
+      allow write: if false;
+    }
+
+    match /appConfig/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

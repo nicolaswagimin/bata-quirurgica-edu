@@ -1,0 +1,16 @@
+# Workspace globs never match blueprints/ — the bundle is not a workspace package.
+packages:
+  - apps/*
+  - services/*
+  - packages/*
+  - infra
+
+# pnpm 11: build scripts only run for packages listed true here.
+# false = explicitly ignored (no error). Unknown packages with build scripts are reported,
+# and strictDepBuilds: false keeps that report a warning instead of an install failure.
+allowBuilds:
+  esbuild: true
+  protobufjs: false
+  re2: false
+  "@firebase/util": false
+strictDepBuilds: false

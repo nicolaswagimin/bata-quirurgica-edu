@@ -1,0 +1,18 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "leaderboard",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "xp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "kbChunks",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "embedding", "vectorConfig": { "dimension": 1024, "flat": {} } }]
+    }
+  ],
+  "fieldOverrides": []
+}

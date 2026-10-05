@@ -1,0 +1,27 @@
+{
+  "name": "bata-quirurgica-edu",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "test:emu": "firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/api run test:emu\"",
+    "test:e2e": "pnpm --filter @bata/web run test:e2e",
+    "test:e2e:emu": "firebase emulators:exec --project demo-bata --only firestore,auth \"pnpm --filter @bata/web run test:e2e:emu\"",
+    "build": "pnpm --filter @bata/web run build",
+    "synth": "pnpm --filter @bata/infra run synth"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "24.19.1",
+    "firebase-tools": "15.32.1",
+    "typescript": "6.0.3"
+  }
+}
