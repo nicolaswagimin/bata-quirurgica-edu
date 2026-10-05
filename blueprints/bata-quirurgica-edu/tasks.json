@@ -126,7 +126,7 @@
       "services/api/src/handlers/entry.ts",
       "services/api/test/unit/base.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T5",
