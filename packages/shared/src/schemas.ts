@@ -74,6 +74,36 @@ export const CreateProfileSchema = z
   .strict();
 export type CreateProfile = z.infer<typeof CreateProfileSchema>;
 
+// ---------- Formularios de autenticación (web) ----------
+
+export const CONSENT_REQUIRED_MESSAGE =
+  'Debes aceptar la política de tratamiento de datos para continuar';
+
+const EmailFieldSchema = z.string().trim().pipe(z.email('Escribe un correo electrónico válido'));
+
+export const LoginFormSchema = z.object({
+  email: EmailFieldSchema,
+  password: z.string().min(1, 'Escribe tu contraseña'),
+});
+export type LoginForm = z.infer<typeof LoginFormSchema>;
+
+export const RegisterFormSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(2, 'Escribe tu nombre (mínimo 2 caracteres)')
+    .max(60, 'El nombre admite máximo 60 caracteres'),
+  email: EmailFieldSchema,
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  consent: z.literal(true, CONSENT_REQUIRED_MESSAGE),
+});
+export type RegisterForm = z.infer<typeof RegisterFormSchema>;
+
+export const PendingConsentSchema = z
+  .object({ policyVersion: z.literal(POLICY_VERSION), acceptedAt: z.iso.datetime() })
+  .strict();
+export type PendingConsent = z.infer<typeof PendingConsentSchema>;
+
 export const JoinGroupSchema = z.object({ groupCode: JoinCodeSchema }).strict();
 export type JoinGroup = z.infer<typeof JoinGroupSchema>;
 

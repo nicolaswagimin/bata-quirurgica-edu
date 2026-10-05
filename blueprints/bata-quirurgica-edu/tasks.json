@@ -61,7 +61,7 @@
       "apps/web/src/routes/public-pages.tsx",
       "apps/web/e2e/smoke.spec.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T3",
