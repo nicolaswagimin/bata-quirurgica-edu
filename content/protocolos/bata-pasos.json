@@ -1,11 +1,31 @@
 {
   "reviewNote": "Secuencia didáctica pendiente de validación por el director de tesis contra el protocolo institucional.",
   "hotspots": [
-    { "id": "cuello", "label": "Cuello", "description": "Zona de lazos posteriores. No se considera estéril; la amarra el personal circulante." },
-    { "id": "punos", "label": "Puños", "description": "Borde de la manga que queda cubierto por el guante en la técnica cerrada." },
-    { "id": "zona-esteril", "label": "Zona estéril frontal", "description": "Frente de la bata desde el pecho hasta la cintura (nivel del campo estéril)." },
-    { "id": "mangas", "label": "Mangas", "description": "Estériles desde un poco por encima del codo hasta el puño." },
-    { "id": "cierre-posterior", "label": "Cierre posterior", "description": "Espalda y solapa envolvente. Nunca se considera estéril." }
+    {
+      "id": "cuello",
+      "label": "Cuello",
+      "description": "Zona de lazos posteriores. No se considera estéril; la amarra el personal circulante."
+    },
+    {
+      "id": "punos",
+      "label": "Puños",
+      "description": "Borde de la manga que queda cubierto por el guante en la técnica cerrada."
+    },
+    {
+      "id": "zona-esteril",
+      "label": "Zona estéril frontal",
+      "description": "Frente de la bata desde el pecho hasta la cintura (nivel del campo estéril)."
+    },
+    {
+      "id": "mangas",
+      "label": "Mangas",
+      "description": "Estériles desde un poco por encima del codo hasta el puño."
+    },
+    {
+      "id": "cierre-posterior",
+      "label": "Cierre posterior",
+      "description": "Espalda y solapa envolvente. Nunca se considera estéril."
+    }
   ],
   "donning": [
     {
@@ -14,7 +34,12 @@
       "title": "Preparación quirúrgica de manos y secado estéril",
       "description": "Realiza la preparación quirúrgica de manos según protocolo y sécalas con una compresa estéril.",
       "hotspotIds": [],
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Preparación quirúrgica de las manos" }
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      }
     },
     {
       "id": "d2",
@@ -22,7 +47,12 @@
       "title": "Tomar la bata por la cara interna",
       "description": "Toma la bata por la cara interna a la altura del cuello y déjala desplegar lejos de superficies no estériles.",
       "hotspotIds": ["cuello"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "d3",
@@ -30,7 +60,12 @@
       "title": "Introducir los brazos sin sacar las manos",
       "description": "Introduce ambos brazos en las mangas y mantén las manos dentro de los puños (técnica cerrada).",
       "hotspotIds": ["mangas", "punos"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "d4",
@@ -38,7 +73,12 @@
       "title": "El circulante amarra los lazos posteriores",
       "description": "El personal circulante ajusta y amarra los lazos del cuello y de la espalda tocando solo la zona posterior.",
       "hotspotIds": ["cuello", "cierre-posterior"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "d5",
@@ -46,7 +86,12 @@
       "title": "Colocación de guantes en técnica cerrada",
       "description": "Desde dentro de las mangas, coloca cada guante sobre el puño y ajústalo sin que la piel toque el exterior.",
       "hotspotIds": ["punos"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "d6",
@@ -54,7 +99,12 @@
       "title": "Cierre de la solapa envolvente",
       "description": "Entrega la lengüeta del lazo frontal, gira para cubrir la espalda y amarra el lazo al frente.",
       "hotspotIds": ["cierre-posterior", "zona-esteril"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     }
   ],
   "doffing": [
@@ -64,7 +114,12 @@
       "title": "Soltar los lazos",
       "description": "El circulante suelta los lazos posteriores; tú sueltas el lazo frontal sin tocar la ropa.",
       "hotspotIds": ["cuello", "cierre-posterior"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "r2",
@@ -72,7 +127,12 @@
       "title": "Retirar la bata hacia adelante",
       "description": "Con los guantes puestos, tira de la bata desde los hombros hacia adelante, alejándola del cuerpo.",
       "hotspotIds": ["zona-esteril", "mangas"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "r3",
@@ -80,7 +140,12 @@
       "title": "Enrollar con la cara externa hacia adentro",
       "description": "Enrolla la bata con la cara contaminada hacia adentro y deséchala en el recipiente indicado.",
       "hotspotIds": ["zona-esteril"],
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" }
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
     },
     {
       "id": "r4",
@@ -88,7 +153,12 @@
       "title": "Retirar los guantes y realizar higiene de manos",
       "description": "Retira los guantes sin tocar la piel con su exterior y realiza higiene de manos.",
       "hotspotIds": ["punos"],
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Uso de guantes" }
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Uso de guantes"
+      }
     }
   ]
 }

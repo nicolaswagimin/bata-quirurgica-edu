@@ -55,13 +55,21 @@
       "prompt": "¿Qué describe mejor el concepto de asepsia en el quirófano?",
       "options": [
         { "id": "a", "text": "Aplicar un antiséptico sobre la piel del paciente" },
-        { "id": "b", "text": "El conjunto de prácticas que impiden que microorganismos lleguen a un área o material estéril" },
+        {
+          "id": "b",
+          "text": "El conjunto de prácticas que impiden que microorganismos lleguen a un área o material estéril"
+        },
         { "id": "c", "text": "Lavar el instrumental con agua y jabón" },
         { "id": "d", "text": "Administrar antibióticos antes de la cirugía" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "La asepsia busca evitar la contaminación de lo que es estéril; la antisepsia, en cambio, es la aplicación de agentes que reducen microorganismos sobre tejido vivo.",
-      "source": { "org": "CDC", "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities", "year": 2008, "section": "Definiciones y terminología" },
+      "source": {
+        "org": "CDC",
+        "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+        "year": 2008,
+        "section": "Definiciones y terminología"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -78,7 +86,12 @@
       ],
       "correctOptionIds": ["c"],
       "explanation": "La esterilización destruye o elimina toda forma de vida microbiana, incluidas las esporas; la desinfección no garantiza eliminar todas las esporas.",
-      "source": { "org": "CDC", "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities", "year": 2008, "section": "Definiciones y terminología" },
+      "source": {
+        "org": "CDC",
+        "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+        "year": 2008,
+        "section": "Definiciones y terminología"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -87,13 +100,15 @@
       "missionId": "m1-fundamentos",
       "type": "truefalse",
       "prompt": "Un elemento estéril que toca una superficie no estéril debe considerarse contaminado.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["a"],
       "explanation": "El contacto con una superficie no estéril rompe la esterilidad; el elemento debe retirarse o reemplazarse.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -110,7 +125,12 @@
       ],
       "correctOptionIds": ["b"],
       "explanation": "La preparación quirúrgica de manos se hace antes de vestir la bata y los guantes estériles, con jabón antimicrobiano o con un preparado de base alcohólica según el protocolo.",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Preparación quirúrgica de las manos" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -120,14 +140,28 @@
       "type": "multiple",
       "prompt": "¿Cuáles son principios de la técnica aséptica? Selecciona todas las correctas.",
       "options": [
-        { "id": "a", "text": "Ante la duda sobre la esterilidad de un elemento, se considera contaminado" },
-        { "id": "b", "text": "Reducir al mínimo los movimientos y el tránsito alrededor del campo estéril" },
+        {
+          "id": "a",
+          "text": "Ante la duda sobre la esterilidad de un elemento, se considera contaminado"
+        },
+        {
+          "id": "b",
+          "text": "Reducir al mínimo los movimientos y el tránsito alrededor del campo estéril"
+        },
         { "id": "c", "text": "Dar la espalda al campo estéril para ganar espacio" },
-        { "id": "d", "text": "El personal vestido de forma estéril permanece dentro del área estéril" }
+        {
+          "id": "d",
+          "text": "El personal vestido de forma estéril permanece dentro del área estéril"
+        }
       ],
       "correctOptionIds": ["a", "b", "d"],
       "explanation": "La duda se resuelve como contaminación, el movimiento se minimiza y el personal estéril no sale del área estéril. Dar la espalda al campo expone una zona no estéril.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -136,13 +170,15 @@
       "missionId": "m1-fundamentos",
       "type": "truefalse",
       "prompt": "Usar guantes estériles reemplaza la preparación quirúrgica de las manos.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["b"],
       "explanation": "Los guantes pueden perforarse durante el procedimiento; por eso la preparación quirúrgica de las manos sigue siendo obligatoria.",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Preparación quirúrgica de las manos" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -153,13 +189,21 @@
       "prompt": "¿Cuál es la función principal de la bata quirúrgica?",
       "options": [
         { "id": "a", "text": "Abrigar al personal en el quirófano" },
-        { "id": "b", "text": "Servir de barrera para reducir el paso de microorganismos y fluidos entre el personal y el paciente" },
+        {
+          "id": "b",
+          "text": "Servir de barrera para reducir el paso de microorganismos y fluidos entre el personal y el paciente"
+        },
         { "id": "c", "text": "Identificar el rol de cada persona del equipo" },
         { "id": "d", "text": "Reemplazar el uso de guantes" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "La bata es una barrera que protege al paciente de la microbiota del personal y al personal de la exposición a fluidos.",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Campos y batas quirúrgicas" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Campos y batas quirúrgicas"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -176,7 +220,12 @@
       ],
       "correctOptionIds": ["b"],
       "explanation": "Las zonas con mayor probabilidad de contacto con fluidos y con el campo son el frente del tronco y las mangas; allí se exige mayor desempeño de barrera. EN 13795 se cita solo como referencia técnica.",
-      "source": { "org": "CEN", "title": "EN 13795-1 Ropa y paños quirúrgicos (referencia técnica, no ingerida)", "year": 2019, "section": "Zonas críticas del producto" },
+      "source": {
+        "org": "CEN",
+        "title": "EN 13795-1 Ropa y paños quirúrgicos (referencia técnica, no ingerida)",
+        "year": 2019,
+        "section": "Zonas críticas del producto"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -185,13 +234,15 @@
       "missionId": "m2-tipos-bata",
       "type": "truefalse",
       "prompt": "Una bata reutilizable de tela puede usarse en cirugía si fue reprocesada y esterilizada según el protocolo institucional.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["a"],
       "explanation": "Tanto las batas desechables como las reutilizables estériles pueden usarse; lo determinante es que estén estériles y cumplan su función de barrera.",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Campos y batas quirúrgicas" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Campos y batas quirúrgicas"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -203,12 +254,20 @@
       "options": [
         { "id": "a", "text": "Continuar; la humedad no afecta la barrera" },
         { "id": "b", "text": "Secarla con una compresa estéril" },
-        { "id": "c", "text": "Cambiar la bata siguiendo el protocolo, porque la humedad puede permitir el paso de microorganismos" },
+        {
+          "id": "c",
+          "text": "Cambiar la bata siguiendo el protocolo, porque la humedad puede permitir el paso de microorganismos"
+        },
         { "id": "d", "text": "Cubrirla con otra compresa" }
       ],
       "correctOptionIds": ["c"],
       "explanation": "Un material empapado puede perder su capacidad de barrera (paso por humedad); la bata comprometida se reemplaza.",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Campos y batas quirúrgicas" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Campos y batas quirúrgicas"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -219,13 +278,21 @@
       "prompt": "¿De qué depende que un paquete estéril almacenado siga siendo apto para usar?",
       "options": [
         { "id": "a", "text": "Solo del color del empaque" },
-        { "id": "b", "text": "De que el empaque esté íntegro, seco y sin eventos que lo comprometan" },
+        {
+          "id": "b",
+          "text": "De que el empaque esté íntegro, seco y sin eventos que lo comprometan"
+        },
         { "id": "c", "text": "De que haya sido abierto y vuelto a cerrar con cinta" },
         { "id": "d", "text": "De la marca del fabricante" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "La esterilidad se mantiene mientras el empaque esté íntegro y no ocurra un evento que lo comprometa (humedad, rotura, caída).",
-      "source": { "org": "CDC", "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities", "year": 2008, "section": "Almacenamiento de elementos estériles" },
+      "source": {
+        "org": "CDC",
+        "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+        "year": 2008,
+        "section": "Almacenamiento de elementos estériles"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -242,7 +309,12 @@
       ],
       "correctOptionIds": ["a", "b", "d"],
       "explanation": "Integridad, indicador de proceso y ausencia de eventos de contaminación son verificaciones previas; el color no influye en la esterilidad.",
-      "source": { "org": "CDC", "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities", "year": 2008, "section": "Monitoreo de la esterilización y almacenamiento" },
+      "source": {
+        "org": "CDC",
+        "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+        "year": 2008,
+        "section": "Monitoreo de la esterilización y almacenamiento"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -259,7 +331,12 @@
       ],
       "correctOptionIds": ["b"],
       "explanation": "En la técnica cerrada las manos no salen del puño de la bata hasta quedar cubiertas por el guante, así la piel nunca toca el exterior estéril.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -270,13 +347,21 @@
       "prompt": "¿Cómo se toma la bata estéril del campo para colocársela?",
       "options": [
         { "id": "a", "text": "Por la cara externa, a la altura del pecho" },
-        { "id": "b", "text": "Por la cara interna, a la altura del cuello, dejándola desplegar sin que toque superficies" },
+        {
+          "id": "b",
+          "text": "Por la cara interna, a la altura del cuello, dejándola desplegar sin que toque superficies"
+        },
         { "id": "c", "text": "Sacudiéndola para que se abra rápido" },
         { "id": "d", "text": "Pidiendo al circulante que la sostenga por el frente" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "Se toca solo la cara interna (la que quedará contra el cuerpo) y se deja desplegar lejos de superficies no estériles; sacudirla dispersa partículas.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -285,13 +370,15 @@
       "missionId": "m3-colocacion",
       "type": "truefalse",
       "prompt": "Quien se viste con la bata debe amarrar por sí mismo los lazos del cuello y de la espalda.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["b"],
       "explanation": "Los lazos posteriores los amarra el personal circulante (no estéril), tocando solo esa zona posterior que no se considera estéril.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -308,7 +395,12 @@
       ],
       "correctOptionIds": ["b"],
       "explanation": "Primero se preparan y secan las manos de forma estéril, luego se viste la bata y por último los guantes (en técnica cerrada, desde dentro de las mangas).",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Preparación quirúrgica de las manos" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -318,14 +410,22 @@
       "type": "single",
       "prompt": "En una bata envolvente, ¿cómo se cierra el lazo frontal para cubrir la espalda?",
       "options": [
-        { "id": "a", "text": "Se entrega la lengüeta o tarjeta del lazo a otra persona y se gira, para que la solapa cubra la espalda sin tocar zonas no estériles" },
+        {
+          "id": "a",
+          "text": "Se entrega la lengüeta o tarjeta del lazo a otra persona y se gira, para que la solapa cubra la espalda sin tocar zonas no estériles"
+        },
         { "id": "b", "text": "Se amarra detrás de la espalda con las manos enguantadas" },
         { "id": "c", "text": "Se deja suelto" },
         { "id": "d", "text": "Se amarra al cuello" }
       ],
       "correctOptionIds": ["a"],
       "explanation": "La lengüeta permite girar sin que las manos estériles toquen la espalda; luego se toma el lazo y se amarra al frente.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 3,
       "xp": 15
     },
@@ -334,13 +434,15 @@
       "missionId": "m3-colocacion",
       "type": "truefalse",
       "prompt": "Si un guante se perfora o se contamina al colocarlo, debe reemplazarse.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["a"],
       "explanation": "Un guante perforado o contaminado deja de ser barrera estéril y se reemplaza de inmediato.",
-      "source": { "org": "OMS", "title": "Global Guidelines for the Prevention of Surgical Site Infection", "year": 2018, "section": "Uso de guantes" },
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Uso de guantes"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -351,13 +453,21 @@
       "prompt": "¿Qué parte de la bata puesta se considera estéril?",
       "options": [
         { "id": "a", "text": "Toda la bata, incluida la espalda" },
-        { "id": "b", "text": "El frente desde el pecho hasta el nivel del campo estéril (cintura) y las mangas desde un poco por encima del codo hasta el puño" },
+        {
+          "id": "b",
+          "text": "El frente desde el pecho hasta el nivel del campo estéril (cintura) y las mangas desde un poco por encima del codo hasta el puño"
+        },
         { "id": "c", "text": "Solo el cuello" },
         { "id": "d", "text": "Desde la cintura hasta el ruedo" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "Por convención perioperatoria solo el frente pecho–cintura y las mangas (desde arriba del codo hasta el puño) se consideran estériles; cuello, axilas, espalda y debajo de la cintura no.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -366,13 +476,15 @@
       "missionId": "m4-campo-esteril",
       "type": "truefalse",
       "prompt": "La espalda de la bata se considera no estéril aunque la bata sea envolvente.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["a"],
       "explanation": "La espalda no se puede vigilar; por eso nunca se considera estéril, aunque esté cubierta por la solapa.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -383,13 +495,21 @@
       "prompt": "Mientras esperas con bata y guantes estériles, ¿dónde mantienes las manos?",
       "options": [
         { "id": "a", "text": "Debajo de las axilas" },
-        { "id": "b", "text": "Frente al cuerpo, por encima de la cintura y por debajo de los hombros" },
+        {
+          "id": "b",
+          "text": "Frente al cuerpo, por encima de la cintura y por debajo de los hombros"
+        },
         { "id": "c", "text": "A los costados, por debajo de la cintura" },
         { "id": "d", "text": "Detrás de la espalda" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "Las manos permanecen dentro de la zona estéril visible: al frente, entre la cintura y los hombros. Las axilas no son zona estéril.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -406,7 +526,12 @@
       ],
       "correctOptionIds": ["b"],
       "explanation": "Frente a frente (estéril con estéril) o espalda con espalda (no estéril con no estéril) evita que una zona no estéril toque una estéril.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -423,7 +548,12 @@
       ],
       "correctOptionIds": ["a", "b", "d"],
       "explanation": "Inclinarse sobre el campo sin estar estéril, bajar las manos de la cintura o tocar la mascarilla rompen la esterilidad; mantener las manos al frente sobre la cintura es lo correcto.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -434,13 +564,21 @@
       "prompt": "Sospechas que la manga de tu bata tocó una superficie no estéril. ¿Qué haces?",
       "options": [
         { "id": "a", "text": "Nada, si nadie lo vio" },
-        { "id": "b", "text": "Lo informas y se cambia la bata o se cubre la manga según el protocolo institucional" },
+        {
+          "id": "b",
+          "text": "Lo informas y se cambia la bata o se cubre la manga según el protocolo institucional"
+        },
         { "id": "c", "text": "Limpias la manga con alcohol" },
         { "id": "d", "text": "Esperas a terminar la cirugía" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "Ante la duda se asume contaminación: se informa al equipo y se corrige según protocolo (cambio de bata o cobertura estéril de la manga).",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -451,13 +589,21 @@
       "prompt": "Al terminar el procedimiento, ¿cuál es un retiro seguro de bata y guantes?",
       "options": [
         { "id": "a", "text": "Quitarse los guantes con los dientes" },
-        { "id": "b", "text": "Retirar primero la bata, enrollándola con la cara externa hacia adentro y alejándola del cuerpo; luego retirar los guantes sin tocar la piel con su exterior" },
+        {
+          "id": "b",
+          "text": "Retirar primero la bata, enrollándola con la cara externa hacia adentro y alejándola del cuerpo; luego retirar los guantes sin tocar la piel con su exterior"
+        },
         { "id": "c", "text": "Sacudir la bata antes de retirarla" },
         { "id": "d", "text": "Retirar la bata por encima de la cabeza" }
       ],
       "correctOptionIds": ["b"],
       "explanation": "La bata se retira con la cara contaminada hacia adentro mientras los guantes aún protegen las manos; después se retiran los guantes. Pendiente de validar contra el protocolo institucional.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -466,13 +612,15 @@
       "missionId": "m5-retiro-oms",
       "type": "truefalse",
       "prompt": "Al retirar la bata se debe evitar que su cara externa toque la ropa o la piel.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["a"],
       "explanation": "Al final del procedimiento la cara externa está contaminada; enrollarla hacia adentro protege al personal.",
-      "source": { "org": "OMS", "title": "WHO Guidelines for Safe Surgery", "year": 2009, "section": "Objetivo 6: prevención de la infección del sitio quirúrgico" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -482,14 +630,22 @@
       "type": "single",
       "prompt": "¿Cuáles son las tres fases de la Lista OMS de verificación de la seguridad de la cirugía?",
       "options": [
-        { "id": "a", "text": "Entrada (antes de la inducción anestésica), Pausa quirúrgica (antes de la incisión) y Salida (antes de que el paciente salga del quirófano)" },
+        {
+          "id": "a",
+          "text": "Entrada (antes de la inducción anestésica), Pausa quirúrgica (antes de la incisión) y Salida (antes de que el paciente salga del quirófano)"
+        },
         { "id": "b", "text": "Ingreso hospitalario, cirugía y alta" },
         { "id": "c", "text": "Lavado, vestido y retiro" },
         { "id": "d", "text": "Preoperatorio, anestesia y recuperación" }
       ],
       "correctOptionIds": ["a"],
       "explanation": "La Lista se aplica en tres momentos: Entrada, Pausa quirúrgica y Salida.",
-      "source": { "org": "OMS", "title": "WHO Surgical Safety Checklist", "year": 2009, "section": "Estructura de la lista: Entrada, Pausa quirúrgica, Salida" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Surgical Safety Checklist",
+        "year": 2009,
+        "section": "Estructura de la lista: Entrada, Pausa quirúrgica, Salida"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -506,7 +662,12 @@
       ],
       "correctOptionIds": ["a"],
       "explanation": "En la Pausa quirúrgica los miembros del equipo se presentan y confirman paciente, sitio y procedimiento; el recuento final corresponde a la Salida.",
-      "source": { "org": "OMS", "title": "WHO Surgical Safety Checklist", "year": 2009, "section": "Pausa quirúrgica (Time Out)" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Surgical Safety Checklist",
+        "year": 2009,
+        "section": "Pausa quirúrgica (Time Out)"
+      },
       "difficulty": 2,
       "xp": 10
     },
@@ -515,13 +676,15 @@
       "missionId": "m5-retiro-oms",
       "type": "truefalse",
       "prompt": "La Lista OMS de verificación la completa únicamente el cirujano.",
-      "options": [
-        { "id": "a", "text": "Verdadero" },
-        { "id": "b", "text": "Falso" }
-      ],
+      "options": [{ "id": "a", "text": "Verdadero" }, { "id": "b", "text": "Falso" }],
       "correctOptionIds": ["b"],
       "explanation": "Es una herramienta de equipo: una persona coordina su aplicación y participan cirugía, anestesia y enfermería.",
-      "source": { "org": "OMS", "title": "WHO Surgical Safety Checklist", "year": 2009, "section": "Cómo aplicar la lista" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Surgical Safety Checklist",
+        "year": 2009,
+        "section": "Cómo aplicar la lista"
+      },
       "difficulty": 1,
       "xp": 10
     },
@@ -538,7 +701,12 @@
       ],
       "correctOptionIds": ["a", "b", "c"],
       "explanation": "En la Salida se confirman el procedimiento, los recuentos y el etiquetado de muestras, además de problemas con el equipo y aspectos clave de la recuperación.",
-      "source": { "org": "OMS", "title": "WHO Surgical Safety Checklist", "year": 2009, "section": "Salida (Sign Out)" },
+      "source": {
+        "org": "OMS",
+        "title": "WHO Surgical Safety Checklist",
+        "year": 2009,
+        "section": "Salida (Sign Out)"
+      },
       "difficulty": 3,
       "xp": 15
     }

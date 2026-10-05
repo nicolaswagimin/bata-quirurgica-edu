@@ -28,13 +28,15 @@
       "packages/shared/test/gamification.test.ts",
       "apps/web/test/unit/contrast.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T2",
     "title": "Build web shell, router, Firebase Auth client and public pages",
     "epic": "01-plataforma",
-    "dependencies": ["E1-T1"],
+    "dependencies": [
+      "E1-T1"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `pnpm --filter @bata/web build` runs THE SYSTEM SHALL exit 0 and write `apps/web/dist/index.html`.",
@@ -65,7 +67,9 @@
     "id": "E1-T3",
     "title": "Spike the AR mirror: camera, PoseLandmarker, FPS, privacy",
     "epic": "01-plataforma",
-    "dependencies": ["E1-T2"],
+    "dependencies": [
+      "E1-T2"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `pnpm --filter @bata/web run mediapipe:prepare` runs THE SYSTEM SHALL exit 0 and leave `apps/web/public/mediapipe/pose_landmarker_lite.task` and the directory `apps/web/public/mediapipe/wasm/` on disk.",
@@ -97,7 +101,9 @@
     "id": "E1-T4",
     "title": "Add API handler kit, CORS error envelope and token authorizer",
     "epic": "01-plataforma",
-    "dependencies": ["E1-T1"],
+    "dependencies": [
+      "E1-T1"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `errorResponse` builds any error THE SYSTEM SHALL return the status mapped to its code, the body `{ \"error\": { \"code\", \"message\" } }`, and the headers `Access-Control-Allow-Origin` equal to `WEB_ORIGIN`, `Access-Control-Allow-Headers: Authorization,Content-Type` and `Vary: Origin`.",
@@ -126,7 +132,9 @@
     "id": "E1-T5",
     "title": "Define CDK stacks: web, REST API with streaming, budget",
     "epic": "01-plataforma",
-    "dependencies": ["E1-T4"],
+    "dependencies": [
+      "E1-T4"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN `pnpm --filter @bata/infra run synth` runs with the `infra/cdk.json` defaults THE SYSTEM SHALL exit 0 and write `infra/cdk.out/bata-api-dev.template.json`, `infra/cdk.out/bata-web-dev.template.json` and `infra/cdk.out/bata-budget-dev.template.json`.",
@@ -158,7 +166,9 @@
     "id": "E1-T6",
     "title": "Add Firestore repositories, quotas and rules tests",
     "epic": "01-plataforma",
-    "dependencies": ["E1-T4"],
+    "dependencies": [
+      "E1-T4"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN an authenticated client reads its own `users/{uid}` or `progress/{uid}/missions/{missionId}` THE SYSTEM SHALL allow it, and WHEN it reads another user's THE SYSTEM SHALL deny it.",
@@ -188,7 +198,9 @@
     "id": "E2-T1",
     "title": "Add profile, consent, group join, account deletion, set-admin",
     "epic": "02-producto",
-    "dependencies": ["E1-T6"],
+    "dependencies": [
+      "E1-T6"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `POST /me` arrives with `{ displayName, consent: { policyVersion: POLICY_VERSION, accepted: true } }` THE SYSTEM SHALL create `users/{uid}` with role `student`, xp 0, level 1, streakDays 0, `consent.policyVersion` and `consent.acceptedAt`, and respond 201 with the profile.",
@@ -216,7 +228,9 @@
     "id": "E2-T2",
     "title": "Add seed script, transactional quiz answers and local API",
     "epic": "02-producto",
-    "dependencies": ["E2-T1"],
+    "dependencies": [
+      "E2-T1"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `seed` runs twice against the emulator THE SYSTEM SHALL leave exactly one `missions` doc per mission and one `questions` doc plus one `questionKeys` doc per question listed in `content/questions/seed.json`, every question with status `draft`.",
@@ -246,7 +260,10 @@
     "id": "E2-T3",
     "title": "Build mission map, onboarding consent and quiz UI",
     "epic": "02-producto",
-    "dependencies": ["E2-T2", "E1-T3"],
+    "dependencies": [
+      "E2-T2",
+      "E1-T3"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN a signed-in user without a profile opens `/` THE SYSTEM SHALL show the consent form, prefilled as accepted when `/registro` stored the acceptance, and on submit SHALL call `POST /me` and then render the mission map.",
@@ -273,7 +290,9 @@
     "id": "E2-T4",
     "title": "Build realtime ranking and profile page",
     "epic": "02-producto",
-    "dependencies": ["E2-T3"],
+    "dependencies": [
+      "E2-T3"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN `/ranking` is open and another user's XP changes in `leaderboard` THE SYSTEM SHALL update the list without a reload, ordered by `xp` descending, showing at most 20 rows.",
@@ -299,7 +318,9 @@
     "id": "E2-T5",
     "title": "Build didactic 3D mode and credits page",
     "epic": "02-producto",
-    "dependencies": ["E1-T2"],
+    "dependencies": [
+      "E1-T2"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN a signed-in user opens `/bata-3d` THE SYSTEM SHALL render a WebGL canvas with the procedural mannequin and gown and a list `Colocación` with every `donning` step of `content/protocolos/bata-pasos.json` in `order`.",
@@ -326,7 +347,10 @@
     "id": "E2-T6",
     "title": "Complete AR mirror overlay and model-viewer space view",
     "epic": "02-producto",
-    "dependencies": ["E1-T3", "E2-T5"],
+    "dependencies": [
+      "E1-T3",
+      "E2-T5"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN `gownGeometry` receives an anchor THE SYSTEM SHALL return the gown outline and the positions of the five hotspots `cuello`, `punos`, `zona-esteril`, `mangas` and `cierre-posterior` in canvas pixels, scaled by the shoulder width and rotated by the shoulder angle.",
@@ -356,7 +380,9 @@
     "id": "E3-T1",
     "title": "Add knowledge base chunking, embeddings and retrieval",
     "epic": "03-asistente-operacion",
-    "dependencies": ["E1-T6"],
+    "dependencies": [
+      "E1-T6"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `chunkPages` receives pages of text THE SYSTEM SHALL emit chunks of at most 800 characters that overlap the previous chunk of the same page by 150 characters and keep that page number.",
@@ -383,7 +409,10 @@
     "id": "E3-T2",
     "title": "Add streaming chat and transcription endpoints with quotas",
     "epic": "03-asistente-operacion",
-    "dependencies": ["E3-T1", "E1-T5"],
+    "dependencies": [
+      "E3-T1",
+      "E1-T5"
+    ],
     "priority": "p0",
     "acceptance": [
       "WHEN `handleChatStream` serves a valid request with retrieved context THE SYSTEM SHALL write the metadata prelude (JSON with `statusCode` 200, `Content-Type: application/x-ndjson; charset=utf-8` and the CORS headers) followed by 8 null bytes, then NDJSON lines: one or more `delta`, one `citations` whose items carry `n`, `title`, `org` and `section`, and one `done` with `latencyMs`.",
@@ -414,7 +443,10 @@
     "id": "E3-T3",
     "title": "Build assistant avatar, streaming panel, mic and TTS",
     "epic": "03-asistente-operacion",
-    "dependencies": ["E3-T2", "E1-T2"],
+    "dependencies": [
+      "E3-T2",
+      "E1-T2"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN `readNdjson` receives a body split at arbitrary byte boundaries THE SYSTEM SHALL yield each complete stream event exactly once and in order, holding a trailing partial line until it completes.",
@@ -443,7 +475,10 @@
     "id": "E3-T4",
     "title": "Add admin API and pages for questions and groups",
     "epic": "03-asistente-operacion",
-    "dependencies": ["E2-T2", "E1-T2"],
+    "dependencies": [
+      "E2-T2",
+      "E1-T2"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN a user whose authorizer context role is `student` calls any `/admin/*` route THE SYSTEM SHALL respond 403 `FORBIDDEN` and change nothing.",
@@ -473,7 +508,10 @@
     "id": "E3-T5",
     "title": "Wire Datadog RUM and Lambda distribution metrics",
     "epic": "03-asistente-operacion",
-    "dependencies": ["E3-T3", "E3-T2"],
+    "dependencies": [
+      "E3-T3",
+      "E3-T2"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN `buildRumConfig` receives an empty `VITE_DD_CLIENT_TOKEN` THE SYSTEM SHALL return `null`, and with a token THE SYSTEM SHALL return service `bata-web`, the env and version, `sessionReplaySampleRate: 0` and `trackUserInteractions: true`.",
@@ -503,7 +541,12 @@
     "id": "E3-T6",
     "title": "Add CI workflow, guarded deploy script and full gate",
     "epic": "03-asistente-operacion",
-    "dependencies": ["E3-T5", "E3-T4", "E2-T6", "E2-T4"],
+    "dependencies": [
+      "E3-T5",
+      "E3-T4",
+      "E2-T6",
+      "E2-T4"
+    ],
     "priority": "p1",
     "acceptance": [
       "WHEN `infra/test/ci-workflow.test.ts` reads `.github/workflows/ci.yml` and `.nvmrc` THE SYSTEM SHALL find `node-version-file: .nvmrc` with `.nvmrc` equal to `24`, `java-version: '21'` and the commands `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:emu`, `pnpm synth`, `pnpm --filter @bata/web run mediapipe:prepare`, `pnpm test:e2e` and `pnpm test:e2e:emu`.",
