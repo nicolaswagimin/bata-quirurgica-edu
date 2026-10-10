@@ -403,7 +403,7 @@
       "services/api/scripts/ingest-kb.ts",
       "services/api/test/unit/kb.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T2",
