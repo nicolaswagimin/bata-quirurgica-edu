@@ -254,7 +254,7 @@
       "services/api/scripts/dev-server.ts",
       "services/api/test/emu/quiz.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T3",

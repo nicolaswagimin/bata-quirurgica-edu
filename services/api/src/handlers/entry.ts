@@ -43,7 +43,13 @@ export const me: ProxyHandler = async (event) => {
   ]);
   return withJsonHandler((e) => handleMe(e))(event);
 };
-export const quiz: ProxyHandler = notImplemented;
+export const quiz: ProxyHandler = async (event) => {
+  const [{ withJsonHandler }, { handleQuiz }] = await Promise.all([
+    import('../lib/http.ts'),
+    import('../routes/quiz.ts'),
+  ]);
+  return withJsonHandler((e) => handleQuiz(e))(event);
+};
 export const chat: ProxyHandler = notImplemented;
 export const transcribe: ProxyHandler = notImplemented;
 export const admin: ProxyHandler = notImplemented;

@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
-import type { Role } from '@bata/shared/schemas';
+import { bogotaDate, levelForXp, nextStreak, sameSet } from '@bata/shared/gamification';
+import type { AnswerResponse, Question, Role } from '@bata/shared/schemas';
 import type { Firestore } from 'firebase-admin/firestore';
 import { consumeQuota, type QuotaDoc, type QuotaKind } from './quota.ts';
 
@@ -120,5 +121,110 @@ export function consumeQuotaTx(
     const { allowed, next } = consumeQuota(current, kind, nowMs);
     if (allowed) tx.set(ref, next);
     return allowed;
+  });
+}
+
+export type QuestionDoc = Omit<Question, 'id'>;
+
+export type MissionProgressDoc = {
+  answeredCorrectIds: string[];
+  completed: boolean;
+  completedAt: string | null;
+};
+
+export type AnswerInput = {
+  uid: string;
+  questionId: string;
+  selectedOptionIds: string[];
+  allowDrafts: boolean;
+  now: Date;
+};
+
+export type AnswerOutcome =
+  | { status: 'question_not_found' }
+  | { status: 'profile_not_found' }
+  | { status: 'ok'; response: AnswerResponse };
+
+// Todas las lecturas antes de cualquier escritura (requisito de las transacciones de Firestore).
+export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<AnswerOutcome> {
+  const { uid, questionId } = input;
+  return db.runTransaction(async (tx) => {
+    const questionSnap = await tx.get(db.doc(`questions/${questionId}`));
+    const question = questionSnap.exists ? (questionSnap.data() as QuestionDoc) : null;
+    if (!question || (question.status === 'draft' && !input.allowDrafts)) {
+      return { status: 'question_not_found' } as const;
+    }
+    const keySnap = await tx.get(db.doc(`questionKeys/${questionId}`));
+    const userSnap = await tx.get(db.doc(`users/${uid}`));
+    if (!userSnap.exists) return { status: 'profile_not_found' } as const;
+    const user = userSnap.data() as UserDoc;
+    const missionSnap = await tx.get(db.doc(`missions/${question.missionId}`));
+    const progressRef = db.doc(`progress/${uid}/missions/${question.missionId}`);
+    const progressSnap = await tx.get(progressRef);
+
+    const correctOptionIds = (keySnap.get('correctOptionIds') as string[] | undefined) ?? [];
+    const correct =
+      correctOptionIds.length > 0 && sameSet(input.selectedOptionIds, correctOptionIds);
+    const progress: MissionProgressDoc = progressSnap.exists
+      ? (progressSnap.data() as MissionProgressDoc)
+      : { answeredCorrectIds: [], completed: false, completedAt: null };
+    const firstCorrect = correct && !progress.answeredCorrectIds.includes(questionId);
+    const xpAwarded = firstCorrect ? question.xp : 0;
+    const nowIso = input.now.toISOString();
+
+    tx.create(db.collection(`progress/${uid}/attempts`).doc(), {
+      questionId,
+      missionId: question.missionId,
+      selectedOptionIds: input.selectedOptionIds,
+      correct,
+      xpAwarded,
+      createdAt: nowIso,
+    });
+
+    let next = user;
+    if (correct) {
+      const today = bogotaDate(input.now);
+      const xp = user.xp + xpAwarded;
+      next = {
+        ...user,
+        xp,
+        level: levelForXp(xp),
+        streakDays: nextStreak(user, today),
+        lastActiveDate: today,
+        updatedAt: nowIso,
+      };
+      tx.update(db.doc(`users/${uid}`), {
+        xp: next.xp,
+        level: next.level,
+        streakDays: next.streakDays,
+        lastActiveDate: next.lastActiveDate,
+        updatedAt: nowIso,
+      });
+      tx.set(db.doc(`leaderboard/${uid}`), leaderboardEntry(next));
+    }
+    if (firstCorrect) {
+      const answeredCorrectIds = [...progress.answeredCorrectIds, questionId];
+      const missionIds = (missionSnap.get('questionIds') as string[] | undefined) ?? [];
+      const completed =
+        missionIds.length > 0 && missionIds.every((id) => answeredCorrectIds.includes(id));
+      tx.set(progressRef, {
+        answeredCorrectIds,
+        completed,
+        completedAt: completed ? (progress.completedAt ?? nowIso) : null,
+      } satisfies MissionProgressDoc);
+    }
+
+    return {
+      status: 'ok',
+      response: {
+        correct,
+        explanation: question.explanation,
+        source: question.source,
+        xpAwarded,
+        totalXp: next.xp,
+        level: next.level,
+        streakDays: next.streakDays,
+      },
+    } as const;
   });
 }
