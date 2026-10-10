@@ -469,7 +469,7 @@
       "apps/web/test/unit/assistant-client.test.ts",
       "apps/web/e2e/assistant.spec.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T4",
