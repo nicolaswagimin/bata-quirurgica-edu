@@ -502,7 +502,7 @@
       "apps/web/src/routes/admin-preguntas.tsx",
       "apps/web/src/routes/admin-grupos.tsx"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T5",

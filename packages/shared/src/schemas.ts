@@ -208,6 +208,30 @@ export const QuestionInputSchema = z
   .superRefine((q, ctx) => checkAnswerKey(q, ctx, []));
 export type QuestionInput = z.infer<typeof QuestionInputSchema>;
 
+// Elemento de GET /admin/questions: la pregunta con su clave (solo para docentes).
+export const AdminQuestionSchema = QuestionSchema.extend({
+  correctOptionIds: CorrectOptionIdsSchema,
+}).strict();
+export type AdminQuestion = z.infer<typeof AdminQuestionSchema>;
+
+export const CreatedGroupSchema = z
+  .object({ groupId: IdSchema, joinCode: JoinCodeSchema })
+  .strict();
+export type CreatedGroup = z.infer<typeof CreatedGroupSchema>;
+
+// Fila de GET /admin/groups/{groupId}/progress.
+export const MemberProgressSchema = z
+  .object({
+    uid: z.string().min(1),
+    displayName: z.string(),
+    xp: z.number().int().min(0),
+    level: z.number().int().min(1),
+    streakDays: z.number().int().min(0),
+    completedMissions: z.number().int().min(0),
+  })
+  .strict();
+export type MemberProgress = z.infer<typeof MemberProgressSchema>;
+
 export const AnswerRequestSchema = z
   .object({ questionId: IdSchema, selectedOptionIds: z.array(IdSchema).min(1).max(6) })
   .strict();

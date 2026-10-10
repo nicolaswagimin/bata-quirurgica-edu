@@ -12,9 +12,12 @@ import type {
 type ProxyHandler = (event: APIGatewayProxyEvent) => Promise<APIGatewayProxyResult>;
 type StreamHandler = (event: APIGatewayProxyEvent, stream: Writable) => Promise<void>;
 
-// Sin el global `awslambda` (pruebas, check:bundle) el handler queda sin envolver.
+// Sin el runtime de Lambda (pruebas, check:bundle) el handler queda sin envolver. El SDK de AWS
+// crea `globalThis.awslambda = {}` fuera de Lambda, por eso se comprueba la función, no el objeto.
 const streamify = (fn: StreamHandler) =>
-  globalThis.awslambda ? globalThis.awslambda.streamifyResponse(fn) : fn;
+  typeof globalThis.awslambda?.streamifyResponse === 'function'
+    ? globalThis.awslambda.streamifyResponse(fn)
+    : fn;
 
 export const notImplemented: ProxyHandler = async () => {
   const { errorResponse, httpError } = await import('../lib/http.ts');
@@ -70,4 +73,10 @@ export const transcribe: ProxyHandler = async (event) => {
   ]);
   return handleTranscribe(event, defaultTranscribeDeps());
 };
-export const admin: ProxyHandler = notImplemented;
+export const admin: ProxyHandler = async (event) => {
+  const [{ withJsonHandler }, { handleAdmin }] = await Promise.all([
+    import('../lib/http.ts'),
+    import('../routes/admin.ts'),
+  ]);
+  return withJsonHandler((e) => handleAdmin(e))(event);
+};

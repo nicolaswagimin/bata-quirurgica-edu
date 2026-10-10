@@ -1,7 +1,14 @@
 import { randomInt } from 'node:crypto';
 import { bogotaDate, levelForXp, nextStreak, sameSet } from '@bata/shared/gamification';
-import type { AnswerResponse, Question, Role } from '@bata/shared/schemas';
-import type { Firestore } from 'firebase-admin/firestore';
+import type {
+  AdminQuestion,
+  AnswerResponse,
+  MemberProgress,
+  Question,
+  QuestionInput,
+  Role,
+} from '@bata/shared/schemas';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { consumeQuota, type QuotaDoc, type QuotaKind } from './quota.ts';
 
 // Único módulo de runtime que toca colecciones de Firestore (las rutas pasan por aquí).
@@ -227,4 +234,108 @@ export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<Answe
       },
     } as const;
   });
+}
+
+// ---------- Administración ----------
+
+const ADMIN_QUESTIONS_LIMIT = 200;
+
+export async function listQuestionsWithKeys(db: Firestore): Promise<AdminQuestion[]> {
+  const snap = await db.collection('questions').limit(ADMIN_QUESTIONS_LIMIT).get();
+  const keyRefs = snap.docs.map((d) => db.doc(`questionKeys/${d.id}`));
+  const keys = keyRefs.length > 0 ? await db.getAll(...keyRefs) : [];
+  return snap.docs
+    .map((d, i) => ({
+      id: d.id,
+      ...(d.data() as QuestionDoc),
+      correctOptionIds: (keys[i]?.get('correctOptionIds') as string[] | undefined) ?? [],
+    }))
+    .sort((a, b) => a.missionId.localeCompare(b.missionId) || a.id.localeCompare(b.id));
+}
+
+export type SaveQuestionOutcome =
+  | { status: 'mission_not_found' }
+  | { status: 'question_not_found' }
+  | { status: 'ok'; question: AdminQuestion };
+
+// Crea (id = null) o reemplaza una pregunta y su clave; siempre queda en `draft` y la misión
+// mantiene su lista `questionIds` al día.
+export function saveQuestionTx(
+  db: Firestore,
+  input: { id: string | null; question: QuestionInput; uid: string },
+): Promise<SaveQuestionOutcome> {
+  return db.runTransaction(async (tx) => {
+    const { correctOptionIds, ...body } = input.question;
+    const ref = input.id ? db.doc(`questions/${input.id}`) : db.collection('questions').doc();
+    const missionSnap = await tx.get(db.doc(`missions/${body.missionId}`));
+    if (!missionSnap.exists) return { status: 'mission_not_found' } as const;
+    let createdBy = input.uid;
+    let previousMissionId: string | null = null;
+    if (input.id) {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return { status: 'question_not_found' } as const;
+      const prev = snap.data() as QuestionDoc;
+      createdBy = prev.createdBy;
+      previousMissionId = prev.missionId;
+    }
+    const doc: QuestionDoc = {
+      ...body,
+      status: 'draft',
+      createdBy,
+      validatedBy: null,
+      validatedAt: null,
+    };
+    tx.set(ref, doc);
+    tx.set(db.doc(`questionKeys/${ref.id}`), { correctOptionIds });
+    if (previousMissionId !== body.missionId) {
+      if (previousMissionId) {
+        tx.update(db.doc(`missions/${previousMissionId}`), {
+          questionIds: FieldValue.arrayRemove(ref.id),
+        });
+      }
+      tx.update(missionSnap.ref, { questionIds: FieldValue.arrayUnion(ref.id) });
+    }
+    return { status: 'ok', question: { id: ref.id, ...doc, correctOptionIds } } as const;
+  });
+}
+
+export function validateQuestionTx(
+  db: Firestore,
+  input: { id: string; uid: string; now: string },
+): Promise<QuestionDoc | null> {
+  const ref = db.doc(`questions/${input.id}`);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const update = { status: 'validated', validatedBy: input.uid, validatedAt: input.now } as const;
+    tx.update(ref, update);
+    return { ...(snap.data() as QuestionDoc), ...update };
+  });
+}
+
+export async function groupExists(db: Firestore, groupId: string): Promise<boolean> {
+  return (await db.doc(`groups/${groupId}`).get()).exists;
+}
+
+export async function groupProgress(db: Firestore, groupId: string): Promise<MemberProgress[]> {
+  const members = await db.collection('users').where('groupId', '==', groupId).get();
+  const rows = await Promise.all(
+    members.docs.map(async (d) => {
+      const user = d.data() as UserDoc;
+      const completed = await db
+        .collection(`progress/${d.id}/missions`)
+        .where('completed', '==', true)
+        .count()
+        .get();
+      return {
+        uid: d.id,
+        displayName: user.displayName,
+        xp: user.xp,
+        level: user.level,
+        streakDays: user.streakDays,
+        completedMissions: completed.data().count,
+      };
+    }),
+  );
+  return rows.sort((a, b) => b.xp - a.xp || a.displayName.localeCompare(b.displayName));
 }
