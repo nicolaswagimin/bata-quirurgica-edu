@@ -4,7 +4,10 @@ import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './lib/firebase.tsx';
+import { initObservability } from './lib/observability.ts';
 import { router } from './router.tsx';
+
+initObservability(import.meta.env);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },

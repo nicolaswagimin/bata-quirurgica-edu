@@ -535,7 +535,7 @@
       "services/api/src/lib/metrics.ts",
       "services/api/test/unit/metrics.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T6",

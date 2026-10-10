@@ -1,4 +1,5 @@
 import { createSocket } from 'node:dgram';
+import { createRequire } from 'node:module';
 
 export const METRIC_NAMES = [
   'groq.ttft_ms',
@@ -67,6 +68,30 @@ export function createMemoryMetrics(): Metrics & { calls: RecordedMetric[]; flus
   return metrics;
 }
 
-export function createMetrics(): Metrics {
-  return createDogStatsdMetrics();
+export type SendDistribution = (name: string, value: number, ...tags: string[]) => void;
+
+// En Lambda el bundle es CJS (`require` existe); en ESM (pruebas, dev local) se crea uno.
+function loadSendDistribution(): SendDistribution {
+  const load = typeof require === 'function' ? require : createRequire(import.meta.url);
+  const mod = load('datadog-lambda-js') as { sendDistributionMetric: SendDistribution };
+  return mod.sendDistributionMetric;
+}
+
+// datadog-lambda-js (capa de Datadog) agrega y envía al terminar la invocación.
+export function createDatadogLambdaMetrics(send?: SendDistribution): Metrics {
+  let sender = send;
+  return {
+    distribution(name, value, tags = {}) {
+      sender ??= loadSendDistribution();
+      const all = { ...tags, stage: process.env.STAGE ?? 'dev' };
+      sender(name, value, ...Object.entries(all).map(([k, v]) => `${k}:${v}`));
+    },
+    async flush() {},
+  };
+}
+
+export function createMetrics({ send }: { send?: SendDistribution } = {}): Metrics {
+  return process.env.DD_LAMBDA_HANDLER
+    ? createDatadogLambdaMetrics(send)
+    : createDogStatsdMetrics();
 }
