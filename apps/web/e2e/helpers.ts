@@ -48,6 +48,14 @@ export async function loginViaUi(
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 }
 
+// Waits until the home page has settled its GET /me: the consent form when the local API is up
+// (404 → "Completa tu perfil"), or the error alert when a spec runs with only the Auth emulator.
+export async function waitForHomeSettled(page: Page): Promise<void> {
+  const consent = page.getByRole('heading', { level: 1, name: 'Completa tu perfil' });
+  await consent.or(page.getByRole('main').getByRole('alert')).first().waitFor();
+  await page.waitForLoadState('networkidle');
+}
+
 const API_BASE = 'http://127.0.0.1:3001/v1';
 const FIRESTORE_DOCS = `http://127.0.0.1:8080/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 const OWNER = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };

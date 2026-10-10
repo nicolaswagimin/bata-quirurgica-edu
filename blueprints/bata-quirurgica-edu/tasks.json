@@ -374,7 +374,7 @@
       "apps/web/test/unit/gown-overlay.test.ts",
       "apps/web/e2e/ar-full.spec.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T1",

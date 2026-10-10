@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createEmulatorUser, loginViaUi, uniqueEmail } from './helpers.ts';
+import { createEmulatorUser, loginViaUi, uniqueEmail, waitForHomeSettled } from './helpers.ts';
 
 test('@emu el AR espejo detecta con cámara falsa y solo hace GET al propio origen', async ({
   page,
@@ -7,10 +7,9 @@ test('@emu el AR espejo detecta con cámara falsa y solo hace GET al propio orig
   const email = uniqueEmail('ar');
   await createEmulatorUser(email);
   await loginViaUi(page, email);
-  // Let the home page finish its own API call (GET /me → 404 shows the consent form) before
-  // watching the AR session; `networkidle` alone can fire before that request starts.
-  await expect(page.getByRole('heading', { level: 1, name: 'Completa tu perfil' })).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  // Let the home page finish its own API call (GET /me) before watching the AR session;
+  // `networkidle` alone can fire before that request starts.
+  await waitForHomeSettled(page);
 
   const origin = new URL(page.url()).origin;
   const offending: string[] = [];

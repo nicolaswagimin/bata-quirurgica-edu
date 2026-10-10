@@ -1,8 +1,13 @@
+import { BataPasosSchema } from '@bata/shared/schemas';
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { ANCHOR_LANDMARKS, FpsMonitor, type Landmark, MIN_VISIBILITY } from '../ar/overlay-math.ts';
+import pasosJson from '../../../../content/protocolos/bata-pasos.json';
+import { drawGown, gownGeometry } from '../ar/gown-overlay.ts';
+import { computeGownAnchor, FpsMonitor, type Landmark } from '../ar/overlay-math.ts';
 import { createPoseLandmarker, type PoseDelegate } from '../ar/pose.ts';
+
+const { hotspots } = BataPasosSchema.parse(pasosJson);
 
 type Status = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
 
@@ -14,8 +19,15 @@ const STATUS_TEXT: Record<Status, string> = {
   'model-error': 'Modelo no disponible',
 };
 
-const POINT_RADIUS = 8;
 const FPS_REFRESH_MS = 500;
+
+// Test hook: `vite build --mode e2e` + `?simularFpsBajo=1` forces the slow-device notice.
+function forcedLowFps(): boolean {
+  return (
+    import.meta.env.MODE === 'e2e' &&
+    new URLSearchParams(window.location.search).get('simularFpsBajo') === '1'
+  );
+}
 
 export default function BataArPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -23,7 +35,10 @@ export default function BataArPage() {
   const [status, setStatus] = useState<Status>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
-  const [lowPerformance, setLowPerformance] = useState(false);
+  const [lowPerformance, setLowPerformance] = useState(forcedLowFps);
+  const [hasAnchor, setHasAnchor] = useState(false);
+  const [hotspotId, setHotspotId] = useState<string | null>(null);
+  const selectedHotspot = hotspots.find((h) => h.id === hotspotId);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,19 +83,29 @@ export default function BataArPage() {
 
     function loop(video: HTMLVideoElement, poseLandmarker: PoseLandmarker) {
       const monitor = new FpsMonitor();
-      const color = getComputedStyle(document.documentElement).getPropertyValue('--color-xp');
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--color-primary');
+      const forceLow = forcedLowFps();
       let lastVideoTime = -1;
+      let nextDetectAt = 0;
       let lastFpsUpdate = 0;
       let found = false;
+      let anchored = false;
 
       const tick = () => {
         if (cancelled) return;
         const now = performance.now();
-        if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+        if (video.readyState >= 2 && video.currentTime !== lastVideoTime && now >= nextDetectAt) {
           lastVideoTime = video.currentTime;
           const result = poseLandmarker.detectForVideo(video, now);
+          // Detection blocks the main thread; on slow devices wait as long as it took so the page
+          // stays responsive (at most ~50% of the time spent detecting).
+          nextDetectAt = performance.now() + (performance.now() - now);
           const landmarks = result.landmarks[0] ?? [];
-          draw(video, landmarks, color);
+          const hasGown = draw(video, landmarks, color);
+          if (hasGown !== anchored) {
+            anchored = hasGown;
+            setHasAnchor(hasGown);
+          }
           const stats = monitor.record(now);
           if (landmarks.length > 0 !== found) {
             found = landmarks.length > 0;
@@ -89,7 +114,7 @@ export default function BataArPage() {
           if (now - lastFpsUpdate >= FPS_REFRESH_MS) {
             lastFpsUpdate = now;
             setFps(Math.round(stats.fps));
-            setLowPerformance(stats.lowPerformance);
+            setLowPerformance(forceLow || stats.lowPerformance);
           }
         }
         frame = requestAnimationFrame(tick);
@@ -97,21 +122,17 @@ export default function BataArPage() {
       frame = requestAnimationFrame(tick);
     }
 
-    function draw(video: HTMLVideoElement, landmarks: readonly Landmark[], color: string) {
+    // Returns whether the gown could be anchored to this frame.
+    function draw(video: HTMLVideoElement, landmarks: readonly Landmark[], color: string): boolean {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext('2d');
-      if (!canvas || !ctx) return;
+      if (!canvas || !ctx) return false;
       if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
       if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = color;
-      for (const index of ANCHOR_LANDMARKS) {
-        const point = landmarks[index];
-        if (!point || (point.visibility ?? 0) < MIN_VISIBILITY) continue;
-        ctx.beginPath();
-        ctx.arc(point.x * canvas.width, point.y * canvas.height, POINT_RADIUS, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      const anchor = computeGownAnchor(landmarks, canvas);
+      drawGown(ctx, gownGeometry(anchor), color);
+      return anchor !== null;
     }
 
     void start();
@@ -166,6 +187,34 @@ export default function BataArPage() {
         </div>
       )}
 
+      {!cameraError && !hasAnchor && (
+        <p className="text-ink">Colócate de frente a la cámara, con hombros y caderas visibles</p>
+      )}
+
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-ink">Zonas de la bata</h2>
+        <div className="flex flex-wrap gap-2">
+          {hotspots.map((h) => (
+            <button
+              key={h.id}
+              type="button"
+              aria-pressed={h.id === hotspotId}
+              onClick={() => setHotspotId(h.id === hotspotId ? null : h.id)}
+              className="min-h-11 rounded-pill border border-border bg-bg px-4 font-medium text-ink hover:bg-primary-soft aria-pressed:bg-primary-soft"
+            >
+              {h.label}
+            </button>
+          ))}
+        </div>
+        <p aria-live="polite" className="text-sm text-ink">
+          {selectedHotspot?.description}
+        </p>
+      </div>
+
+      <Link to="/bata-espacio" className="inline-block font-medium text-primary underline">
+        Ver en tu espacio
+      </Link>
+
       {status === 'model-error' && (
         <p role="alert" className="text-danger">
           No pudimos cargar el modelo de detección. Recarga la página para intentarlo de nuevo.
@@ -178,12 +227,11 @@ export default function BataArPage() {
         </p>
       )}
       {lowPerformance && (
-        <p className="text-sm text-ink">
-          Tu dispositivo va lento para el espejo AR. Prueba el{' '}
+        <p role="status" className="text-sm text-ink">
+          Tu dispositivo va lento con la cámara.{' '}
           <Link to="/bata-3d" className="font-medium text-primary underline">
-            modo 3D
+            Prueba el modo 3D
           </Link>
-          .
         </p>
       )}
     </section>
