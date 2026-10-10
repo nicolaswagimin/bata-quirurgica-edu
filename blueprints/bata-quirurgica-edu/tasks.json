@@ -222,7 +222,7 @@
       "services/api/scripts/set-admin.ts",
       "services/api/test/emu/me.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T2",
