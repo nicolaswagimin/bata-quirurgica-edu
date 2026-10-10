@@ -1,3 +1,4 @@
+import type { Writable } from 'node:stream';
 import type {
   APIGatewayAuthorizerResult,
   APIGatewayProxyEvent,
@@ -9,6 +10,11 @@ import type {
 // (la prueba de infra los lee con /^export const (\w+)/gm) y carga su módulo con import().
 
 type ProxyHandler = (event: APIGatewayProxyEvent) => Promise<APIGatewayProxyResult>;
+type StreamHandler = (event: APIGatewayProxyEvent, stream: Writable) => Promise<void>;
+
+// Sin el global `awslambda` (pruebas, check:bundle) el handler queda sin envolver.
+const streamify = (fn: StreamHandler) =>
+  globalThis.awslambda ? globalThis.awslambda.streamifyResponse(fn) : fn;
 
 export const notImplemented: ProxyHandler = async () => {
   const { errorResponse, httpError } = await import('../lib/http.ts');
@@ -50,6 +56,18 @@ export const quiz: ProxyHandler = async (event) => {
   ]);
   return withJsonHandler((e) => handleQuiz(e))(event);
 };
-export const chat: ProxyHandler = notImplemented;
-export const transcribe: ProxyHandler = notImplemented;
+export const chat = streamify(async (event, stream) => {
+  const [{ handleChatStream }, { defaultChatDeps }] = await Promise.all([
+    import('../routes/assistant.ts'),
+    import('../lib/assistant-deps.ts'),
+  ]);
+  await handleChatStream(event, stream, defaultChatDeps());
+});
+export const transcribe: ProxyHandler = async (event) => {
+  const [{ handleTranscribe }, { defaultTranscribeDeps }] = await Promise.all([
+    import('../routes/assistant.ts'),
+    import('../lib/assistant-deps.ts'),
+  ]);
+  return handleTranscribe(event, defaultTranscribeDeps());
+};
 export const admin: ProxyHandler = notImplemented;
