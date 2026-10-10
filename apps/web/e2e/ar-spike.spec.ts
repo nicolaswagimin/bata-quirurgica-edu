@@ -7,6 +7,8 @@ test('@emu el AR espejo detecta con cámara falsa y solo hace GET al propio orig
   const email = uniqueEmail('ar');
   await createEmulatorUser(email);
   await loginViaUi(page, email);
+  // Let the home page finish its own API calls (GET /me) before watching the AR session.
+  await page.waitForLoadState('networkidle');
 
   const origin = new URL(page.url()).origin;
   const offending: string[] = [];

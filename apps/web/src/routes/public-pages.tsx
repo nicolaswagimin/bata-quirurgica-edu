@@ -22,6 +22,7 @@ import { type FieldValues, type Path, type UseFormSetError, useForm } from 'reac
 import type { z } from 'zod';
 import privacidadJson from '../../../../content/legal/privacidad.json';
 import { FormField } from '../components/form-field.tsx';
+import { clearAuthNotice, readAuthNotice } from '../lib/api.ts';
 import { auth } from '../lib/firebase.tsx';
 
 const privacyPolicy = PrivacyPolicySchema.parse(privacidadJson);
@@ -78,14 +79,17 @@ function FormAlert({ message }: { message: string | null }) {
 export function LoginPage() {
   const router = useRouter();
   const { redirect } = useSearch({ from: '/login' });
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(readAuthNotice);
   const [notice, setNotice] = useState<string | null>(null);
   const { register, handleSubmit, setError, getValues, formState } = useForm<LoginForm>({
     defaultValues: { email: '', password: '' },
   });
   const { errors, isSubmitting } = formState;
 
-  const finish = () => router.history.push(safeRedirect(redirect));
+  const finish = () => {
+    clearAuthNotice();
+    router.history.push(safeRedirect(redirect));
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
