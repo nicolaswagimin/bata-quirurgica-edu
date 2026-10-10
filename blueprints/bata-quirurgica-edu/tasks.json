@@ -312,7 +312,7 @@
       "apps/web/e2e/ranking.spec.ts",
       "apps/web/e2e/perfil.spec.ts"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T5",

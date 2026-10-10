@@ -7,7 +7,9 @@ test('@emu el AR espejo detecta con cámara falsa y solo hace GET al propio orig
   const email = uniqueEmail('ar');
   await createEmulatorUser(email);
   await loginViaUi(page, email);
-  // Let the home page finish its own API calls (GET /me) before watching the AR session.
+  // Let the home page finish its own API call (GET /me → 404 shows the consent form) before
+  // watching the AR session; `networkidle` alone can fire before that request starts.
+  await expect(page.getByRole('heading', { level: 1, name: 'Completa tu perfil' })).toBeVisible();
   await page.waitForLoadState('networkidle');
 
   const origin = new URL(page.url()).origin;
