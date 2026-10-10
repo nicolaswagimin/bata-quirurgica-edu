@@ -575,6 +575,6 @@
       "scripts/deploy.sh",
       "infra/test/ci-workflow.test.ts"
     ],
-    "status": "pending"
+    "status": "done"
   }
 ]
