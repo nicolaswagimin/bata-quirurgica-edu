@@ -8,7 +8,9 @@ paths:
 
 - Pilas: `bata-web-<stage>`, `bata-api-<stage>`, `bata-budget-<stage>`, todas con
   `env: { region: 'us-east-1' }`. Contexto: `stage`, `webOrigin`, `alertEmail`, `ddSite`,
-  `firebaseProjectId`, `assistantReservedConcurrency` (0 = sin concurrencia reservada).
+  `firebaseProjectId`, `assistantReservedConcurrency` (0 = sin concurrencia reservada),
+  `datadog` (`true`/`false`; `false` = sin capas, variables `DD_*` ni secreto de Datadog;
+  `deploy.sh` lo toma de `DATADOG_ENABLED`, por defecto `true`).
 - Las 6 funciones usan el mismo `entry` (`services/api/src/handlers/entry.ts`) con distinto
   `handler`; runtime `NODEJS_24_X`, `ARM_64`, formato CJS, sin VPC.
 - Nada de `cdk deploy`, `cdk bootstrap` ni `aws`/`gcloud` desde el agente: son pasos humanos del

@@ -11,6 +11,7 @@ export interface AppContext {
   ddSite: string;
   firebaseProjectId: string;
   assistantReservedConcurrency: number;
+  datadog: boolean;
 }
 
 function requireContext(app: App, key: keyof AppContext): string {
@@ -19,6 +20,14 @@ function requireContext(app: App, key: keyof AppContext): string {
     throw new Error(`Falta el contexto de CDK "${key}"`);
   }
   return String(value);
+}
+
+function requireBooleanContext(app: App, key: keyof AppContext): boolean {
+  const value = requireContext(app, key);
+  if (value !== 'true' && value !== 'false') {
+    throw new Error(`El contexto de CDK "${key}" debe ser true o false (recibido: ${value})`);
+  }
+  return value === 'true';
 }
 
 /** Builds the three stacks; `context` overrides/extends what cdk.json provides. */
@@ -35,6 +44,7 @@ export function buildApp(context: Record<string, unknown> = {}): App {
     ddSite: requireContext(app, 'ddSite'),
     firebaseProjectId: requireContext(app, 'firebaseProjectId'),
     assistantReservedConcurrency: Number(requireContext(app, 'assistantReservedConcurrency')),
+    datadog: requireBooleanContext(app, 'datadog'),
   });
   new BudgetStack(app, `bata-budget-${stage}`, {
     env,

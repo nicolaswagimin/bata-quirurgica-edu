@@ -57,6 +57,27 @@ describe('metrics', () => {
     expect(await received).toBe('groq.ttft_ms:123|d|#model:openai/gpt-oss-120b,stage:test');
   });
 
+  it('never throws or rejects when no Datadog extension is listening (datadog=false)', async () => {
+    // Reserve a free port and release it so nothing is listening there.
+    const probe = await listen(0);
+    if (!probe) throw new Error('No se pudo abrir un socket UDP local');
+    const port = probe.address().port;
+    probe.close();
+    const metrics = createDogStatsdMetrics({ port });
+    for (let i = 0; i < 3; i += 1) metrics.distribution('groq.ttft_ms', i);
+    await expect(metrics.flush()).resolves.toBeUndefined();
+  });
+
+  it('swallows send errors, sync or async, without crashing the invocation', async () => {
+    const badPort = createDogStatsdMetrics({ port: 0 });
+    expect(() => badPort.distribution('groq.ttft_ms', 1)).not.toThrow();
+    await expect(badPort.flush()).resolves.toBeUndefined();
+
+    const badHost = createDogStatsdMetrics({ host: 'dogstatsd.invalid' });
+    expect(() => badHost.distribution('groq.ttft_ms', 1)).not.toThrow();
+    await expect(badHost.flush()).resolves.toBeUndefined();
+  });
+
   it('sends key:value tags through datadog-lambda-js', () => {
     const send = vi.fn();
     const metrics = createDatadogLambdaMetrics(send);

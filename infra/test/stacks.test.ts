@@ -140,6 +140,31 @@ describe('bata-api-dev', () => {
     }
   });
 
+  it('wires Datadog layers, env and the API key secret when datadog is on (default)', () => {
+    const chat = findFunction(api, 'chat') as LambdaProps & { Layers?: unknown[] };
+    expect(chat.Environment?.Variables?.DD_API_KEY_SECRET_ARN).toBeDefined();
+    expect(chat.Layers).toHaveLength(1);
+    expect(findFunction(api, 'quiz').Environment?.Variables?.DD_LAMBDA_HANDLER).toBe('index.quiz');
+    expect(JSON.stringify(api.toJSON())).toContain('datadog-api-key');
+  });
+
+  it('deploys without any Datadog layer, env var or secret when datadog=false', () => {
+    const { api: plain } = synthStacks({ datadog: 'false' });
+    for (const fn of Object.values(functionsBy(plain)) as (LambdaProps & { Layers?: unknown })[]) {
+      expect(fn.Layers).toBeUndefined();
+      const keys = Object.keys(fn.Environment?.Variables ?? {});
+      expect(keys.filter((k) => k.startsWith('DD_'))).toEqual([]);
+    }
+    for (const name of ['authorizer', 'me', 'quiz', 'chat', 'transcribe', 'admin']) {
+      expect(findFunction(plain, name).Handler).toBe(`index.${name}`);
+    }
+    expect(JSON.stringify(plain.toJSON())).not.toMatch(/datadog/i);
+  });
+
+  it('rejects a datadog context that is not exactly true or false', () => {
+    expect(() => synthStacks({ datadog: 'yes' })).toThrow(/datadog/);
+  });
+
   it('points every function at an export of entry.ts, on node24/arm64 without VPC', () => {
     const entrySource = readFileSync(
       resolve(infraRoot, '..', 'services', 'api', 'src', 'handlers', 'entry.ts'),

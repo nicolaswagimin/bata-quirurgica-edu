@@ -16,6 +16,9 @@ Uso: bash scripts/deploy.sh --dry-run | --apply
   --dry-run  Imprime el plan de despliegue y sintetiza las pilas de producción.
   --apply    Ejecuta el plan (paso humano). Requiere ALERT_EMAIL, FIREBASE_PROJECT_ID
              y apps/web/.env.production.
+
+  Opcionales: ASSISTANT_RESERVED_CONCURRENCY=0 (sin concurrencia reservada),
+              DATADOG_ENABLED=false (sin capas, variables ni secreto de Datadog).
 USAGE
 }
 
@@ -24,7 +27,7 @@ print_plan() {
 Plan de despliegue (prod):
 1. pnpm --filter @bata/infra exec cdk deploy bata-web-prod -c stage=prod -c webOrigin=https://pendiente.invalid -c alertEmail="$ALERT_EMAIL" -c firebaseProjectId="$FIREBASE_PROJECT_ID" --require-approval never
 2. aws cloudformation describe-stacks --stack-name bata-web-prod --query "Stacks[0].Outputs"  → BucketName, DistributionId, DistributionDomainName
-3. pnpm --filter @bata/infra exec cdk deploy bata-api-prod bata-budget-prod -c stage=prod -c webOrigin="https://$DistributionDomainName" -c alertEmail="$ALERT_EMAIL" -c firebaseProjectId="$FIREBASE_PROJECT_ID" -c assistantReservedConcurrency="${ASSISTANT_RESERVED_CONCURRENCY:-5}" --require-approval never
+3. pnpm --filter @bata/infra exec cdk deploy bata-api-prod bata-budget-prod -c stage=prod -c webOrigin="https://$DistributionDomainName" -c alertEmail="$ALERT_EMAIL" -c firebaseProjectId="$FIREBASE_PROJECT_ID" -c assistantReservedConcurrency="${ASSISTANT_RESERVED_CONCURRENCY:-5}" -c datadog="${DATADOG_ENABLED:-true}" --require-approval never
 4. aws cloudformation describe-stacks --stack-name bata-api-prod --query "Stacks[0].Outputs"  → ApiUrl
 5. pnpm --filter @bata/web run mediapipe:prepare && VITE_API_BASE_URL="${ApiUrl%/}" pnpm --filter @bata/web build   (lee apps/web/.env.production)
 6. aws s3 sync apps/web/dist "s3://$BucketName" --delete
@@ -77,7 +80,7 @@ apply() {
   DistributionDomainName="$(stack_output bata-web-prod DistributionDomainName)"
 
   echo "== 3. Pilas api y budget"
-  pnpm --filter @bata/infra exec cdk deploy bata-api-prod bata-budget-prod -c stage=prod -c webOrigin="https://$DistributionDomainName" -c alertEmail="$ALERT_EMAIL" -c firebaseProjectId="$FIREBASE_PROJECT_ID" -c assistantReservedConcurrency="${ASSISTANT_RESERVED_CONCURRENCY:-5}" --require-approval never
+  pnpm --filter @bata/infra exec cdk deploy bata-api-prod bata-budget-prod -c stage=prod -c webOrigin="https://$DistributionDomainName" -c alertEmail="$ALERT_EMAIL" -c firebaseProjectId="$FIREBASE_PROJECT_ID" -c assistantReservedConcurrency="${ASSISTANT_RESERVED_CONCURRENCY:-5}" -c datadog="${DATADOG_ENABLED:-true}" --require-approval never
 
   echo "== 4. Salidas de la pila api"
   local ApiUrl

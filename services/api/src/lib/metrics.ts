@@ -25,7 +25,8 @@ function formatTags(tags: Record<string, string>): string {
     .join(',');
 }
 
-// DogStatsD por UDP hacia la extensión de Datadog; nunca bloquea la respuesta si falla.
+// DogStatsD por UDP hacia la extensión de Datadog; nunca bloquea ni tumba la respuesta si falla
+// (p. ej. desplegado con datadog=false: no hay extensión escuchando en 8125).
 export function createDogStatsdMetrics({
   host = '127.0.0.1',
   port = 8125,
@@ -42,7 +43,11 @@ export function createDogStatsdMetrics({
       const all = { ...tags, stage: process.env.STAGE ?? 'dev' };
       const datagram = `${name}:${value}|d|#${formatTags(all)}`;
       const sent = new Promise<void>((resolve) => {
-        socket.send(datagram, port, host, () => resolve());
+        try {
+          socket.send(datagram, port, host, () => resolve());
+        } catch {
+          resolve();
+        }
       });
       pending.add(sent);
       void sent.then(() => pending.delete(sent));

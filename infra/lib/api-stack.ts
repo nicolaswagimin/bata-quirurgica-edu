@@ -25,6 +25,8 @@ export interface ApiStackProps extends StackProps {
   ddSite: string;
   firebaseProjectId: string;
   assistantReservedConcurrency: number;
+  /** false = no Datadog layers, env vars or secret (deploy before the Datadog account exists). */
+  datadog: boolean;
 }
 
 type HandlerName = 'authorizer' | 'me' | 'quiz' | 'chat' | 'transcribe' | 'admin';
@@ -61,11 +63,9 @@ export class ApiStack extends Stack {
       `/bata/${stage}/firebase-service-account`,
     );
     const groqKey = Secret.fromSecretNameV2(this, 'GroqSecret', `/bata/${stage}/groq-api-key`);
-    const datadogKey = Secret.fromSecretNameV2(
-      this,
-      'DatadogSecret',
-      `/bata/${stage}/datadog-api-key`,
-    );
+    const datadogKey = props.datadog
+      ? Secret.fromSecretNameV2(this, 'DatadogSecret', `/bata/${stage}/datadog-api-key`)
+      : undefined;
 
     const baseEnv = {
       STAGE: stage,
@@ -128,12 +128,14 @@ export class ApiStack extends Stack {
       env: {
         ...groqEnv,
         KB_MAX_DISTANCE: '0.35',
-        DD_SITE: props.ddSite,
-        DD_API_KEY_SECRET_ARN: datadogKey.secretArn,
-        DD_SERVICE: 'bata-api',
-        DD_ENV: stage,
+        ...(datadogKey && {
+          DD_SITE: props.ddSite,
+          DD_API_KEY_SECRET_ARN: datadogKey.secretArn,
+          DD_SERVICE: 'bata-api',
+          DD_ENV: stage,
+        }),
       },
-      secrets: [groqKey, datadogKey],
+      secrets: datadogKey ? [groqKey, datadogKey] : [groqKey],
       timeout: 60,
       memorySize: 1024,
       reservedConcurrentExecutions: reserved,
@@ -141,18 +143,22 @@ export class ApiStack extends Stack {
     chatFn.addToRolePolicy(
       new PolicyStatement({ actions: ['bedrock:InvokeModel'], resources: [TITAN_EMBED_ARN] }),
     );
-    // The streaming chat handler is not wrapped by the Datadog construct: only the extension layer.
-    chatFn.addLayers(LayerVersion.fromLayerVersionArn(this, 'DdExtension', DD_EXTENSION_LAYER_ARN));
 
-    new DatadogLambda(this, 'Datadog', {
-      nodeLayerVersion: 143,
-      extensionLayerVersion: 99,
-      site: props.ddSite,
-      apiKeySecretArn: datadogKey.secretArn,
-      service: 'bata-api',
-      env: stage,
-      captureLambdaPayload: false,
-    }).addLambdaFunctions([authorizerFn, meFn, quizFn, adminFn, transcribeFn]);
+    if (datadogKey) {
+      // The streaming chat handler is not wrapped by the Datadog construct: only the extension layer.
+      chatFn.addLayers(
+        LayerVersion.fromLayerVersionArn(this, 'DdExtension', DD_EXTENSION_LAYER_ARN),
+      );
+      new DatadogLambda(this, 'Datadog', {
+        nodeLayerVersion: 143,
+        extensionLayerVersion: 99,
+        site: props.ddSite,
+        apiKeySecretArn: datadogKey.secretArn,
+        service: 'bata-api',
+        env: stage,
+        captureLambdaPayload: false,
+      }).addLambdaFunctions([authorizerFn, meFn, quizFn, adminFn, transcribeFn]);
+    }
 
     const api = new RestApi(this, 'Api', {
       restApiName: `bata-api-${stage}`,
