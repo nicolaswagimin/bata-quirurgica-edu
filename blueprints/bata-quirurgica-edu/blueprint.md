@@ -1765,7 +1765,7 @@ Puertas manuales (lista de lanzamiento; dueño entre paréntesis):
 - [ ] (estudiante) Primer admin: `pnpm --filter @bata/api run set-admin -- <correo>` con `GOOGLE_APPLICATION_CREDENTIALS` del proyecto real y sin variables de emulador.
 - [ ] (estudiante) Descargar los PDFs de `content/kb/sources.json` a `content/kb/pdfs/` (verificando licencia) y correr `pnpm --filter @bata/api run ingest-kb`.
 - [ ] (director) Validar las 30 preguntas semilla y la secuencia de `bata-pasos.json` en `/admin/preguntas`; evaluación del asistente (§17).
-- [ ] (estudiante) Activo 3D: modelo CC-BY de Sketchfab → rig en Mixamo → Blender → `apps/web/public/models/bata.glb`; agregar su entrada (título, autor, URL, licencia, modificaciones) en `content/credits.json`.
+- [ ] (estudiante) Activo 3D: `apps/web/public/models/bata.glb` es un modelo propio generado por código (`pnpm --filter @bata/web run model:export`; ADR 0007, sección "Activo 3D"), con su entrada `bata-glb` en `content/credits.json`. Verificar a mano que `/bata-espacio` lo muestra y lo coloca en el espacio en iPhone Safari (Quick Look) y Android Chrome (Scene Viewer).
 - [ ] (estudiante) Recorrido con teclado, lector de pantalla y zoom 200 % (§15); error de prueba visible en Datadog; una reversión ensayada.
 - [ ] Ningún Non-Goal de §1 fue construido.
 

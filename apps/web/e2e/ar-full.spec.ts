@@ -59,6 +59,8 @@ test('@emu con FPS bajo se sugiere el modo 3D', async ({ page }) => {
 });
 
 test('@emu ver en tu espacio define model-viewer y avisa si falta el modelo', async ({ page }) => {
+  // public/models/bata.glb is committed, so simulate a deploy without it.
+  await page.route('**/models/bata.glb', (route) => route.fulfill({ status: 404 }));
   await login(page, 'ar-space');
   await page.getByRole('navigation').getByRole('link', { name: 'AR espejo' }).click();
   await page.getByRole('link', { name: 'Ver en tu espacio' }).click();

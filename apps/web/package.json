@@ -12,7 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test --grep-invert @emu",
     "test:e2e:emu": "pnpm --filter @bata/api run seed && E2E_WITH_API=1 playwright test --grep @emu",
-    "mediapipe:prepare": "node --import tsx scripts/prepare-mediapipe.ts"
+    "mediapipe:prepare": "node --import tsx scripts/prepare-mediapipe.ts",
+    "model:export": "node --import tsx scripts/export-bata-glb.ts"
   },
   "dependencies": {
     "@bata/shared": "workspace:*",

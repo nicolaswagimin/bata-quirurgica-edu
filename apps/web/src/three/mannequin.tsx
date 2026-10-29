@@ -2,8 +2,7 @@ import { Html, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { DoubleSide, type Group, type MeshStandardMaterial } from 'three';
-
-type Vec3 = [number, number, number];
+import { MANNEQUIN_PARTS, type Vec3 } from './mannequin-parts.ts';
 
 // Where each hotspot of bata-pasos.json sits on the mannequin; unknown ids are not drawn.
 const HOTSPOT_POSITIONS: Record<string, Vec3> = {
@@ -60,26 +59,23 @@ function Scene({ progress, animate, hotspotIds, activeHotspotId }: SceneProps) {
       <directionalLight position={[2, 3, 2]} intensity={1.2} />
 
       <group>
-        <mesh position={[0, 1.66, 0]}>
-          <sphereGeometry args={[0.12, 32, 16]} />
-          <meshStandardMaterial color={colors.body} />
-        </mesh>
-        <mesh position={[0, 1.15, 0]}>
-          <capsuleGeometry args={[0.17, 0.5, 8, 24]} />
-          <meshStandardMaterial color={colors.body} />
-        </mesh>
-        {[-1, 1].map((side) => (
-          <group key={side}>
-            <mesh position={[side * 0.3, 1.12, 0]} rotation={[0, 0, side * 0.12]}>
-              <capsuleGeometry args={[0.05, 0.55, 6, 16]} />
+        {MANNEQUIN_PARTS.map((part) =>
+          part.kind === 'sphere' ? (
+            <mesh key={part.position.join()} position={part.position}>
+              <sphereGeometry args={[part.radius, 32, 16]} />
               <meshStandardMaterial color={colors.body} />
             </mesh>
-            <mesh position={[side * 0.1, 0.45, 0]}>
-              <capsuleGeometry args={[0.07, 0.75, 6, 16]} />
+          ) : (
+            <mesh
+              key={part.position.join()}
+              position={part.position}
+              rotation={[0, 0, part.rotationZ]}
+            >
+              <capsuleGeometry args={[part.radius, part.length, 8, 24]} />
               <meshStandardMaterial color={colors.body} />
             </mesh>
-          </group>
-        ))}
+          ),
+        )}
       </group>
 
       <group ref={gown} position={[0, GOWN_TOP, 0]}>
