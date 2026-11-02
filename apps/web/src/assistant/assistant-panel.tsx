@@ -9,17 +9,17 @@ import {
 } from '@bata/shared/schemas';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Pictogram } from '../components/pictogram.tsx';
+import {
+  buttonPrimary as primaryButtonClass,
+  buttonSecondary as secondaryButtonClass,
+} from '../components/ui-classes.ts';
 import { ApiError, apiFetch } from '../lib/api.ts';
 import { auth, env } from '../lib/firebase.tsx';
 import { StreamHttpError, streamChat } from './stream.ts';
 import { blobToBase64, type RecordingHandle, recordUpTo30s, speak } from './voice.ts';
 
 const MAX_SENT_MESSAGES = 10;
-
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-const secondaryButtonClass =
-  'min-h-11 rounded-pill border border-border bg-bg px-4 font-medium text-ink hover:bg-primary-soft disabled:opacity-60';
 
 type FormValues = { question: string };
 
@@ -53,16 +53,6 @@ async function openChat(
     if (err instanceof StreamHttpError && err.status === 401) await run(true);
     else throw err;
   }
-}
-
-function AvatarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none">
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" />
-      <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" strokeWidth="2" />
-      <path d="M8 6.5h8" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
 }
 
 export default function AssistantPanel() {
@@ -188,20 +178,22 @@ export default function AssistantPanel() {
     <>
       <button
         type="button"
-        aria-label="Abrir asistente"
         onClick={() => dialogRef.current?.showModal()}
-        className="fixed top-3 left-3 z-50 flex size-11 items-center justify-center rounded-pill border-2 border-bg bg-primary text-bg hover:bg-primary-strong"
+        className="pressable fixed top-3 left-3 z-50 inline-flex min-h-11 items-center gap-2 rounded-pill bg-bg py-1.5 pr-4 pl-1.5 text-sm font-extrabold text-primary focus-dual shadow-float hover:bg-primary-soft"
       >
-        <AvatarIcon />
+        <span className="grid size-8 place-items-center rounded-pill bg-primary text-bg">
+          <Pictogram name="ask" className="size-[18px]" />
+        </span>
+        Pregúntale<span className="sr-only">, abrir asistente</span>
       </button>
       <dialog
         ref={dialogRef}
         aria-labelledby="asistente-titulo"
         onClose={onClose}
-        className="mt-16 ml-3 max-h-[calc(100dvh-5rem)] w-[min(28rem,calc(100vw-1.5rem))] overflow-y-auto rounded-card border border-border bg-bg p-4 text-ink backdrop:bg-ink/40"
+        className="mt-16 ml-3 max-h-[calc(100dvh-5rem)] w-[min(28rem,calc(100vw-1.5rem))] overflow-y-auto rounded-card bg-bg p-4 text-ink shadow-float backdrop:bg-ink/40"
       >
         <div className="flex items-start justify-between gap-2">
-          <h2 id="asistente-titulo" className="text-lg font-semibold">
+          <h2 id="asistente-titulo" className="text-lg font-extrabold">
             Asistente de bioseguridad
           </h2>
           <button
@@ -253,7 +245,7 @@ export default function AssistantPanel() {
             maxLength={2000}
             aria-invalid={questionError ? 'true' : undefined}
             aria-describedby={questionError ? 'asistente-pregunta-error' : undefined}
-            className="rounded-[8px] border border-border p-2"
+            className="rounded-card border border-muted p-2"
             {...register('question')}
           />
           {questionError && (

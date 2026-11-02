@@ -7,6 +7,10 @@ import {
 import { useForm } from 'react-hook-form';
 import { FormField } from './form-field.tsx';
 import { TextAreaField } from './text-area-field.tsx';
+import {
+  buttonPrimary as primaryButtonClass,
+  buttonSecondary as secondaryButtonClass,
+} from './ui-classes.ts';
 
 const OPTION_IDS = ['a', 'b', 'c', 'd', 'e', 'f'] as const;
 
@@ -16,11 +20,7 @@ const TYPE_LABELS: Record<QuestionType, string> = {
   truefalse: 'Verdadero o falso',
 };
 
-const inputClass = 'min-h-11 rounded-card border border-border bg-bg px-3 text-base text-ink';
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-const secondaryButtonClass =
-  'min-h-11 rounded-pill border border-border px-4 font-semibold text-ink hover:bg-primary-soft';
+const inputClass = 'min-h-11 rounded-card border border-muted bg-bg px-3 text-base text-ink';
 
 type Draft = {
   missionId: string;
@@ -171,7 +171,7 @@ export function QuestionForm({ question, missionIds, onSubmit, onCancel }: Quest
 
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-4 rounded-card bg-surface p-4">
-      <h2 className="text-xl font-semibold text-ink">
+      <h2 className="text-xl font-extrabold tracking-tight text-ink">
         {question ? `Editar pregunta ${question.id}` : 'Nueva pregunta'}
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">

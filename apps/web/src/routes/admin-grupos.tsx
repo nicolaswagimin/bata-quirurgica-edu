@@ -10,6 +10,7 @@ import { useForm } from 'react-hook-form';
 import { FormField } from '../components/form-field.tsx';
 import { LoadingState } from '../components/loading-state.tsx';
 import { AdminOnlyNotice } from '../components/require-admin.tsx';
+import { buttonPrimary as primaryButtonClass } from '../components/ui-classes.ts';
 import { ApiError, apiFetch } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
 
@@ -39,9 +40,7 @@ function errorText(error: unknown): string {
   return error instanceof ApiError ? error.message : messageForStatus(0);
 }
 
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-const inputClass = 'min-h-11 rounded-card border border-border bg-bg px-3 text-base text-ink';
+const inputClass = 'min-h-11 rounded-card border border-muted bg-bg px-3 text-base text-ink';
 
 type FormValues = { name: string };
 
@@ -89,14 +88,16 @@ export default function AdminGruposPage() {
 
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-ink">Grupos</h1>
+      <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance text-ink">
+        Grupos
+      </h1>
 
       <form
         noValidate
         onSubmit={onSubmit}
         className="flex flex-col gap-3 rounded-card bg-surface p-4"
       >
-        <h2 className="text-xl font-semibold text-ink">Crear grupo</h2>
+        <h2 className="text-xl font-extrabold tracking-tight text-ink">Crear grupo</h2>
         <FormField
           id="grupo-nombre"
           label="Nombre del grupo"
@@ -127,7 +128,7 @@ export default function AdminGruposPage() {
       </form>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold text-ink">Progreso del grupo</h2>
+        <h2 className="text-xl font-extrabold tracking-tight text-ink">Progreso del grupo</h2>
         {groups.length === 0 ? (
           <p className="text-muted">Crea un grupo para ver el progreso de sus integrantes.</p>
         ) : (
@@ -156,7 +157,7 @@ export default function AdminGruposPage() {
           <p className="text-muted">Este grupo aún no tiene integrantes.</p>
         ) : null}
         {progress.data && progress.data.length > 0 ? (
-          <div className="overflow-x-auto rounded-card border border-border">
+          <div className="overflow-x-auto rounded-card bg-bg shadow-sheet">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface text-muted">
                 <tr>
@@ -179,7 +180,7 @@ export default function AdminGruposPage() {
               </thead>
               <tbody>
                 {progress.data.map((m) => (
-                  <tr key={m.uid} className="border-t border-border text-ink">
+                  <tr key={m.uid} className="border-t border-grid text-ink">
                     <th scope="row" className="p-3 font-medium">
                       {m.displayName}
                     </th>

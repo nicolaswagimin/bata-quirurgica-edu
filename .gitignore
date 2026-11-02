@@ -34,3 +34,11 @@ content/kb/pdfs/
 
 # Blender profile and intermediate renders of the 3D asset pipeline
 tools/bata-3d/.work/
+
+# Impeccable design tooling: only the shared config and the home surface contract are versioned
+.impeccable/*
+!.impeccable/config.json
+apps/web/.impeccable/*
+!apps/web/.impeccable/surfaces/
+apps/web/.impeccable/surfaces/*
+!apps/web/.impeccable/surfaces/apps-web-src-routes-home-tsx.md

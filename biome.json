@@ -17,6 +17,7 @@
       "!!**/public/draco",
       "!!**/playwright-report",
       "!!**/test-results",
+      "!!**/.impeccable",
       "!pnpm-lock.yaml"
     ]
   },

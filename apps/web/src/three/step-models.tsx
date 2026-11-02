@@ -114,7 +114,7 @@ function Scene({
             <Html key={id} position={position} center zIndexRange={[10, 0]}>
               <span
                 aria-hidden="true"
-                className={`block size-4 rounded-pill border-2 border-bg ${id === activeHotspotId ? 'bg-xp' : 'bg-info'}`}
+                className={`block size-4 rounded-pill border-2 border-bg ${id === activeHotspotId ? 'bg-seal' : 'bg-primary'}`}
               />
             </Html>
           );

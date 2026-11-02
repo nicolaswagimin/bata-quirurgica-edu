@@ -5,16 +5,14 @@ import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { FormField } from '../components/form-field.tsx';
 import { LoadingState } from '../components/loading-state.tsx';
+import { StatsBar } from '../components/stats-bar.tsx';
+import {
+  buttonDanger as dangerButtonClass,
+  buttonPrimary as primaryButtonClass,
+  buttonSecondary as secondaryButtonClass,
+} from '../components/ui-classes.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
-import { StatsBar } from './home.tsx';
-
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-const dangerButtonClass =
-  'min-h-11 rounded-pill bg-danger px-4 font-semibold text-bg hover:opacity-90 disabled:opacity-60';
-const secondaryButtonClass =
-  'min-h-11 rounded-pill border border-border px-4 font-semibold text-ink hover:bg-primary-soft';
 
 function unexpected(error: unknown): string {
   return error instanceof ApiError ? error.message : 'Ocurrió un error inesperado.';
@@ -110,9 +108,9 @@ function DeleteAccount() {
         ref={dialogRef}
         aria-labelledby="eliminar-titulo"
         aria-describedby="eliminar-descripcion"
-        className="m-auto max-w-md rounded-card border border-border bg-bg p-6 text-ink backdrop:bg-ink/40"
+        className="m-auto max-w-md rounded-card bg-bg p-6 text-ink shadow-float backdrop:bg-ink/40"
       >
-        <h2 id="eliminar-titulo" className="text-lg font-semibold">
+        <h2 id="eliminar-titulo" className="text-lg font-extrabold">
           ¿Eliminar tu cuenta?
         </h2>
         <p id="eliminar-descripcion" className="mt-2 text-sm text-muted">
@@ -143,16 +141,38 @@ function DeleteAccount() {
   );
 }
 
+function SignOutButton() {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  async function onSignOut() {
+    await signOut();
+    queryClient.clear();
+    await navigate({ to: '/login' });
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => void onSignOut()}
+      className={`${secondaryButtonClass} self-start`}
+    >
+      Cerrar sesión
+    </button>
+  );
+}
+
 function ProfileDetails({ profile }: { profile: Profile }) {
   return (
     <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Tu perfil</h1>
+        <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">
+          Tu perfil
+        </h1>
         <p className="text-lg text-ink">{profile.displayName}</p>
         <StatsBar profile={profile} />
       </header>
       <section className="flex flex-col gap-3 rounded-card bg-surface p-6">
-        <h2 className="text-lg font-semibold">Grupo</h2>
+        <h2 className="text-lg font-extrabold">Grupo</h2>
         <p className="text-sm text-muted">
           {profile.groupId
             ? 'Ya perteneces a un grupo. Puedes cambiarlo con otro código.'
@@ -160,8 +180,9 @@ function ProfileDetails({ profile }: { profile: Profile }) {
         </p>
         <JoinGroupForm />
       </section>
-      <section className="flex flex-col gap-3 rounded-card border border-border p-6">
-        <h2 className="text-lg font-semibold">Tu cuenta</h2>
+      <section className="flex flex-col gap-3 rounded-card bg-surface p-6">
+        <h2 className="text-lg font-extrabold">Tu cuenta</h2>
+        <SignOutButton />
         <p className="text-sm text-muted">
           Puedes eliminar tu cuenta y todos tus datos en cualquier momento.
         </p>

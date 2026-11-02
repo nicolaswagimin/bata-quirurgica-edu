@@ -81,6 +81,8 @@ export const ProfileSchema = z.object({
   xp: z.number().int().min(0),
   level: z.number().int().min(1),
   streakDays: z.number().int().min(0),
+  /** Last day (YYYY-MM-DD, Bogotá) with a correct answer; older API responses may omit it. */
+  lastActiveDate: z.string().nullable().optional(),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 

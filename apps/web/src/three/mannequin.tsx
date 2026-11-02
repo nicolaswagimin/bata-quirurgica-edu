@@ -106,7 +106,7 @@ function Scene({ progress, animate, hotspotIds, activeHotspotId }: SceneProps) {
           <Html key={id} position={position} center zIndexRange={[10, 0]}>
             <span
               aria-hidden="true"
-              className={`block size-4 rounded-pill border-2 border-bg ${active ? 'bg-xp' : 'bg-info'}`}
+              className={`block size-4 rounded-pill border-2 border-bg ${active ? 'bg-seal' : 'bg-primary'}`}
             />
           </Html>
         );

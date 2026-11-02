@@ -22,17 +22,16 @@ import { type FieldValues, type Path, type UseFormSetError, useForm } from 'reac
 import type { z } from 'zod';
 import privacidadJson from '../../../../content/legal/privacidad.json';
 import { FormField } from '../components/form-field.tsx';
+import {
+  textLink as linkClass,
+  notebookCard,
+  buttonPrimary as primaryButtonClass,
+  buttonSecondary as secondaryButtonClass,
+} from '../components/ui-classes.ts';
 import { clearAuthNotice, readAuthNotice } from '../lib/api.ts';
 import { auth } from '../lib/firebase.tsx';
 
 const privacyPolicy = PrivacyPolicySchema.parse(privacidadJson);
-
-const cardClass = 'mx-auto flex max-w-md flex-col gap-4 rounded-card bg-surface p-6';
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-const secondaryButtonClass =
-  'min-h-11 rounded-pill border border-border bg-bg px-4 font-semibold text-ink hover:bg-primary-soft';
-const linkClass = 'text-primary underline hover:text-primary-strong';
 
 function authErrorMessage(error: unknown): string {
   const code = error instanceof FirebaseError ? error.code : '';
@@ -132,8 +131,10 @@ export function LoginPage() {
   };
 
   return (
-    <section className={cardClass}>
-      <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
+    <section className={notebookCard}>
+      <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">
+        Iniciar sesión
+      </h1>
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         <FormField
           id="login-email"
@@ -204,8 +205,10 @@ export function RegistroPage() {
   const consentErrorId = 'registro-consent-error';
 
   return (
-    <section className={cardClass}>
-      <h1 className="text-2xl font-semibold">Crear cuenta</h1>
+    <section className={notebookCard}>
+      <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">
+        Crear cuenta
+      </h1>
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         <FormField
           id="registro-nombre"
@@ -273,12 +276,14 @@ export function PrivacidadPage() {
   return (
     <article className="mx-auto flex max-w-3xl flex-col gap-6">
       <header>
-        <h1 className="text-2xl font-semibold">{privacyPolicy.title}</h1>
+        <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">
+          {privacyPolicy.title}
+        </h1>
         <p className="mt-1 text-sm text-muted">Versión {privacyPolicy.policyVersion}</p>
       </header>
       {privacyPolicy.sections.map((section) => (
         <section key={section.heading} className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold">{section.heading}</h2>
+          <h2 className="text-lg font-extrabold">{section.heading}</h2>
           {section.paragraphs.map((paragraph) => (
             <p key={paragraph} className="leading-relaxed">
               {paragraph}

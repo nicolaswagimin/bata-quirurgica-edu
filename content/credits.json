@@ -23,6 +23,14 @@
       "sourceUrl": "https://static.makehumancommunity.org/assets/assetpacks.html",
       "license": "CC0 1.0",
       "modifications": "Ropa y guantes recoloreados; zapatos con menos polígonos; texturas reducidas a 1024 px."
+    },
+    {
+      "id": "atkinson-hyperlegible",
+      "title": "Tipografías Atkinson Hyperlegible Next y Atkinson Hyperlegible Mono",
+      "author": "Braille Institute of America; The Atkinson Hyperlegible Next/Mono Project Authors",
+      "sourceUrl": "https://github.com/googlefonts/atkinson-hyperlegible-next",
+      "license": "SIL Open Font License 1.1 (apps/web/public/fonts/OFL.txt)",
+      "modifications": "Subconjunto latino en woff2, servido desde el propio sitio."
     }
   ]
 }

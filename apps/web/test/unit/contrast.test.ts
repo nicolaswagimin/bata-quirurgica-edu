@@ -37,11 +37,25 @@ describe('contraste de tokens de color', () => {
     ['info', 'bg'],
     ['bg', 'primary'],
     ['ink', 'xp'],
+    ['ink', 'xp-soft'],
+    ['ink', 'surface'],
+    ['muted', 'surface'],
+    ['ink', 'primary-soft'],
+    ['seal', 'bg'],
+    ['success', 'bg'],
+    ['bg', 'primary-strong'],
+    ['on-primary-muted', 'primary'],
   ])('%s sobre %s ≥ 4.5:1', (fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('success sobre bg ≥ 3:1 (elementos no textuales)', () => {
-    expect(contrast('success', 'bg')).toBeGreaterThanOrEqual(3);
+  it.each([
+    ['success', 'bg'],
+    ['muted', 'bg'],
+    ['focus', 'bg'],
+    ['focus-on-primary', 'primary'],
+    ['primary', 'bg'],
+  ])('%s sobre %s ≥ 3:1 (elementos no textuales: bordes, foco, casillas)', (fg, bg) => {
+    expect(contrast(fg, bg)).toBeGreaterThanOrEqual(3);
   });
 });

@@ -4,15 +4,14 @@ import { useState } from 'react';
 import { LoadingState } from '../components/loading-state.tsx';
 import { QuestionForm } from '../components/question-form.tsx';
 import { AdminOnlyNotice } from '../components/require-admin.tsx';
+import {
+  buttonPrimary as primaryButtonClass,
+  buttonSecondary as secondaryButtonClass,
+} from '../components/ui-classes.ts';
 import { ApiError, apiFetch } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
 
 const QUESTIONS_KEY = ['admin', 'questions'] as const;
-
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-const secondaryButtonClass =
-  'min-h-11 rounded-pill border border-border px-4 font-semibold text-ink hover:bg-primary-soft';
 
 type Editing = { question: AdminQuestion | null } | null;
 
@@ -21,8 +20,8 @@ function errorText(error: unknown): string {
 }
 
 const badgeClass = {
-  validated: 'rounded-pill bg-primary px-3 py-1 text-xs font-semibold text-bg',
-  draft: 'rounded-pill border border-border bg-bg px-3 py-1 text-xs font-semibold text-muted',
+  validated: 'rounded-pill bg-primary px-3 py-1 text-xs font-bold text-bg',
+  draft: 'rounded-pill bg-surface px-3 py-1 text-xs font-bold text-muted',
 } as const;
 
 export default function AdminPreguntasPage() {
@@ -67,7 +66,9 @@ export default function AdminPreguntasPage() {
     <section className="mx-auto flex max-w-4xl flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Banco de preguntas</h1>
+          <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance text-ink">
+            Banco de preguntas
+          </h1>
           <p className="text-sm text-muted">
             Toda pregunta nueva o editada queda en borrador hasta que un docente la valide.
           </p>
@@ -106,10 +107,7 @@ export default function AdminPreguntasPage() {
 
       <ul className="flex flex-col gap-3">
         {list.map((q) => (
-          <li
-            key={q.id}
-            className="flex flex-col gap-2 rounded-card border border-border bg-surface p-4"
-          >
+          <li key={q.id} className="flex flex-col gap-2 rounded-card bg-surface p-4">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               <span className={badgeClass[q.status]}>
                 {q.status === 'validated' ? 'Validada' : 'Borrador'}

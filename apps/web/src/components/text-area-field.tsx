@@ -18,7 +18,7 @@ export function TextAreaField({ id, label, error, ...rest }: TextAreaFieldProps)
         rows={3}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className="min-h-11 rounded-card border border-border bg-bg px-3 py-2 text-base text-ink aria-invalid:border-danger"
+        className="min-h-11 rounded-card border border-muted bg-bg px-3 py-2 text-base text-ink aria-invalid:border-2 aria-invalid:border-danger"
         {...rest}
       />
       {error ? (

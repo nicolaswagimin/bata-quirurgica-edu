@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "apps/web/src/routes/home.tsx"
+        ],
+        "createdAt": "2026-11-02T18:26:32.234Z",
+        "reason": "agent triage: before:border-l-2 is the notebook's red margin rule on a ::before pseudo-element (Libreta de prácticas world), not a card side accent"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "9px",
+        "files": [
+          "apps/web/src/components/mission-index.tsx"
+        ],
+        "createdAt": "2026-11-02T18:45:40.082Z",
+        "reason": "agent triage: 9px aria-hidden stamp lettering, recorded in DESIGN.md as part of the seal, not a type step"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "apps/web/src/styles.css"
+        ],
+        "createdAt": "2026-11-02T18:45:40.111Z",
+        "reason": "agent triage: the quadrille paper-grid is the Libreta de prácticas world's core material, user-approved direction contract"
+      }
+    ]
+  }
+}

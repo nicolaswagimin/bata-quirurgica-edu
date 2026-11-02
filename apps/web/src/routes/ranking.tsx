@@ -74,24 +74,30 @@ function RankingList({ tab, groupId, uid }: { tab: Tab; groupId: string | null; 
     return <p className="text-muted">Aún no hay puntajes. ¡Responde tu primera misión!</p>;
   }
   return (
-    <ol aria-label="Posiciones" className="flex flex-col gap-2">
+    <ol aria-label="Posiciones" className="flex flex-col">
       {entries.map((entry, index) => {
         const mine = entry.uid === uid;
         return (
           <li
             key={entry.uid}
             aria-current={mine ? 'true' : undefined}
-            className={`flex items-center gap-3 rounded-card border border-border p-3 ${
-              mine ? 'bg-primary-soft' : 'bg-surface'
+            className={`flex items-center gap-3 border-b border-grid px-2 py-3 last:border-b-0 ${
+              mine ? '-mx-2 rounded-card bg-primary-soft px-4' : ''
             }`}
           >
-            <span className="w-8 text-center font-semibold text-muted">{index + 1}</span>
-            <span className="flex-1 font-semibold text-ink">
+            <span
+              className={`w-10 text-center font-mono text-xl font-bold tabular-nums ${
+                index < 3 ? 'text-seal' : 'text-muted'
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span className="min-w-0 flex-1 leading-snug font-bold text-ink">
               {entry.displayName}
               {mine ? <span className="font-normal text-muted"> (tú)</span> : null}
             </span>
             <span className="text-sm text-muted">Nivel {entry.level}</span>
-            <span className="rounded-pill bg-xp px-3 py-1 text-sm font-semibold text-ink">
+            <span className="rounded-pill bg-xp px-3 py-1.5 text-sm leading-none font-extrabold whitespace-nowrap text-ink tabular-nums">
               {entry.xp} XP
             </span>
           </li>
@@ -102,8 +108,8 @@ function RankingList({ tab, groupId, uid }: { tab: Tab; groupId: string | null; 
 }
 
 const tabClass =
-  'min-h-11 rounded-pill px-4 font-semibold aria-selected:bg-primary aria-selected:text-bg ' +
-  'border border-border text-ink hover:bg-primary-soft aria-selected:hover:bg-primary-strong';
+  'pressable min-h-11 rounded-pill px-4 font-bold text-primary ring-2 ring-primary ring-inset hover:bg-primary-soft ' +
+  'aria-selected:bg-primary aria-selected:text-bg aria-selected:hover:bg-primary-strong';
 
 export default function RankingPage() {
   const me = useMe();
@@ -127,8 +133,8 @@ export default function RankingPage() {
     : [{ id: 'global', label: 'Global' }];
 
   return (
-    <section className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Ranking</h1>
+    <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">Ranking</h1>
       <div role="tablist" aria-label="Tipo de ranking" className="flex gap-2">
         {tabs.map((t) => (
           <button

@@ -1,3 +1,4 @@
+import { bogotaDate } from '@bata/shared/gamification';
 import {
   type AnswerRequest,
   type AnswerResponse,
@@ -10,12 +11,13 @@ import { Link, useParams } from '@tanstack/react-router';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { type FormEvent, useState } from 'react';
 import { LoadingState } from '../components/loading-state.tsx';
+import { missionCode } from '../components/mission-sheet.tsx';
+import { Pictogram } from '../components/pictogram.tsx';
+import { StatsBar } from '../components/stats-bar.tsx';
+import { buttonPrimary, pageTitle, sheet, textLink } from '../components/ui-classes.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { db, useAuth } from '../lib/firebase.tsx';
-import { MissionSchema, StatsBar } from './home.tsx';
-
-const primaryButtonClass =
-  'min-h-11 self-start rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
+import { MissionSchema } from './home.tsx';
 
 async function loadMission(missionId: string) {
   const [missionSnap, flagsSnap] = await Promise.all([
@@ -38,19 +40,26 @@ async function loadMission(missionId: string) {
 function AnswerResult({ result }: { result: AnswerResponse }) {
   const { source } = result;
   return (
-    <div className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4">
-      <p className={`text-xl font-semibold ${result.correct ? 'text-success' : 'text-danger'}`}>
+    <div className="flex animate-rise flex-col gap-3 rounded-card bg-bg p-4 shadow-sheet">
+      <p
+        className={`flex items-center gap-2 text-xl font-extrabold ${
+          result.correct ? 'text-success' : 'text-danger'
+        }`}
+      >
+        {result.correct ? <Pictogram name="check" className="size-6" strokeWidth={3} /> : null}
         {result.correct ? '¡Correcto!' : 'Incorrecto'}
       </p>
-      <p>{result.explanation}</p>
-      <p className="text-sm text-muted">
+      <p className="max-w-[65ch]">{result.explanation}</p>
+      <p className="border-t border-grid pt-2 text-sm text-muted">
         Fuente: {source.org}, «{source.title}» ({source.year}), {source.section}
       </p>
-      <p>
-        <span className="rounded-pill bg-xp px-3 py-1 text-sm font-semibold text-ink">
-          +{result.xpAwarded} XP
-        </span>
-      </p>
+      {result.xpAwarded > 0 ? (
+        <p>
+          <span className="rounded-pill bg-xp px-3 py-1.5 text-sm leading-none font-extrabold text-ink">
+            +{result.xpAwarded} XP
+          </span>
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -66,7 +75,13 @@ function QuestionCard({ question, index }: { question: Question; index: number }
     onSuccess: async (result) => {
       queryClient.setQueryData<Profile | null>(['me', user?.uid], (old) =>
         old
-          ? { ...old, xp: result.totalXp, level: result.level, streakDays: result.streakDays }
+          ? {
+              ...old,
+              xp: result.totalXp,
+              level: result.level,
+              streakDays: result.streakDays,
+              ...(result.correct ? { lastActiveDate: bogotaDate(new Date()) } : {}),
+            }
           : old,
       );
       await Promise.all([
@@ -90,15 +105,15 @@ function QuestionCard({ question, index }: { question: Question; index: number }
   const promptId = `pregunta-${question.id}`;
 
   return (
-    <li className="flex flex-col gap-4 rounded-card bg-surface p-4">
+    <li className="flex flex-col gap-4 border-b border-grid pb-8 last:border-b-0 last:pb-0">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <fieldset aria-labelledby={promptId} className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 id={promptId} className="font-semibold">
+            <h2 id={promptId} className="text-lg leading-snug font-extrabold text-balance">
               {index + 1}. {question.prompt}
             </h2>
             {question.status === 'draft' ? (
-              <span className="rounded-pill border border-border bg-bg px-2 text-xs text-muted">
+              <span className="rounded-pill bg-surface px-2 py-1 text-xs leading-none font-bold text-muted">
                 Borrador
               </span>
             ) : null}
@@ -107,7 +122,11 @@ function QuestionCard({ question, index }: { question: Question; index: number }
           {question.options.map((option) => {
             const id = `${question.id}-${option.id}`;
             return (
-              <div key={option.id} className="flex items-start gap-2">
+              <label
+                key={option.id}
+                htmlFor={id}
+                className="pressable flex min-h-12 cursor-pointer items-start gap-3 rounded-card bg-bg px-3 py-3 ring-1 ring-border ring-inset hover:bg-primary-soft has-checked:bg-primary-soft has-checked:ring-2 has-checked:ring-primary"
+              >
                 <input
                   id={id}
                   type={multiple ? 'checkbox' : 'radio'}
@@ -115,17 +134,17 @@ function QuestionCard({ question, index }: { question: Question; index: number }
                   value={option.id}
                   checked={selected.includes(option.id)}
                   onChange={(e) => toggle(option.id, e.target.checked)}
-                  className="mt-1 size-6 accent-primary"
+                  className="mt-0.5 size-5 flex-none accent-primary"
                 />
-                <label htmlFor={id}>{option.text}</label>
-              </div>
+                <span>{option.text}</span>
+              </label>
             );
           })}
         </fieldset>
         <button
           type="submit"
           disabled={selected.length === 0 || answer.isPending}
-          className={primaryButtonClass}
+          className={`${buttonPrimary} self-start`}
         >
           Responder
         </button>
@@ -156,8 +175,8 @@ export default function MisionPage() {
   if (data.isError || !data.data) {
     return (
       <section className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Misión no disponible</h1>
-        <Link to="/" className="text-primary underline hover:text-primary-strong">
+        <h1 className={pageTitle}>Misión no disponible</h1>
+        <Link to="/" className={`${textLink} self-start`}>
           Volver a las misiones
         </Link>
       </section>
@@ -166,19 +185,25 @@ export default function MisionPage() {
 
   const { mission, questions } = data.data;
   return (
-    <section className="flex flex-col gap-6">
+    <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-3">
-        <Link to="/" className="text-sm text-primary underline hover:text-primary-strong">
+        <Link to="/" className={`${textLink} self-start text-sm`}>
           Volver a las misiones
         </Link>
-        <h1 className="text-2xl font-semibold">{mission.title}</h1>
-        <p className="text-muted">{mission.description}</p>
+        <p
+          aria-hidden="true"
+          className="font-mono text-code leading-none font-bold tracking-tighter text-primary"
+        >
+          {missionCode(mission.order)}
+        </p>
+        <h1 className={pageTitle}>{mission.title}</h1>
+        <p className="max-w-[65ch] text-muted">{mission.description}</p>
         {me.data ? <StatsBar profile={me.data} /> : null}
       </header>
       {questions.length === 0 ? (
         <p className="text-muted">Esta misión aún no tiene preguntas publicadas.</p>
       ) : (
-        <ol className="flex flex-col gap-4">
+        <ol className={`${sheet} flex flex-col gap-8`}>
           {questions.map((question, index) => (
             <QuestionCard key={question.id} question={question} index={index} />
           ))}

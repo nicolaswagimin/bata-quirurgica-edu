@@ -13,7 +13,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { FormField } from '../components/form-field.tsx';
+import { HomeBand } from '../components/home-band.tsx';
 import { LoadingState } from '../components/loading-state.tsx';
+import { type IndexEntry, MissionIndex } from '../components/mission-index.tsx';
+import { MissionSheet } from '../components/mission-sheet.tsx';
+import { buttonPrimary as primaryButtonClass } from '../components/ui-classes.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { db, useAuth } from '../lib/firebase.tsx';
 
@@ -31,9 +35,6 @@ const MissionProgressSchema = z.object({
 });
 type MissionProgress = z.infer<typeof MissionProgressSchema>;
 
-const primaryButtonClass =
-  'min-h-11 rounded-pill bg-primary px-4 font-semibold text-bg hover:bg-primary-strong disabled:opacity-60';
-
 function hasPendingConsent(): boolean {
   try {
     const raw = sessionStorage.getItem(PENDING_CONSENT_KEY);
@@ -41,33 +42,6 @@ function hasPendingConsent(): boolean {
   } catch {
     return false;
   }
-}
-
-function FlameIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-streak" fill="currentColor">
-      <path d="M12 2c1 3.5-1.5 5.5-1.5 8 0 1.4 1 2.5 2.3 2.5 1.6 0 2.4-1.4 2.2-3.2C17.6 11 19 13.6 19 16a7 7 0 0 1-14 0c0-4.6 4-7.4 7-14Z" />
-    </svg>
-  );
-}
-
-export function StatsBar({ profile }: { profile: Profile }) {
-  return (
-    <ul aria-label="Tu progreso" className="flex flex-wrap items-center gap-2 text-sm">
-      <li data-testid="xp-pill" className="rounded-pill bg-xp px-3 py-1 font-semibold text-ink">
-        {profile.xp} XP
-      </li>
-      <li className="rounded-pill bg-primary-soft px-3 py-1 font-semibold text-ink">
-        Nivel {profile.level}
-      </li>
-      <li className="flex items-center gap-1 rounded-pill border border-border px-3 py-1">
-        <FlameIcon />
-        <span>
-          {profile.streakDays} {profile.streakDays === 1 ? 'día' : 'días'} de racha
-        </span>
-      </li>
-    </ul>
-  );
 }
 
 type ConsentFormValues = { displayName: string; groupCode: string; consent: boolean };
@@ -130,8 +104,12 @@ function ConsentForm() {
   const consentErrorId = 'perfil-consent-error';
 
   return (
-    <section className="mx-auto flex max-w-md flex-col gap-4 rounded-card bg-surface p-6">
-      <h1 className="text-xl font-semibold">Completa tu perfil</h1>
+    <section className="paper-grid relative mx-auto flex max-w-lg flex-col gap-4 rounded-card py-8 pr-6 pl-16 shadow-sheet before:absolute before:inset-y-0 before:left-11 before:border-l-2 before:border-margin">
+      <h1 className="text-xl font-extrabold tracking-tight">Completa tu perfil</h1>
+      <p className="text-sm text-muted">
+        Así abres tu libreta de prácticas: cinco misiones sobre la bata quirúrgica y la
+        bioseguridad, con cada explicación basada en OMS, CDC y la Resolución 3100 de 2019.
+      </p>
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         <FormField
           id="perfil-nombre"
@@ -147,6 +125,10 @@ function ConsentForm() {
           error={errors.groupCode?.message}
           {...register('groupCode')}
         />
+        <p className="-mt-2 text-xs text-muted">
+          Si tu docente te dio un código de 6 letras o números, escríbelo para aparecer en el
+          ranking de tu grupo. Puedes agregarlo después en tu perfil.
+        </p>
         <div className="flex flex-col gap-1">
           <div className="flex items-start gap-2">
             <input
@@ -171,7 +153,7 @@ function ConsentForm() {
             </p>
           ) : null}
         </div>
-        <p role="alert" className="text-sm text-danger empty:hidden">
+        <p role="alert" className="text-sm font-bold text-danger empty:hidden">
           {formError ?? ''}
         </p>
         <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
@@ -200,44 +182,65 @@ function MissionMap({ profile }: { profile: Profile }) {
     },
   });
 
+  const progressKnown = progress.isSuccess;
+  const entries: IndexEntry[] = (missions.data ?? []).map((m) => {
+    const p = progress.data?.[m.id];
+    return {
+      id: m.id,
+      order: m.order,
+      title: m.title,
+      description: m.description,
+      topic: m.topic,
+      xpReward: m.xpReward,
+      iconKey: m.iconKey,
+      questionCount: m.questionIds.length,
+      correct: progressKnown ? (p?.answeredCorrectIds.length ?? 0) : null,
+      completed: p?.completed ?? false,
+    };
+  });
+  const current = entries.find((e) => !e.completed) ?? null;
+
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Hola, {profile.displayName}</h1>
-        <StatsBar profile={profile} />
-      </header>
-      <h2 className="text-lg font-semibold">Tus misiones</h2>
-      {missions.isPending ? <LoadingState /> : null}
+    <div className="flex flex-col">
+      <HomeBand profile={profile} />
+      {missions.isPending || progress.isPending ? <LoadingState /> : null}
       {missions.isError ? (
-        <p role="alert" className="text-danger">
-          No pudimos cargar las misiones. Intenta de nuevo.
-        </p>
+        <div role="alert" className="mt-8 flex flex-col items-start gap-3">
+          <p className="font-bold text-danger">No pudimos cargar tus misiones.</p>
+          <button
+            type="button"
+            onClick={() => void missions.refetch()}
+            className={primaryButtonClass}
+          >
+            Reintentar
+          </button>
+        </div>
       ) : null}
-      <ol className="flex flex-col gap-3">
-        {missions.data?.map((mission) => {
-          const done = progress.data?.[mission.id];
-          const correct = done?.answeredCorrectIds.length ?? 0;
-          return (
-            <li key={mission.id}>
-              <Link
-                to="/mision/$missionId"
-                params={{ missionId: mission.id }}
-                className="flex flex-col gap-1 rounded-card border border-border bg-surface p-4 hover:bg-primary-soft"
-              >
-                <span className="text-sm text-muted">Misión {mission.order}</span>
-                <span className="font-semibold text-ink">{mission.title}</span>
-                <span className="text-sm text-muted">{mission.description}</span>
-                <span className="text-sm text-ink">
-                  {done?.completed
-                    ? 'Completada'
-                    : `${correct} de ${mission.questionIds.length} correctas`}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
+      {missions.isSuccess && !progress.isPending ? (
+        entries.length === 0 ? (
+          <p className="mt-8 text-muted">Aún no hay misiones publicadas. Vuelve pronto.</p>
+        ) : (
+          <div className="grid gap-8 md:-mt-12 md:grid-cols-12 md:items-start">
+            {current ? (
+              <MissionSheet mission={current} correct={current.correct} className="md:col-span-7" />
+            ) : (
+              <section className="paper-grid -mx-4 px-4 py-8 md:col-span-7 md:mx-0 md:rounded-card md:p-10">
+                <h2 className="text-xl font-extrabold tracking-tight">Libreta completa</h2>
+                <p className="mt-2 max-w-[52ch] text-sm text-muted">
+                  Sellaste las {entries.length} misiones. Repasa en 3D o en el AR espejo para
+                  mantener la técnica.
+                </p>
+              </section>
+            )}
+            <MissionIndex
+              entries={entries}
+              currentId={current?.id ?? null}
+              className="md:col-span-5"
+            />
+          </div>
+        )
+      ) : null}
+    </div>
   );
 }
 

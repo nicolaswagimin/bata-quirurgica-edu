@@ -148,7 +148,9 @@ export default function BataArPage() {
 
   return (
     <section className="mx-auto max-w-3xl space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">AR espejo</h1>
+      <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance text-ink">
+        AR espejo
+      </h1>
       <p className="text-muted">
         La imagen de tu cámara se procesa solo en este dispositivo y nunca se envía a internet.
       </p>
@@ -162,7 +164,7 @@ export default function BataArPage() {
       </p>
 
       {cameraError ? (
-        <div role="alert" className="rounded-card border border-border bg-surface p-6">
+        <div role="alert" className="rounded-card bg-surface p-6">
           <p className="font-medium text-ink">No pudimos acceder a la cámara</p>
           <p className="mt-1 text-sm text-muted">
             Revisa los permisos del navegador o explora la bata sin cámara.
@@ -172,7 +174,7 @@ export default function BataArPage() {
           </Link>
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-card border border-border bg-surface">
+        <div className="relative overflow-hidden rounded-card bg-surface shadow-sheet">
           <video
             ref={videoRef}
             playsInline
@@ -192,7 +194,7 @@ export default function BataArPage() {
       )}
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink">Zonas de la bata</h2>
+        <h2 className="text-lg font-extrabold text-ink">Zonas de la bata</h2>
         <div className="flex flex-wrap gap-2">
           {hotspots.map((h) => (
             <button
@@ -200,7 +202,7 @@ export default function BataArPage() {
               type="button"
               aria-pressed={h.id === hotspotId}
               onClick={() => setHotspotId(h.id === hotspotId ? null : h.id)}
-              className="min-h-11 rounded-pill border border-border bg-bg px-4 font-medium text-ink hover:bg-primary-soft aria-pressed:bg-primary-soft"
+              className="pressable min-h-11 rounded-pill bg-bg px-4 font-bold text-primary ring-2 ring-primary ring-inset hover:bg-primary-soft aria-pressed:bg-primary aria-pressed:text-bg"
             >
               {h.label}
             </button>

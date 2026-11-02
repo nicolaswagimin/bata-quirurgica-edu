@@ -10,16 +10,16 @@ export default function CreditosPage() {
       <p className="text-muted">Activos 3D y multimedia usados en la plataforma y sus licencias.</p>
       <ul className="flex flex-col gap-3">
         {credits.assets.map((asset) => (
-          <li key={asset.id} className="rounded-card border border-border bg-surface p-4">
-            <h2 className="text-lg font-semibold">{asset.title}</h2>
+          <li key={asset.id} className="border-b border-grid py-4 last:border-b-0">
+            <h2 className="text-lg font-extrabold">{asset.title}</h2>
             <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-              <dt className="font-semibold">Autor</dt>
+              <dt className="font-bold">Autor</dt>
               <dd>{asset.author}</dd>
-              <dt className="font-semibold">Licencia</dt>
+              <dt className="font-bold">Licencia</dt>
               <dd>{asset.license}</dd>
-              <dt className="font-semibold">Modificaciones</dt>
+              <dt className="font-bold">Modificaciones</dt>
               <dd>{asset.modifications || 'Sin modificaciones'}</dd>
-              <dt className="font-semibold">Fuente</dt>
+              <dt className="font-bold">Fuente</dt>
               <dd>
                 {asset.sourceUrl ? (
                   <a

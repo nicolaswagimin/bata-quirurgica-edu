@@ -84,24 +84,34 @@ workspace por subruta (`@bata/shared/schemas`). Sin alias `@/`, sin barrels.
 
 ## Design system
 
-| Rol | Valor | Uso |
-|---|---|---|
-| Fondo | `#FFFFFF` | página |
-| Superficie | `#F5FAF8` | tarjetas, paneles |
-| Primario | `#127A5F` | botones, enlaces, barras de progreso |
-| Primario fuerte | `#0E5E49` | hover/activo |
-| Primario suave | `#E3F3EC` | fondos de selección |
-| Texto | `#10201B` | cuerpo |
-| Texto atenuado | `#55665F` | ayudas, metadatos |
-| Borde | `#D5E3DD` | separadores, inputs |
-| XP | `#F2B705` | píldora dorada (texto `#10201B` encima) |
-| Racha | `#F2711C` | icono de llama decorativo, siempre con número en texto |
-| Éxito / Peligro / Info | `#1E9E5A` / `#C93C3C` / `#2563EB` | estados; éxito solo en elementos no textuales o texto ≥ 24 px |
+Mundo visual: **Libreta de prácticas** (tinta de bolígrafo sobre cuaderno cuadriculado; sello violeta
+para lo dominado). Fuente única de tokens: `apps/web/src/styles.css`. Detalle y movimiento: `DESIGN.md`.
 
-- Tipografía: pila del sistema (`ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto`), sin
-  fuentes web. Escala 12 / 14 / 16 / 20 / 24 / 32 px.
-- Espaciado base 4 px. Radio 12 px tarjetas, 999 px píldoras. Bordes suaves, sin sombras fuertes.
-- Solo modo claro. Foco visible `#2563EB` 3 px. Respetar `prefers-reduced-motion`.
+| Rol | Token | Valor | Uso |
+|---|---|---|---|
+| Fondo | `bg` | `#FFFFFF` | página, hoja |
+| Superficie | `surface` | `#EEF3FB` | paneles, filas en hover |
+| Cuadrícula / margen | `grid` / `margin` | `#DCE7F5` / `#F3A6A6` | solo en la hoja abierta (`paper-grid`); reglas |
+| Primario (bolígrafo) | `primary` | `#1F3FB0` | cabecera, botones, casillas, enlaces |
+| Primario fuerte | `primary-strong` | `#16225C` | hover/activo |
+| Primario suave | `primary-soft` | `#E3EAF8` | fondos de selección |
+| Texto | `ink` | `#16225C` | cuerpo; nunca negro puro |
+| Texto atenuado | `muted` | `#4A5A8A` | ayudas, metadatos, borde de inputs |
+| Sello | `seal` | `#6A3FB5` | misión dominada |
+| XP | `xp` / `xp-soft` | `#F2B705` / `#FFF3C4` | solo en fichas y en la barra de nivel, texto `ink` encima |
+| Racha | `streak` | `#F2711C` | llama decorativa, siempre con número en texto |
+| Éxito / Peligro / Info | `success` / `danger` / `info` | `#1E7A4C` / `#C0352B` / `#2563EB` | estados |
+| Foco | `focus` / `focus-on-primary` | `#16225C` / `#F2B705` | anillo de 3 px |
+
+- Tipografía: Atkinson Hyperlegible Next (UI) y Atkinson Hyperlegible Mono (solo códigos y cifras),
+  OFL, autoalojadas en `apps/web/public/fonts/`. Escala 12 / 14 / 16 / 20 / 24 / 32 px + 48 px
+  para el código de misión.
+- Espaciado base 4 px. Radio 4 px casillas, 12 px hojas y paneles, 999 px píldoras. Sin tarjetas con
+  borde: reglas y tipografía separan el contenido.
+- Íconos: `components/pictogram.tsx` (línea 2 px, retícula 24). Sin emoji como ícono.
+- Movimiento: duraciones y curvas solo desde tokens (`--duration-*`, `--ease-*`, `animate-stamp`);
+  un momento orquestado por pantalla; nada desde escala 0; utilidad `pressable` para presionar.
+- Solo modo claro. Respetar `prefers-reduced-motion`.
 
 ## Environment
 

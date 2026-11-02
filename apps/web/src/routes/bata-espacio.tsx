@@ -56,7 +56,9 @@ export default function BataEspacioPage() {
 
   return (
     <section className="mx-auto max-w-3xl space-y-4">
-      <h1 className="text-2xl font-semibold text-ink">Ver en tu espacio</h1>
+      <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance text-ink">
+        Ver en tu espacio
+      </h1>
       <p className="text-muted">
         Coloca la bata en tu entorno con la realidad aumentada de tu teléfono.
       </p>
@@ -64,7 +66,7 @@ export default function BataEspacioPage() {
       {state === 'checking' && <p className="text-sm text-muted">Buscando el modelo 3D…</p>}
 
       {state === 'available' && (
-        <div className="overflow-hidden rounded-card border border-border bg-surface">
+        <div className="overflow-hidden rounded-card bg-surface shadow-sheet">
           <model-viewer
             src={MODEL_URL}
             ar
@@ -79,7 +81,7 @@ export default function BataEspacioPage() {
       )}
 
       {state === 'missing' && (
-        <div role="status" className="rounded-card border border-border bg-surface p-6">
+        <div role="status" className="rounded-card bg-surface p-6">
           <p className="font-medium text-ink">El modelo 3D definitivo aún no está disponible</p>
           <Link to="/bata-3d" className="mt-3 inline-block font-medium text-primary underline">
             Ver la bata en 3D

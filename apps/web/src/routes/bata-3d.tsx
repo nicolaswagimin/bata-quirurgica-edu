@@ -31,7 +31,7 @@ function usePrefersReducedMotion(): boolean {
 }
 
 const buttonClass =
-  'min-h-11 rounded-pill border border-border bg-bg px-4 font-semibold text-ink hover:bg-primary-soft disabled:opacity-50';
+  'pressable min-h-11 rounded-pill bg-bg px-4 font-bold text-primary ring-2 ring-primary ring-inset hover:bg-primary-soft disabled:opacity-50';
 
 export default function Bata3dPage() {
   const reducedMotion = usePrefersReducedMotion();
@@ -77,10 +77,10 @@ export default function Bata3dPage() {
             role="tab"
             aria-selected={mode === tab.mode}
             onClick={() => selectMode(tab.mode)}
-            className={`min-h-11 rounded-pill px-4 font-semibold ${
+            className={`min-h-11 rounded-pill px-4 font-bold ${
               mode === tab.mode
                 ? 'bg-primary text-bg'
-                : 'border border-border bg-bg text-ink hover:bg-primary-soft'
+                : 'bg-bg text-primary ring-2 ring-primary ring-inset hover:bg-primary-soft'
             }`}
           >
             {tab.label}
@@ -93,7 +93,7 @@ export default function Bata3dPage() {
           data-testid="bata-3d"
           data-animate={reducedMotion ? 'false' : 'true'}
           data-model={modelUrl ? shownModel : ''}
-          className="overflow-hidden rounded-card border border-border bg-surface"
+          className="overflow-hidden rounded-card bg-surface shadow-sheet"
         >
           {modelUrl ? (
             <ModelBoundary fallback={mannequin}>
@@ -112,7 +112,7 @@ export default function Bata3dPage() {
         </div>
 
         <section aria-labelledby="pasos-titulo" className="flex flex-col gap-3">
-          <h2 id="pasos-titulo" className="text-lg font-semibold">
+          <h2 id="pasos-titulo" className="text-lg font-extrabold">
             Pasos
           </h2>
           <ol aria-label={tabLabel} className="flex flex-col gap-1">
@@ -123,7 +123,7 @@ export default function Bata3dPage() {
                   aria-current={i === index ? 'step' : undefined}
                   onClick={() => setIndex(i)}
                   className={`min-h-11 w-full rounded-card px-3 py-2 text-left text-sm ${
-                    i === index ? 'bg-primary-soft font-semibold' : 'hover:bg-surface'
+                    i === index ? 'bg-primary-soft font-bold' : 'hover:bg-surface'
                   }`}
                 >
                   {s.order}. {s.title}
@@ -135,7 +135,7 @@ export default function Bata3dPage() {
       </div>
 
       <div className="flex flex-col gap-2 rounded-card bg-surface p-4">
-        <p aria-live="polite" data-testid="paso-actual" className="text-lg font-semibold">
+        <p aria-live="polite" data-testid="paso-actual" className="text-lg font-extrabold">
           Paso {index + 1} de {steps.length}: {step.title}
         </p>
         <p>{step.description}</p>
@@ -164,7 +164,7 @@ export default function Bata3dPage() {
       </div>
 
       <section aria-labelledby="zonas-titulo" className="flex flex-col gap-2">
-        <h2 id="zonas-titulo" className="text-lg font-semibold">
+        <h2 id="zonas-titulo" className="text-lg font-extrabold">
           Zonas de la bata
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -175,10 +175,10 @@ export default function Bata3dPage() {
               aria-expanded={hotspotId === h.id}
               aria-controls="zona-descripcion"
               onClick={() => setHotspotId(hotspotId === h.id ? null : h.id)}
-              className={`min-h-11 rounded-pill border px-4 text-sm font-semibold ${
+              className={`min-h-11 rounded-pill border px-4 text-sm font-bold ${
                 hotspotId === h.id
                   ? 'border-primary bg-primary-soft text-ink'
-                  : 'border-border bg-bg text-ink hover:bg-primary-soft'
+                  : 'border-muted bg-bg text-ink hover:bg-primary-soft'
               } ${stepHotspotIds.has(h.id) ? 'underline' : ''}`}
             >
               {h.label}
