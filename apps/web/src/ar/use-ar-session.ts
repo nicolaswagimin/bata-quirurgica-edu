@@ -3,7 +3,8 @@
 import { DONNING_STEP_IDS } from '@bata/shared/schemas';
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
-import { drawGown, gownGeometry } from './gown-overlay.ts';
+import { gownMesh } from './gown-mesh.ts';
+import { createGownTextures, drawGownMesh, type GownTextures } from './gown-render.ts';
 import { computeGownAnchor, FpsMonitor, type Landmark } from './overlay-math.ts';
 import { createPoseLandmarker, type PoseDelegate } from './pose.ts';
 import {
@@ -53,10 +54,13 @@ function sameView(a: PracticeView | null, b: PracticeView): boolean {
 export function useArSession(
   videoRef: RefObject<HTMLVideoElement | null>,
   canvasRef: RefObject<HTMLCanvasElement | null>,
+  hotspotRef: RefObject<string | null>,
 ) {
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
+  /** Average canvas time per frame for the gown and guides (ms), shown next to the FPS. */
+  const [drawMs, setDrawMs] = useState(0);
   const [lowPerformance, setLowPerformance] = useState(forcedLowFps);
   const [hasAnchor, setHasAnchor] = useState(false);
   const [violations, setViolations] = useState<Violation[]>([]);
@@ -131,10 +135,13 @@ export function useArSession(
       const smoother = new LandmarkSmoother();
       const tracker = new ViolationTracker();
       const colors = {
-        gown: token('primary'),
+        fabric: token('gown'),
+        trim: token('gown-trim'),
+        paper: token('bg'),
         line: token('bg'),
         danger: token('danger'),
       };
+      let textures: GownTextures | null | undefined;
       const forceLow = forcedLowFps();
       let lastVideoTime = -1;
       let nextDetectAt = 0;
@@ -143,6 +150,7 @@ export function useArSession(
       let anchored = false;
       let violationKey = '';
       let lastView: PracticeView | null = null;
+      let renderMs = 0;
 
       const tick = () => {
         if (cancelled) return;
@@ -160,7 +168,13 @@ export function useArSession(
           const body = bodyFrame(landmarks, size);
           if (!body) tracker.reset();
           const active = tracker.update(body ? detectViolations(body) : new Set(), now);
-          const hasGown = draw(canvas, landmarks, body, active, colors);
+          if (textures === undefined && canvas) {
+            const ctx = canvas.getContext('2d');
+            textures = ctx ? createGownTextures(ctx, colors) : null;
+          }
+          const drawStart = performance.now();
+          const hasGown = draw(canvas, landmarks, body, active, colors, textures ?? null);
+          renderMs = renderMs * 0.9 + (performance.now() - drawStart) * 0.1;
 
           const key = [...active].sort().join(',');
           if (key !== violationKey) {
@@ -189,6 +203,7 @@ export function useArSession(
           if (now - lastFpsUpdate >= FPS_REFRESH_MS) {
             lastFpsUpdate = now;
             setFps(Math.round(stats.fps));
+            setDrawMs(Math.round(renderMs * 10) / 10);
             setLowPerformance(forceLow || stats.lowPerformance);
           }
         }
@@ -203,7 +218,8 @@ export function useArSession(
       landmarks: readonly Landmark[],
       body: ReturnType<typeof bodyFrame>,
       active: ReadonlySet<Violation>,
-      colors: { gown: string; line: string; danger: string },
+      colors: { fabric: string; trim: string; paper: string; line: string; danger: string },
+      textures: GownTextures | null,
     ): boolean {
       const video = videoRef.current;
       const ctx = canvas?.getContext('2d');
@@ -212,7 +228,9 @@ export function useArSession(
       if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const anchor = computeGownAnchor(landmarks, canvas);
-      drawGown(ctx, gownGeometry(anchor), colors.gown);
+      if (body && textures) {
+        drawGownMesh(ctx, gownMesh(body), textures, colors, body.shoulderWidth, hotspotRef.current);
+      }
       drawPostureGuides(ctx, body, active, colors);
       return anchor !== null;
     }
@@ -224,12 +242,13 @@ export function useArSession(
       stopTracks(stream);
       landmarker?.close();
     };
-  }, [videoRef, canvasRef]);
+  }, [videoRef, canvasRef, hotspotRef]);
 
   return {
     status,
     delegate,
     fps,
+    drawMs,
     lowPerformance,
     hasAnchor,
     violations,

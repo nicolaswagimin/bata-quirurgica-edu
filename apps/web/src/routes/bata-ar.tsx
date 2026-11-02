@@ -23,10 +23,13 @@ export default function BataArPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   const selectedHotspot = hotspots.find((h) => h.id === hotspotId);
+  const hotspotRef = useRef<string | null>(null);
+  hotspotRef.current = hotspotId;
   const {
     status,
     delegate,
     fps,
+    drawMs,
     lowPerformance,
     hasAnchor,
     violations,
@@ -34,7 +37,7 @@ export default function BataArPage() {
     practiceRun,
     startPractice,
     stopPractice,
-  } = useArSession(videoRef, canvasRef);
+  } = useArSession(videoRef, canvasRef, hotspotRef);
 
   const cameraError = status === 'camera-error';
 
@@ -143,7 +146,7 @@ export default function BataArPage() {
 
       {delegate && (
         <p className="text-sm text-muted">
-          {fps} FPS · procesamiento en {delegate}
+          {fps} FPS · procesamiento en {delegate} · dibujo {drawMs} ms
         </p>
       )}
       {lowPerformance && (

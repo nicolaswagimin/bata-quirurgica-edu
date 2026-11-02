@@ -21,6 +21,9 @@
   /* Rubber stamp: mastered */
   --color-seal: #6a3fb5;
   --color-seal-soft: #efe8fa;
+  /* Gown in the AR mirror and 3D mode: SMS fabric and knit trim (tools/bata-3d/gown.py) */
+  --color-gown: #32718e;
+  --color-gown-trim: #1d4b63;
   /* Game: only inside chips */
   --color-xp: #f2b705;
   --color-xp-soft: #fff3c4;
