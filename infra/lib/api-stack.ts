@@ -220,7 +220,9 @@ export class ApiStack extends Stack {
     for (const method of ['GET', 'POST', 'DELETE']) route(me, method, meFn);
     route(me.addResource('group'), 'POST', meFn);
 
-    route(api.root.addResource('quiz').addResource('answer'), 'POST', quizFn);
+    const quizResource = api.root.addResource('quiz');
+    route(quizResource.addResource('answer'), 'POST', quizFn);
+    route(quizResource.addResource('practice'), 'POST', quizFn);
 
     const assistant = api.root.addResource('assistant');
     assistant.addResource('chat').addMethod(

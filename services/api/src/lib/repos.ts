@@ -1,9 +1,16 @@
 import { randomInt } from 'node:crypto';
-import { bogotaDate, levelForXp, nextStreak, sameSet } from '@bata/shared/gamification';
+import {
+  bogotaDate,
+  levelForXp,
+  nextStreak,
+  PRACTICE_XP,
+  sameSet,
+} from '@bata/shared/gamification';
 import type {
   AdminQuestion,
   AnswerResponse,
   MemberProgress,
+  PracticeCompleteResponse,
   Question,
   QuestionInput,
   Role,
@@ -228,6 +235,77 @@ export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<Answe
         explanation: question.explanation,
         source: question.source,
         xpAwarded,
+        totalXp: next.xp,
+        level: next.level,
+        streakDays: next.streakDays,
+      },
+    } as const;
+  });
+}
+
+// ---------- Práctica guiada ----------
+
+export type PracticeInput = { uid: string; stepIds: readonly string[]; now: Date };
+export type PracticeOutcome =
+  | { status: 'ok'; response: PracticeCompleteResponse }
+  | { status: 'profile_not_found' };
+
+/**
+ * Registra una práctica guiada completa. Las imágenes nunca salen del navegador, así que el servidor
+ * solo confía en que el cliente validó los pasos; por eso el premio es pequeño y se limita a una vez
+ * por día de Bogotá (`progress/{uid}/practice/{YYYY-MM-DD}`). Cuenta como actividad para la racha.
+ */
+export function completePracticeTx(db: Firestore, input: PracticeInput): Promise<PracticeOutcome> {
+  const { uid } = input;
+  return db.runTransaction(async (tx) => {
+    const today = bogotaDate(input.now);
+    const userRef = db.doc(`users/${uid}`);
+    const practiceRef = db.doc(`progress/${uid}/practice/${today}`);
+    const userSnap = await tx.get(userRef);
+    if (!userSnap.exists) return { status: 'profile_not_found' } as const;
+    const user = userSnap.data() as UserDoc;
+    const practiceSnap = await tx.get(practiceRef);
+    if (practiceSnap.exists) {
+      return {
+        status: 'ok',
+        response: {
+          xpAwarded: 0,
+          alreadyCompletedToday: true,
+          totalXp: user.xp,
+          level: user.level,
+          streakDays: user.streakDays,
+        },
+      } as const;
+    }
+    const nowIso = input.now.toISOString();
+    const xp = user.xp + PRACTICE_XP;
+    const next: UserDoc = {
+      ...user,
+      xp,
+      level: levelForXp(xp),
+      streakDays: nextStreak(user, today),
+      lastActiveDate: today,
+      updatedAt: nowIso,
+    };
+    tx.create(practiceRef, {
+      protocol: 'donning',
+      stepIds: [...input.stepIds],
+      xpAwarded: PRACTICE_XP,
+      createdAt: nowIso,
+    });
+    tx.update(userRef, {
+      xp: next.xp,
+      level: next.level,
+      streakDays: next.streakDays,
+      lastActiveDate: next.lastActiveDate,
+      updatedAt: nowIso,
+    });
+    tx.set(db.doc(`leaderboard/${uid}`), leaderboardEntry(next));
+    return {
+      status: 'ok',
+      response: {
+        xpAwarded: PRACTICE_XP,
+        alreadyCompletedToday: false,
         totalXp: next.xp,
         level: next.level,
         streakDays: next.streakDays,

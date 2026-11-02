@@ -1,17 +1,16 @@
 import { BataPasosSchema } from '@bata/shared/schemas';
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { Link } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
-import { drawGown, gownGeometry } from '../ar/gown-overlay.ts';
-import { computeGownAnchor, FpsMonitor, type Landmark } from '../ar/overlay-math.ts';
-import { createPoseLandmarker, type PoseDelegate } from '../ar/pose.ts';
+import { type ArStatus, useArSession } from '../ar/use-ar-session.ts';
+import { ArAlerts } from '../components/ar-alerts.tsx';
+import { ArPracticePanel } from '../components/ar-practice-panel.tsx';
+import { buttonPrimary } from '../components/ui-classes.ts';
 
-const { hotspots } = BataPasosSchema.parse(pasosJson);
+const { hotspots, donning } = BataPasosSchema.parse(pasosJson);
+const steps = [...donning].sort((a, b) => a.order - b.order);
 
-type Status = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
-
-const STATUS_TEXT: Record<Status, string> = {
+const STATUS_TEXT: Record<ArStatus, string> = {
   loading: 'Cargando modelo',
   detecting: 'Detectando',
   found: 'Pose encontrada',
@@ -19,130 +18,23 @@ const STATUS_TEXT: Record<Status, string> = {
   'model-error': 'Modelo no disponible',
 };
 
-const FPS_REFRESH_MS = 500;
-
-// Test hook: `vite build --mode e2e` + `?simularFpsBajo=1` forces the slow-device notice.
-function forcedLowFps(): boolean {
-  return (
-    import.meta.env.MODE === 'e2e' &&
-    new URLSearchParams(window.location.search).get('simularFpsBajo') === '1'
-  );
-}
-
 export default function BataArPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState<Status>('loading');
-  const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
-  const [fps, setFps] = useState(0);
-  const [lowPerformance, setLowPerformance] = useState(forcedLowFps);
-  const [hasAnchor, setHasAnchor] = useState(false);
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   const selectedHotspot = hotspots.find((h) => h.id === hotspotId);
-
-  useEffect(() => {
-    let cancelled = false;
-    let stream: MediaStream | null = null;
-    let landmarker: PoseLandmarker | null = null;
-    let frame = 0;
-
-    async function start() {
-      const cameraPromise = navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false,
-      });
-      const modelPromise = createPoseLandmarker();
-      // Avoid an unhandled rejection if the camera fails first.
-      modelPromise.catch(() => undefined);
-      try {
-        stream = await cameraPromise;
-      } catch {
-        if (!cancelled) setStatus('camera-error');
-        modelPromise.then(({ landmarker: l }) => l.close()).catch(() => undefined);
-        return;
-      }
-      if (cancelled) return stopTracks(stream);
-
-      const video = videoRef.current;
-      if (!video) return;
-      video.srcObject = stream;
-      await video.play().catch(() => undefined);
-
-      try {
-        const created = await modelPromise;
-        landmarker = created.landmarker;
-        if (cancelled) return;
-        setDelegate(created.delegate);
-      } catch {
-        if (!cancelled) setStatus('model-error');
-        return;
-      }
-      setStatus('detecting');
-      loop(video, landmarker);
-    }
-
-    function loop(video: HTMLVideoElement, poseLandmarker: PoseLandmarker) {
-      const monitor = new FpsMonitor();
-      const color = getComputedStyle(document.documentElement).getPropertyValue('--color-primary');
-      const forceLow = forcedLowFps();
-      let lastVideoTime = -1;
-      let nextDetectAt = 0;
-      let lastFpsUpdate = 0;
-      let found = false;
-      let anchored = false;
-
-      const tick = () => {
-        if (cancelled) return;
-        const now = performance.now();
-        if (video.readyState >= 2 && video.currentTime !== lastVideoTime && now >= nextDetectAt) {
-          lastVideoTime = video.currentTime;
-          const result = poseLandmarker.detectForVideo(video, now);
-          // Detection blocks the main thread; on slow devices wait as long as it took so the page
-          // stays responsive (at most ~50% of the time spent detecting).
-          nextDetectAt = performance.now() + (performance.now() - now);
-          const landmarks = result.landmarks[0] ?? [];
-          const hasGown = draw(video, landmarks, color);
-          if (hasGown !== anchored) {
-            anchored = hasGown;
-            setHasAnchor(hasGown);
-          }
-          const stats = monitor.record(now);
-          if (landmarks.length > 0 !== found) {
-            found = landmarks.length > 0;
-            setStatus(found ? 'found' : 'detecting');
-          }
-          if (now - lastFpsUpdate >= FPS_REFRESH_MS) {
-            lastFpsUpdate = now;
-            setFps(Math.round(stats.fps));
-            setLowPerformance(forceLow || stats.lowPerformance);
-          }
-        }
-        frame = requestAnimationFrame(tick);
-      };
-      frame = requestAnimationFrame(tick);
-    }
-
-    // Returns whether the gown could be anchored to this frame.
-    function draw(video: HTMLVideoElement, landmarks: readonly Landmark[], color: string): boolean {
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
-      if (!canvas || !ctx) return false;
-      if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
-      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const anchor = computeGownAnchor(landmarks, canvas);
-      drawGown(ctx, gownGeometry(anchor), color);
-      return anchor !== null;
-    }
-
-    void start();
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-      stopTracks(stream);
-      landmarker?.close();
-    };
-  }, []);
+  const {
+    status,
+    delegate,
+    fps,
+    lowPerformance,
+    hasAnchor,
+    violations,
+    practice,
+    practiceRun,
+    startPractice,
+    stopPractice,
+  } = useArSession(videoRef, canvasRef);
 
   const cameraError = status === 'camera-error';
 
@@ -193,6 +85,32 @@ export default function BataArPage() {
         <p className="text-ink">Colócate de frente a la cámara, con hombros y caderas visibles</p>
       )}
 
+      {!cameraError && status !== 'loading' && status !== 'model-error' ? (
+        <>
+          <ArAlerts violations={violations} />
+          {practice ? (
+            <ArPracticePanel
+              key={practiceRun}
+              steps={steps}
+              view={practice}
+              onRestart={startPractice}
+              onExit={stopPractice}
+            />
+          ) : (
+            <div className="flex flex-col items-start gap-2 rounded-card bg-surface p-5">
+              <h2 className="text-lg font-extrabold">Práctica guiada</h2>
+              <p className="text-sm text-muted">
+                Recorre los 6 pasos de colocación frente a la cámara. Cada paso se valida con tu
+                postura y suma XP una vez al día al completarlos todos.
+              </p>
+              <button type="button" onClick={startPractice} className={buttonPrimary}>
+                Empezar práctica guiada
+              </button>
+            </div>
+          )}
+        </>
+      ) : null}
+
       <div className="space-y-3">
         <h2 className="text-lg font-extrabold text-ink">Zonas de la bata</h2>
         <div className="flex flex-wrap gap-2">
@@ -238,8 +156,4 @@ export default function BataArPage() {
       )}
     </section>
   );
-}
-
-function stopTracks(stream: MediaStream | null) {
-  for (const track of stream?.getTracks() ?? []) track.stop();
 }

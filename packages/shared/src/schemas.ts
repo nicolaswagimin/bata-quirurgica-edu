@@ -250,6 +250,35 @@ export const AnswerResponseSchema = z
   .strict();
 export type AnswerResponse = z.infer<typeof AnswerResponseSchema>;
 
+// ---------- Práctica guiada (AR espejo) ----------
+
+/** Orden de los pasos de colocación; debe coincidir con content/protocolos/bata-pasos.json. */
+export const DONNING_STEP_IDS = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'] as const;
+
+export const PracticeCompleteRequestSchema = z
+  .object({
+    protocol: z.literal('donning'),
+    stepIds: z
+      .array(IdSchema)
+      .length(DONNING_STEP_IDS.length)
+      .refine((ids) => ids.every((id, i) => id === DONNING_STEP_IDS[i]), {
+        message: 'Los pasos deben venir completos y en orden',
+      }),
+  })
+  .strict();
+export type PracticeCompleteRequest = z.infer<typeof PracticeCompleteRequestSchema>;
+
+export const PracticeCompleteResponseSchema = z
+  .object({
+    xpAwarded: z.number().int().min(0),
+    alreadyCompletedToday: z.boolean(),
+    totalXp: z.number().int().min(0),
+    level: z.number().int().min(1),
+    streakDays: z.number().int().min(0),
+  })
+  .strict();
+export type PracticeCompleteResponse = z.infer<typeof PracticeCompleteResponseSchema>;
+
 // ---------- Asistente ----------
 
 export const ChatMessageSchema = z

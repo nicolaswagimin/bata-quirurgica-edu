@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { levelForXp } from '@bata/shared/gamification';
-import { POLICY_VERSION, type SeedFile } from '@bata/shared/schemas';
+import { levelForXp, PRACTICE_XP } from '@bata/shared/gamification';
+import { DONNING_STEP_IDS, POLICY_VERSION, type SeedFile } from '@bata/shared/schemas';
 import type { APIGatewayProxyEvent } from 'aws-lambda';
 import type { Firestore } from 'firebase-admin/firestore';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -172,5 +172,55 @@ describe('POST /quiz/answer', () => {
     await createProfile();
     const res = await quiz(event('POST', '/quiz/answer', { questionId: 'q01' }));
     expect(res.statusCode).toBe(422);
+  });
+});
+
+describe('POST /quiz/practice', () => {
+  const body = { protocol: 'donning', stepIds: [...DONNING_STEP_IDS] };
+  const practice = () => event('POST', '/quiz/practice', body);
+
+  it('awards practice XP once per Bogotá day and counts it for the streak', async () => {
+    await createProfile();
+    const first = await handleQuiz(practice(), at('2026-11-02T15:00:00Z'));
+    expect(first.statusCode).toBe(200);
+    expect(JSON.parse(first.body)).toEqual({
+      xpAwarded: PRACTICE_XP,
+      alreadyCompletedToday: false,
+      totalXp: PRACTICE_XP,
+      level: levelForXp(PRACTICE_XP),
+      streakDays: 1,
+    });
+
+    // 23:30 in Bogotá is still the same day (04:30 UTC next day).
+    const again = await handleQuiz(practice(), at('2026-11-03T04:30:00Z'));
+    expect(JSON.parse(again.body)).toMatchObject({
+      xpAwarded: 0,
+      alreadyCompletedToday: true,
+      totalXp: PRACTICE_XP,
+    });
+
+    const nextDay = await handleQuiz(practice(), at('2026-11-03T15:00:00Z'));
+    expect(JSON.parse(nextDay.body)).toMatchObject({
+      xpAwarded: PRACTICE_XP,
+      totalXp: PRACTICE_XP * 2,
+      streakDays: 2,
+    });
+    expect((await db.doc(`leaderboard/${UID}`).get()).data()).toMatchObject({
+      xp: PRACTICE_XP * 2,
+    });
+    const records = await db.collection(`progress/${UID}/practice`).get();
+    expect(records.docs.map((d) => d.id).sort()).toEqual(['2026-11-02', '2026-11-03']);
+  });
+
+  it('rejects incomplete or reordered steps and requires a profile', async () => {
+    const missing = await quiz(practice());
+    expect(missing.statusCode).toBe(404);
+    await createProfile();
+    const reordered = await quiz(
+      event('POST', '/quiz/practice', { ...body, stepIds: [...DONNING_STEP_IDS].reverse() }),
+    );
+    expect(reordered.statusCode).toBe(422);
+    expect(JSON.parse(reordered.body)).toMatchObject({ error: { code: expect.any(String) } });
+    expect(reordered.headers?.['Access-Control-Allow-Origin']).toBeDefined();
   });
 });

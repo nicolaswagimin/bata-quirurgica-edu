@@ -6,9 +6,11 @@ import {
   ChatRequestSchema,
   CreateProfileSchema,
   CreditsSchema,
+  DONNING_STEP_IDS,
   KbSourcesSchema,
   messageForStatus,
   POLICY_VERSION,
+  PracticeCompleteRequestSchema,
   PrivacyPolicySchema,
   SeedFileSchema,
   StreamEventSchema,
@@ -57,6 +59,26 @@ describe('SeedFileSchema', () => {
 });
 
 describe('esquemas de API', () => {
+  it('DONNING_STEP_IDS sigue el orden de content/protocolos/bata-pasos.json', () => {
+    const pasos = BataPasosSchema.parse(readJson('protocolos/bata-pasos.json'));
+    const ordered = [...pasos.donning].sort((a, b) => a.order - b.order).map((s) => s.id);
+    expect(ordered).toEqual([...DONNING_STEP_IDS]);
+  });
+
+  it('PracticeCompleteRequest exige los 6 pasos en orden y nada más', () => {
+    const ok = { protocol: 'donning', stepIds: [...DONNING_STEP_IDS] };
+    expect(PracticeCompleteRequestSchema.safeParse(ok).success).toBe(true);
+    expect(
+      PracticeCompleteRequestSchema.safeParse({ ...ok, stepIds: [...DONNING_STEP_IDS].reverse() })
+        .success,
+    ).toBe(false);
+    expect(
+      PracticeCompleteRequestSchema.safeParse({ ...ok, stepIds: DONNING_STEP_IDS.slice(0, 5) })
+        .success,
+    ).toBe(false);
+    expect(PracticeCompleteRequestSchema.safeParse({ ...ok, xp: 999 }).success).toBe(false);
+  });
+
   it('CreateProfile exige el consentimiento vigente', () => {
     const base = {
       displayName: 'Laura',

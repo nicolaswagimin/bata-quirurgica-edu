@@ -92,6 +92,19 @@ describe('bata-api-dev', () => {
     });
   });
 
+  it('routes POST /quiz/practice to the quiz function behind the TOKEN authorizer', () => {
+    const practice = Object.entries(
+      api.findResources('AWS::ApiGateway::Resource', { Properties: { PathPart: 'practice' } }),
+    );
+    expect(practice).toHaveLength(1);
+    api.hasResourceProperties('AWS::ApiGateway::Method', {
+      HttpMethod: 'POST',
+      ResourceId: { Ref: practice[0]?.[0] },
+      AuthorizationType: 'CUSTOM',
+      Integration: Match.objectLike({ Type: 'AWS_PROXY' }),
+    });
+  });
+
   it('uses a TOKEN authorizer cached for 300 s and leaves OPTIONS unauthenticated', () => {
     api.hasResourceProperties('AWS::ApiGateway::Authorizer', {
       Type: 'TOKEN',

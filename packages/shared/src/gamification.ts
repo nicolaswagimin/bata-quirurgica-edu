@@ -3,6 +3,9 @@
 const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** XP por completar una práctica guiada del AR espejo; se suma una sola vez por día de Bogotá. */
+export const PRACTICE_XP = 30;
+
 /** Nivel = floor(sqrt(xp / 50)) + 1. */
 export function levelForXp(xp: number): number {
   return Math.floor(Math.sqrt(Math.max(0, xp) / 50)) + 1;

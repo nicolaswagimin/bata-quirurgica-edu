@@ -1,8 +1,8 @@
-import { AnswerRequestSchema } from '@bata/shared/schemas';
+import { AnswerRequestSchema, PracticeCompleteRequestSchema } from '@bata/shared/schemas';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { httpError, json, parseJsonBody, readAuthContext } from '../lib/http.ts';
 import { getDb } from '../lib/identity.ts';
-import { submitAnswerTx } from '../lib/repos.ts';
+import { completePracticeTx, submitAnswerTx } from '../lib/repos.ts';
 
 export type QuizDeps = { now: () => Date };
 
@@ -29,6 +29,23 @@ async function answer(
   return json(200, outcome.response);
 }
 
+async function practice(
+  event: APIGatewayProxyEvent,
+  uid: string,
+  deps: QuizDeps,
+): Promise<APIGatewayProxyResult> {
+  const input = parseJsonBody(PracticeCompleteRequestSchema, event.body);
+  const outcome = await completePracticeTx(await getDb(), {
+    uid,
+    stepIds: input.stepIds,
+    now: deps.now(),
+  });
+  if (outcome.status === 'profile_not_found') {
+    throw httpError('NOT_FOUND', 'Aún no tienes un perfil.');
+  }
+  return json(200, outcome.response);
+}
+
 export async function handleQuiz(
   event: APIGatewayProxyEvent,
   deps: QuizDeps = defaultDeps,
@@ -36,5 +53,6 @@ export async function handleQuiz(
   const { uid } = readAuthContext(event);
   const route = `${event.httpMethod} ${event.path.replace(/\/+$/, '')}`;
   if (route === 'POST /quiz/answer') return answer(event, uid, deps);
+  if (route === 'POST /quiz/practice') return practice(event, uid, deps);
   throw httpError('NOT_FOUND', 'Ruta no encontrada.');
 }
