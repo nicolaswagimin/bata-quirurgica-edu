@@ -44,6 +44,27 @@ test('@emu modo 3D: pasos, navegación, retiro y zonas', async ({ page }) => {
   await expect(page.getByText(zone?.description ?? '-')).toBeVisible();
 });
 
+test('@emu colocación carga un modelo por paso desde el propio origen; retiro avisa', async ({
+  page,
+  baseURL,
+}) => {
+  const requests: string[] = [];
+  page.on('request', (r) => requests.push(r.url()));
+  await openBata3d(page);
+  const container = page.getByTestId('bata-3d');
+  await expect(container).toHaveAttribute('data-model', '/models/paso-1.glb', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(container).toHaveAttribute('data-model', '/models/paso-2.glb', { timeout: 30_000 });
+
+  const assets = requests.filter((u) => /\/(models|draco)\//.test(u));
+  expect(assets.length).toBeGreaterThan(0);
+  for (const url of assets) expect(url.startsWith(baseURL ?? '')).toBe(true);
+
+  await page.getByRole('tab', { name: 'Retiro' }).click();
+  await expect(page.getByText('Las poses de retiro están en desarrollo')).toBeVisible();
+  await expect(container).toHaveAttribute('data-model', '');
+});
+
 test('@emu modo 3D sin animación con prefers-reduced-motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openBata3d(page);

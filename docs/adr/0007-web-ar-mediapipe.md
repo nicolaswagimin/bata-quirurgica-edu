@@ -22,6 +22,14 @@ versionado difiere de la salida del script. Estático (sin rig, animaciones ni t
 origen en los pies, < 2 MB (≈ 0,3 MB, ≈ 11 000 triángulos). Ningún consumidor necesita esqueleto:
 model-viewer lo muestra tal cual y el AR espejo dibuja su propia silueta 2D.
 
+## Modelos por paso en /bata-3d (2026-11-02)
+La colocación usa `public/models/paso-1.glb` … `paso-6.glb`: figura humana de MPFB (assets CC0) posada
+según `content/protocolos/bata-pasos.json`, con la bata simulada en Blender y congelada como malla
+estática (`tools/bata-3d`; `source env.sh && blender --background --python build_step.py -- <n> export`).
+Límites: 80 000 triángulos y 3 MB por archivo, Draco y WebP. El decodificador Draco se autoaloja en
+`public/draco/` y la CSP permite `blob:` en `connect-src` para las texturas embebidas. El retiro sigue
+con el maniquí procedural hasta que existan sus poses.
+
 ## Rechazado
 Body tracking nativo con ARKit/ARCore: exige app nativa, dos plataformas y publicación en tiendas.
 

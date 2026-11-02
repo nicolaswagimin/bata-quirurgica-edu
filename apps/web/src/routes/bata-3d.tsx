@@ -3,7 +3,9 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { Mannequin } from '../three/mannequin.tsx';
-import { buildTimeline, type TimelineMode } from '../three/steps.ts';
+import { ModelBoundary } from '../three/model-boundary.tsx';
+import { StepModels } from '../three/step-models.tsx';
+import { buildTimeline, stepModelUrl, type TimelineMode } from '../three/steps.ts';
 
 const pasos = BataPasosSchema.parse(pasosJson);
 const timelines = {
@@ -36,6 +38,7 @@ export default function Bata3dPage() {
   const [mode, setMode] = useState<TimelineMode>('donning');
   const [index, setIndex] = useState(0);
   const [hotspotId, setHotspotId] = useState<string | null>(null);
+  const [shownModel, setShownModel] = useState('');
 
   const steps = timelines[mode];
   const step = steps[index] ?? steps[0];
@@ -44,6 +47,17 @@ export default function Bata3dPage() {
   const activeHotspot = pasos.hotspots.find((h) => h.id === hotspotId) ?? null;
 
   if (!step) return null;
+
+  const modelUrl = stepModelUrl(mode, step.order);
+  const mannequin = (
+    <Mannequin
+      label={`Maniquí 3D con la bata quirúrgica. ${tabLabel}, paso ${index + 1}: ${step.title}`}
+      progress={step.progress}
+      animate={!reducedMotion}
+      hotspotIds={step.hotspotIds}
+      activeHotspotId={hotspotId}
+    />
+  );
 
   const selectMode = (next: TimelineMode) => {
     setMode(next);
@@ -78,15 +92,23 @@ export default function Bata3dPage() {
         <div
           data-testid="bata-3d"
           data-animate={reducedMotion ? 'false' : 'true'}
+          data-model={modelUrl ? shownModel : ''}
           className="overflow-hidden rounded-card border border-border bg-surface"
         >
-          <Mannequin
-            label={`Maniquí 3D con la bata quirúrgica. ${tabLabel}, paso ${index + 1}: ${step.title}`}
-            progress={step.progress}
-            animate={!reducedMotion}
-            hotspotIds={step.hotspotIds}
-            activeHotspotId={hotspotId}
-          />
+          {modelUrl ? (
+            <ModelBoundary fallback={mannequin}>
+              <StepModels
+                label={`Persona en 3D con la bata quirúrgica. ${tabLabel}, paso ${index + 1}: ${step.title}`}
+                order={step.order}
+                animate={!reducedMotion}
+                hotspotIds={step.hotspotIds}
+                activeHotspotId={hotspotId}
+                onShown={setShownModel}
+              />
+            </ModelBoundary>
+          ) : (
+            mannequin
+          )}
         </div>
 
         <section aria-labelledby="pasos-titulo" className="flex flex-col gap-3">
@@ -169,7 +191,10 @@ export default function Bata3dPage() {
       </section>
 
       <p className="text-sm text-muted">
-        Modelo procedural provisional. Ver{' '}
+        {mode === 'doffing'
+          ? 'Las poses de retiro están en desarrollo: por ahora se muestra el maniquí provisional. '
+          : ''}
+        Ver{' '}
         <Link to="/creditos" className="text-primary underline hover:text-primary-strong">
           créditos
         </Link>

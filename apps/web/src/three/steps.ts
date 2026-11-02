@@ -2,6 +2,14 @@ import type { BataPasos, Hotspot, ProtocolStep } from '@bata/shared/schemas';
 
 export type TimelineMode = 'donning' | 'doffing';
 
+// Donning has one static model per step (tools/bata-3d). Doffing keeps the mannequin for now.
+export const DONNING_MODEL_COUNT = 6;
+
+export function stepModelUrl(mode: TimelineMode, order: number): string | null {
+  if (mode !== 'donning' || order < 1 || order > DONNING_MODEL_COUNT) return null;
+  return `/models/paso-${order}.glb`;
+}
+
 export type TimelineStep = ProtocolStep & {
   hotspots: Hotspot[];
   // How much of the gown is on the mannequin at this step (0 = none, 1 = fully dressed).

@@ -17,7 +17,7 @@ export interface WebStackProps extends StackProps {
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval'",
-  "connect-src 'self' https://*.execute-api.us-east-1.amazonaws.com https://*.googleapis.com https://*.datadoghq.com https://*.browser-intake-datadoghq.com",
+  "connect-src 'self' blob: https://*.execute-api.us-east-1.amazonaws.com https://*.googleapis.com https://*.datadoghq.com https://*.browser-intake-datadoghq.com",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",

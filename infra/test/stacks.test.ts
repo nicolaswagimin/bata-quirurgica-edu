@@ -204,6 +204,10 @@ describe('bata-api-dev', () => {
 });
 
 describe('bata-web-dev', () => {
+  it('lets the app read the blob: textures embedded in GLB models', () => {
+    expect(JSON.stringify(web.toJSON())).toMatch(/connect-src 'self' blob:/);
+  });
+
   it('keeps the bucket private and serves it through CloudFront OAC with SPA fallback', () => {
     web.hasResourceProperties('AWS::S3::Bucket', {
       PublicAccessBlockConfiguration: {

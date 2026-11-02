@@ -31,3 +31,6 @@ content/kb/pdfs/
 # OS / editor noise
 .DS_Store
 *.log
+
+# Blender profile and intermediate renders of the 3D asset pipeline
+tools/bata-3d/.work/

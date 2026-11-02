@@ -14,6 +14,7 @@
       "!!**/dist",
       "!!**/cdk.out",
       "!!**/public/mediapipe",
+      "!!**/public/draco",
       "!!**/playwright-report",
       "!!**/test-results",
       "!pnpm-lock.yaml"
