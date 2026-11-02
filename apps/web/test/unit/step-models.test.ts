@@ -11,7 +11,8 @@ type GltfJson = {
   extensionsRequired?: string[];
   skins?: unknown[];
   animations?: unknown[];
-  accessors: { count: number }[];
+  images?: { mimeType?: string }[];
+  accessors: { count: number; min?: number[]; max?: number[] }[];
   meshes: { primitives: { indices?: number }[] }[];
 };
 
@@ -45,6 +46,23 @@ describe('donning step models', () => {
     }
     expect(triangles).toBeGreaterThan(1000);
     expect(triangles).toBeLessThanOrEqual(MAX_TRIANGLES);
+  });
+
+  it('paso-6-ar.glb, for AR, stands on its origin at real scale with textures every viewer reads', async () => {
+    const glb = await readFile(join(PUBLIC, 'models', 'paso-6-ar.glb'));
+    expect(glb.byteLength).toBeLessThanOrEqual(MAX_BYTES);
+    const json = jsonChunk(glb);
+    expect(json.skins ?? []).toEqual([]);
+    expect(json.extensionsRequired ?? []).not.toContain('EXT_texture_webp');
+    expect((json.images ?? []).map((i) => i.mimeType)).not.toContain('image/webp');
+    // glTF is Y-up in metres: the lowest point is the floor and the figure is about 1.7 m tall.
+    const bounds = json.accessors.filter((a) => a.min?.length === 3 && a.max?.length === 3);
+    const minY = Math.min(...bounds.map((a) => a.min?.[1] ?? 0));
+    const maxY = Math.max(...bounds.map((a) => a.max?.[1] ?? 0));
+    expect(minY).toBeGreaterThan(-0.02);
+    expect(minY).toBeLessThan(0.05);
+    expect(maxY).toBeGreaterThan(1.6);
+    expect(maxY).toBeLessThan(1.85);
   });
 
   it('ships the self-hosted Draco decoder', async () => {

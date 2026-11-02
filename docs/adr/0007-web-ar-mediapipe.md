@@ -12,15 +12,13 @@
   https://caniuse.com/webxr
 - Si el FPS cae por debajo de 12 durante 5 s se sugiere el modo 3D.
 
-## Activo 3D (2026-10-28)
-`apps/web/public/models/bata.glb` es un modelo propio generado por código: el maniquí procedural de
-`src/three/mannequin-parts.ts` con una bata estilizada (`src/three/bata-model.ts`: manga larga con
-puños de punto, largo a media pierna, sin cuello ni bolsillos, cierre cruzado atrás con amarres en
-cintura y cuello, colores de los tokens de `styles.css`). `pnpm --filter @bata/web run model:export`
-lo regenera con `GLTFExporter`; es determinista y `test/unit/bata-model.test.ts` falla si el archivo
-versionado difiere de la salida del script. Estático (sin rig, animaciones ni texturas), en metros,
-origen en los pies, < 2 MB (≈ 0,3 MB, ≈ 11 000 triángulos). Ningún consumidor necesita esqueleto:
-model-viewer lo muestra tal cual y el AR espejo dibuja su propia silueta 2D.
+## Activo 3D de "Ver en tu espacio" (2026-11-02)
+`apps/web/public/models/paso-6-ar.glb`: la figura con la bata completa del paso 6 de colocación,
+exportada por `tools/bata-3d` junto con `paso-6.glb` pero con texturas JPEG/PNG en vez de WebP, porque
+Scene Viewer y Quick Look no garantizan WebP. En metros y con origen en los pies, así el AR la pone a
+escala real sobre el piso; Draco con decodificador en `public/draco/`
+(`ModelViewerElement.dracoDecoderLocation`). Sustituye al `bata.glb` del maniquí procedural
+(2026-10-28), que se eliminó junto con su exportador.
 
 ## Modelos por paso en /bata-3d (2026-11-02)
 La colocación usa `public/models/paso-1.glb` … `paso-6.glb`: figura humana de MPFB (assets CC0) posada

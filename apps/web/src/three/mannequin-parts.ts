@@ -1,5 +1,5 @@
 // Single source for the procedural mannequin's body, in metres (feet at y ≈ 0, ~1.78 m tall).
-// mannequin.tsx renders it with R3F and bata-model.ts rebuilds it with plain three.js for the GLB.
+// mannequin.tsx renders it with R3F (doffing steps, and the fallback when a step model fails).
 
 export type Vec3 = [number, number, number];
 

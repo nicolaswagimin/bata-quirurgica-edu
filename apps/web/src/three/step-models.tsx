@@ -1,7 +1,8 @@
 import { Html, OrbitControls, useGLTF } from '@react-three/drei';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { NoToneMapping } from 'three';
+import { NeutralToneMapping, PMREMGenerator } from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { Vec3 } from './mannequin-parts.ts';
 import { DRACO_DECODER_PATH, ModelLayer } from './model-layer.tsx';
 import { DONNING_MODEL_COUNT, stepModelUrl } from './steps.ts';
@@ -9,7 +10,8 @@ import { DONNING_MODEL_COUNT, stepModelUrl } from './steps.ts';
 // Where each hotspot sits per donning step: the figure's arms and the gown move between steps.
 const STEP_HOTSPOTS: Record<number, Record<string, Vec3>> = {
   2: { cuello: [0, 1.4, 0.42] },
-  3: { mangas: [0.25, 1.28, 0.2], punos: [0.2, 1.24, 0.42] },
+  // Arms point at the camera here, so each marker goes on a different arm or they would overlap.
+  3: { mangas: [-0.23, 1.3, 0.12], punos: [0.2, 1.24, 0.42] },
   4: { cuello: [0, 1.38, -0.08], 'cierre-posterior': [0, 1.0, -0.16] },
   5: { punos: [0.1, 1.13, 0.3] },
   6: { 'cierre-posterior': [0, 1.1, -0.17], 'zona-esteril': [0, 1.2, 0.17] },
@@ -39,6 +41,24 @@ function neighbourUrls(order: number): string[] {
 
 type Layer = { url: string; order: number };
 
+// Neutral studio reflections, built in the browser (nothing downloaded). Without them the fabric
+// reads darker and more saturated than in the approved Blender preview, lit by a grey world.
+function StudioEnvironment() {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    const generator = new PMREMGenerator(gl);
+    const environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = environment;
+    scene.environmentIntensity = 0.75;
+    return () => {
+      scene.environment = null;
+      environment.dispose();
+      generator.dispose();
+    };
+  }, [gl, scene]);
+  return null;
+}
+
 function Scene({
   order,
   animate,
@@ -66,9 +86,10 @@ function Scene({
   const yaw = STEP_YAW[order] ?? 0;
   return (
     <>
-      <hemisphereLight intensity={3} groundColor={GROUND_LIGHT} />
-      <directionalLight position={[1.5, 3, 2.5]} intensity={2.6} />
-      <directionalLight position={[-2, 2, -2.5]} intensity={1.2} />
+      <StudioEnvironment />
+      <hemisphereLight intensity={1.9} groundColor={GROUND_LIGHT} />
+      <directionalLight position={[1.5, 3, 2.5]} intensity={2.1} />
+      <directionalLight position={[-2, 2, -2.5]} intensity={1} />
 
       {layers.map((layer) => (
         <Suspense key={layer.url} fallback={null}>
@@ -112,7 +133,7 @@ export function StepModels({ label, ...scene }: StepModelsProps) {
       <Canvas
         camera={{ position: [0, 1.05, 2.9], fov: 38 }}
         dpr={[1, 2]}
-        gl={{ toneMapping: NoToneMapping }}
+        gl={{ toneMapping: NeutralToneMapping }}
       >
         <Scene {...scene} />
       </Canvas>

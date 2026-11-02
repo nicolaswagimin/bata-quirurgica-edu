@@ -59,8 +59,8 @@ test('@emu con FPS bajo se sugiere el modo 3D', async ({ page }) => {
 });
 
 test('@emu ver en tu espacio define model-viewer y avisa si falta el modelo', async ({ page }) => {
-  // public/models/bata.glb is committed, so simulate a deploy without it.
-  await page.route('**/models/bata.glb', (route) => route.fulfill({ status: 404 }));
+  // The model is committed, so simulate a deploy without it.
+  await page.route('**/models/paso-6-ar.glb', (route) => route.fulfill({ status: 404 }));
   await login(page, 'ar-space');
   await page.getByRole('navigation').getByRole('link', { name: 'AR espejo' }).click();
   await page.getByRole('link', { name: 'Ver en tu espacio' }).click();
@@ -77,7 +77,7 @@ test('@emu ver en tu espacio define model-viewer y avisa si falta el modelo', as
 });
 
 test('@emu ver en tu espacio usa model-viewer con AR cuando el modelo existe', async ({ page }) => {
-  await page.route('**/models/bata.glb', (route) =>
+  await page.route('**/models/paso-6-ar.glb', (route) =>
     route.fulfill({ status: 200, contentType: 'model/gltf-binary', body: '' }),
   );
   await login(page, 'ar-space-ok');
@@ -88,6 +88,6 @@ test('@emu ver en tu espacio usa model-viewer con AR cuando el modelo existe', a
   await expect(viewer).toHaveAttribute('ar-modes', 'webxr scene-viewer quick-look');
   // React 19 sets `src` as a property because model-viewer defines one.
   expect(await viewer.evaluate((el) => (el as HTMLElement & { src: string }).src)).toBe(
-    '/models/bata.glb',
+    '/models/paso-6-ar.glb',
   );
 });

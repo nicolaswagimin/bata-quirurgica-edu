@@ -2,7 +2,15 @@ import '@google/model-viewer';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
-const MODEL_URL = '/models/bata.glb';
+// The fully gowned figure of donning step 6, in metres with its origin at the feet, so AR places it
+// at real scale on the floor. JPEG/PNG textures: every AR viewer reads them.
+const MODEL_URL = '/models/paso-6-ar.glb';
+
+// The model is Draco-compressed; the decoder is self-hosted so the page only talks to its origin.
+// model-viewer reads this global every time it creates an element, so the class setter alone is
+// overwritten with its CDN default.
+const globals = self as unknown as { ModelViewerElement?: Record<string, unknown> };
+globals.ModelViewerElement = { ...globals.ModelViewerElement, dracoDecoderLocation: '/draco/' };
 
 declare module 'react' {
   namespace JSX {
@@ -12,6 +20,9 @@ declare module 'react' {
         ar?: boolean;
         'ar-modes'?: string;
         'camera-controls'?: boolean;
+        'environment-image'?: string;
+        // React 19 sets it as a property, and model-viewer's property is a number.
+        exposure?: number;
         alt: string;
       };
     }
@@ -59,7 +70,9 @@ export default function BataEspacioPage() {
             ar
             ar-modes="webxr scene-viewer quick-look"
             camera-controls
-            alt="Bata quirúrgica en 3D"
+            environment-image="neutral"
+            exposure={1.7}
+            alt="Persona con la bata quirúrgica puesta, en 3D"
             style={{ display: 'block', width: '100%', height: '28rem' }}
           />
         </div>

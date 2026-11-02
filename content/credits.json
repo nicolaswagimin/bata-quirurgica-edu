@@ -9,16 +9,8 @@
       "modifications": "Geometría construida con primitivas de three.js mientras se integra el modelo definitivo."
     },
     {
-      "id": "bata-glb",
-      "title": "Modelo 3D de la bata quirúrgica (bata.glb)",
-      "author": "Proyecto Bata Quirúrgica Edu",
-      "sourceUrl": null,
-      "license": "Modelo propio generado por código; mismo licenciamiento del repositorio",
-      "modifications": "Maniquí procedural con bata estilizada (manga larga con puños, largo a media pierna, cierre cruzado atrás con amarres), exportado con GLTFExporter de three.js."
-    },
-    {
       "id": "pasos-colocacion-glb",
-      "title": "Modelos 3D de los pasos de colocación (paso-1 a paso-6)",
+      "title": "Modelos 3D de los pasos de colocación (paso-1 a paso-6) y de \"Ver en tu espacio\"",
       "author": "Proyecto Bata Quirúrgica Edu",
       "sourceUrl": null,
       "license": "Modelos propios generados por código; mismo licenciamiento del repositorio",

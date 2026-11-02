@@ -2,6 +2,7 @@
 Run: source env.sh && blender --background --python build_step.py -- <step>"""
 import math
 import os
+import re
 import sys
 import time
 
@@ -17,6 +18,8 @@ MAX_TRIANGLES = 80_000
 GOWN_TRIANGLES = 26_000
 SHOES_RATIO = 0.015
 HAND_BONES = ("wrist", "finger", "metacarpal")
+CUTOUT = re.compile("eyebrow|eyelash|mouth_protection", re.IGNORECASE)
+AR_STEP = 6  # the fully gowned figure is the one placed in the room
 MAX_TEXTURE = 1024
 MAX_GLB_BYTES = 3 * 1024 * 1024
 MODELS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "apps", "web", "public", "models")
@@ -155,9 +158,26 @@ def circulator_hands(human, rig, bows):
     return hands
 
 
-def export_glb(step):
-    """Static, Draco-compressed GLB: textures at most 1024 px in WebP, nothing hidden included."""
+def opaque_materials():
+    """MPFB wires every texture's alpha, so the exporter marks the skin and lips as blended and viewers
+    sort them wrongly (lips over the mask). Only lashes, brows and the mask's ear loops keep alpha."""
+    for material in bpy.data.materials:
+        if not material.use_nodes or CUTOUT.search(material.name):
+            continue
+        tree = material.node_tree
+        for link in list(tree.links):
+            if link.to_socket.name == "Alpha" and link.to_node.type == "BSDF_PRINCIPLED":
+                tree.links.remove(link)
+        for node in tree.nodes:
+            if node.type == "BSDF_PRINCIPLED":
+                node.inputs["Alpha"].default_value = 1.0
+
+
+def export_glb(step, ar=False):
+    """Static, Draco-compressed GLB: textures at most 1024 px in WebP, nothing hidden included.
+    `ar` writes the variant for "Ver en tu espacio": JPEG/PNG textures, which every AR viewer reads."""
     objects = visible_objects()
+    opaque_materials()
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objects:
         obj.hide_set(False)
@@ -168,7 +188,7 @@ def export_glb(step):
         if max(width, height) > MAX_TEXTURE:
             factor = MAX_TEXTURE / max(width, height)
             image.scale(int(width * factor), int(height * factor))
-    path = os.path.join(MODELS, f"paso-{step}.glb")
+    path = os.path.join(MODELS, f"paso-{step}-ar.glb" if ar else f"paso-{step}.glb")
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format="GLB",
@@ -177,7 +197,7 @@ def export_glb(step):
         export_skins=False,
         export_morph=False,
         export_apply=True,
-        export_image_format="WEBP",
+        export_image_format="AUTO" if ar else "WEBP",
         export_image_quality=90,
         export_draco_mesh_compression_enable=True,
         export_draco_mesh_compression_level=6,
@@ -262,6 +282,8 @@ def main():
     print("TIME build", round(time.time() - started))
     if "export" in sys.argv:
         export_glb(step)
+        if step == AR_STEP:
+            export_glb(step, ar=True)
     setup_render(samples=64, res=(620, 930))
     views = [("front", 0), ("three", 35), ("back3", 150)]
     if step in (2, 4, 6):
