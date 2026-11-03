@@ -187,6 +187,14 @@ export const VIOLATION_TEXT: Record<Violation, string> = {
   axilas: 'No cruces los brazos ni metas las manos bajo las axilas: no son zonas estériles.',
 };
 
+/** Short form for the game banner, readable at ~2 m; the full text above goes to screen readers. */
+export const VIOLATION_SHORT: Record<Violation, string> = {
+  'bajo-cintura': 'Muñeca bajo la cintura: súbela',
+  cuello: 'No toques el cuello',
+  espalda: 'Manos fuera de la espalda',
+  axilas: 'Manos fuera de las axilas',
+};
+
 // Thresholds include a margin past the anatomical line so jitter around it never warns.
 export const THRESHOLDS = {
   /** Wrist this far below the waist (in torso heights) counts as below it. */

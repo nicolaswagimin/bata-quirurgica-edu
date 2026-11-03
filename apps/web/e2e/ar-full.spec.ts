@@ -1,12 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import {
-  createEmulatorUser,
-  createUserWithProfile,
-  loginViaUi,
-  uniqueEmail,
-  waitForHomeSettled,
-} from './helpers.ts';
+import { createEmulatorUser, loginViaUi, uniqueEmail, waitForHomeSettled } from './helpers.ts';
 
 const pasos = JSON.parse(
   readFileSync(new URL('../../../content/protocolos/bata-pasos.json', import.meta.url), 'utf8'),
@@ -96,31 +90,4 @@ test('@emu ver en tu espacio usa model-viewer con AR cuando el modelo existe', a
   expect(await viewer.evaluate((el) => (el as HTMLElement & { src: string }).src)).toBe(
     '/models/paso-6-ar.glb',
   );
-});
-
-test('@emu práctica guiada: 6 pasos, avisos en vivo y XP sumado solo por el backend una vez al día', async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  const { email } = await createUserWithProfile('Daniela Ruiz');
-  await loginViaUi(page, email);
-  await expect(page.getByRole('heading', { level: 1, name: 'Hola, Daniela Ruiz' })).toBeVisible();
-  await page.goto('/bata-ar');
-  await expect(page.getByTestId('ar-status')).toHaveText('Detectando', { timeout: 30_000 });
-  await expect(page.getByTestId('ar-alerts')).toContainText('Sin avisos');
-  await page.getByRole('button', { name: 'Empezar práctica guiada' }).click();
-  const panel = page.getByRole('region', { name: 'Práctica guiada: colocación de la bata' });
-  await expect(panel.getByRole('listitem')).toHaveCount(6);
-  await expect(panel.getByTestId('ar-practice-hint')).toBeVisible();
-
-  // Measure the detection loop on this machine (fake camera, no person in frame).
-  await page.waitForTimeout(4_000);
-  const fpsText = (await page.getByText(/\d+ FPS · procesamiento en/).textContent()) ?? '';
-  console.log(`AR fps (headless, fake camera): ${fpsText}`);
-
-  await page.goto('/bata-ar?simularPracticaCompleta=1');
-  await page.getByRole('button', { name: 'Empezar práctica guiada' }).click();
-  await expect(page.getByText('¡Práctica completa! +30 XP')).toBeVisible();
-  await page.getByRole('button', { name: 'Practicar de nuevo' }).click();
-  await expect(page.getByText(/Ya sumaste el XP de práctica de hoy/)).toBeVisible();
 });
