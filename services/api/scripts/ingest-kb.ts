@@ -12,6 +12,7 @@ import {
   KB_DOCUMENTS,
   type PageText,
 } from '../src/lib/kb.ts';
+import { stripPageFurniture } from '../src/lib/kb-clean.ts';
 
 export const DEFAULT_SOURCES_FILE = fileURLToPath(
   new URL('../../../content/kb/sources.json', import.meta.url),
@@ -32,7 +33,7 @@ export type IngestDeps = {
 async function readPages(file: string): Promise<PageText[]> {
   const { extractText } = await import('unpdf');
   const { text } = await extractText(new Uint8Array(await readFile(file)), { mergePages: false });
-  return text.map((pageText, i) => ({ page: i + 1, text: pageText }));
+  return stripPageFurniture(text.map((pageText, i) => ({ page: i + 1, text: pageText })));
 }
 
 async function replaceChunks(

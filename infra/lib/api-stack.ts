@@ -127,7 +127,9 @@ export class ApiStack extends Stack {
     const chatFn = makeFn('chat', {
       env: {
         ...groqEnv,
-        KB_MAX_DISTANCE: '0.35',
+        // Calibrated 2026-11-02 with scripts/kb-probe.ts against the ingested KB (Titan V2, cosine):
+        // relevant questions reached 0.536 at worst, off-topic ones started at 0.766.
+        KB_MAX_DISTANCE: '0.60',
         ...(datadogKey && {
           DD_SITE: props.ddSite,
           DD_API_KEY_SECRET_ARN: datadogKey.secretArn,

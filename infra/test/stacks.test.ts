@@ -92,6 +92,11 @@ describe('bata-api-dev', () => {
     });
   });
 
+  it('gives the chat function the calibrated KB distance threshold', () => {
+    // Measured with scripts/kb-probe.ts: relevant ≤ 0.536, off-topic ≥ 0.766.
+    expect(findFunction(api, 'chat').Environment?.Variables?.KB_MAX_DISTANCE).toBe('0.60');
+  });
+
   it('routes POST /quiz/practice to the quiz function behind the TOKEN authorizer', () => {
     const practice = Object.entries(
       api.findResources('AWS::ApiGateway::Resource', { Properties: { PathPart: 'practice' } }),

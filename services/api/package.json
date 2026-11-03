@@ -11,7 +11,8 @@
     "dev:smoke": "node --env-file-if-exists=.env --import tsx scripts/dev-server.ts --smoke",
     "seed": "node --env-file-if-exists=.env --import tsx scripts/seed.ts",
     "set-admin": "node --env-file-if-exists=.env --import tsx scripts/set-admin.ts",
-    "ingest-kb": "node --env-file-if-exists=.env --import tsx scripts/ingest-kb.ts"
+    "ingest-kb": "node --env-file-if-exists=.env --import tsx scripts/ingest-kb.ts",
+    "kb-probe": "node --env-file-if-exists=.env --import tsx scripts/kb-probe.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1146.0",

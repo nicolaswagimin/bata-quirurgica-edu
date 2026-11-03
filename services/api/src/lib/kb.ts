@@ -163,3 +163,43 @@ export async function retrieveContext(
     .sort((a, b) => a.distance - b.distance)
     .slice(0, k);
 }
+
+/**
+ * Merges the results of several queries (e.g. the question and its English translation, since the
+ * embeddings barely relate Spanish questions to English sources): one entry per chunk with its best
+ * distance, ascending, at most `k`.
+ */
+export function mergeRetrievals(results: RetrievedChunk[][], k = 5): RetrievedChunk[] {
+  const best = new Map<string, RetrievedChunk>();
+  for (const chunk of results.flat()) {
+    const key = `${chunk.source.title}|${chunk.page}|${chunk.text}`;
+    const prev = best.get(key);
+    if (!prev || chunk.distance < prev.distance) best.set(key, chunk);
+  }
+  return [...best.values()].sort((a, b) => a.distance - b.distance).slice(0, k);
+}
+
+/**
+ * Searches with the question as asked and, in parallel, with its English translation: the sources
+ * are mostly English and the embeddings relate Spanish questions to them poorly. If translation
+ * fails or returns nothing new, the original question alone is used.
+ */
+export async function retrieveBilingual(
+  query: string,
+  {
+    search,
+    translate,
+    k = 5,
+  }: {
+    search: (q: string) => Promise<RetrievedChunk[]>;
+    translate: (q: string) => Promise<string | null>;
+    k?: number;
+  },
+): Promise<RetrievedChunk[]> {
+  const english = translate(query).catch(() => null);
+  const [original, translated] = await Promise.all([
+    search(query),
+    english.then((q) => (q && q.trim() !== query.trim() ? search(q) : [])),
+  ]);
+  return mergeRetrievals([original, translated], k);
+}
