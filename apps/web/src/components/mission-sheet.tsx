@@ -1,5 +1,8 @@
 import { Link } from '@tanstack/react-router';
+import { missionSprite } from '../art/sprites.ts';
 import { Pictogram } from './pictogram.tsx';
+import { PixelSprite } from './pixel-sprite.tsx';
+import { panel } from './ui-classes.ts';
 
 export type SheetMission = {
   id: string;
@@ -9,20 +12,17 @@ export type SheetMission = {
   topic: string;
   xpReward: number;
   questionCount: number;
+  iconKey?: string;
 };
 
-/** Mission code as printed in the notebook: order 2 → "M-02". */
+/** Mission code: order 2 → "M-02". */
 export function missionCode(order: number): string {
   return `M-${String(order).padStart(2, '0')}`;
 }
 
-const sheetClass =
-  'paper-grid relative -mx-4 px-4 py-6 pl-16 shadow-[inset_0_-2px_0_var(--color-primary)] ' +
-  'before:absolute before:inset-y-0 before:left-11 before:border-l-2 before:border-margin ' +
-  'md:mx-0 md:rounded-card md:py-10 md:pr-10 md:pl-24 md:shadow-sheet md:before:left-[4.5rem]';
-
 /**
- * Today's open page: the one mission to continue, its six competency boxes and one action.
+ * Today's open mission: its pixel icon on the mint tile wall, one progress tile per question and
+ * one action.
  * `correct` is null when progress could not be read, so the page never shows a false 0.
  */
 export function MissionSheet({
@@ -38,16 +38,29 @@ export function MissionSheet({
   const boxes = Array.from({ length: mission.questionCount }, (_, i) => i < (correct ?? 0));
 
   return (
-    <section aria-labelledby="mision-de-hoy" className={`${sheetClass} ${className}`}>
-      <h2 id="mision-de-hoy" className="flex flex-col gap-2">
-        <span className="font-mono text-code leading-none font-bold tracking-tighter text-primary">
-          {missionCode(mission.order)}
+    <section aria-labelledby="mision-de-hoy" className={`${panel} ${className}`}>
+      <div className="flex items-center gap-4">
+        <span className="tile-grid relative grid size-20 shrink-0 place-items-center rounded-card md:size-24">
+          <PixelSprite
+            sprite={missionSprite(mission.iconKey ?? '')}
+            className="size-12 md:size-16"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute -right-2 -bottom-2 rounded-box bg-primary px-1.5 py-0.5 font-pixel text-xs font-semibold text-bg"
+          >
+            {missionCode(mission.order)}
+          </span>
         </span>
-        <span className="max-w-[24ch] text-lg leading-snug font-extrabold tracking-tight text-balance text-ink md:text-xl">
+        <h2
+          id="mision-de-hoy"
+          className="max-w-[24ch] text-lg leading-snug font-extrabold tracking-tight text-balance text-ink md:text-xl"
+        >
+          <span className="sr-only">Misión de hoy: </span>
           {mission.title}
-        </span>
-      </h2>
-      <p className="mt-2 max-w-[52ch] text-sm text-muted">{mission.description}</p>
+        </h2>
+      </div>
+      <p className="mt-4 max-w-[52ch] text-sm text-muted">{mission.description}</p>
       {correct === null ? (
         <p className="mt-4 text-sm text-muted">
           Tu progreso no está disponible ahora. Puedes seguir practicando igual.
@@ -62,7 +75,9 @@ export function MissionSheet({
               <li
                 // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length, order-stable boxes
                 key={i}
-                className="grid size-8 place-items-center rounded-box border-2 border-primary bg-bg text-primary"
+                className={`grid size-8 place-items-center rounded-box border-2 ${
+                  done ? 'border-primary bg-primary text-bg' : 'border-muted bg-primary-soft'
+                }`}
               >
                 {done ? <Pictogram name="check" className="size-5" strokeWidth={3} /> : null}
               </li>

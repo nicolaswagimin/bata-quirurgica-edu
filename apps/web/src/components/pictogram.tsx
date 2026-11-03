@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-// Line pictograms of the "Libreta de prácticas" world: 24 px grid, 2 px stroke, round joins.
+// Line pictograms for UI chrome (tabs, buttons): 24 px grid, 2 px stroke, round joins. Mission
+// icons, badges and the mascot are pixel art instead (src/art/sprites.ts).
 // Mission keys match `iconKey` in content/questions/seed.json.
 const PATHS = {
   shield: (

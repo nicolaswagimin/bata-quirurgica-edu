@@ -1,7 +1,9 @@
 import { Link, Outlet } from '@tanstack/react-router';
+import { MISSION_SPRITES } from '../art/sprites.ts';
 import { useAuth } from '../lib/firebase.tsx';
 import { AssistantSlot } from './assistant-slot.tsx';
 import { Pictogram, type PictogramName } from './pictogram.tsx';
+import { PixelSprite } from './pixel-sprite.tsx';
 
 const NAV_LINKS = [
   { to: '/', label: 'Inicio', icon: 'home' },
@@ -11,15 +13,18 @@ const NAV_LINKS = [
   { to: '/perfil', label: 'Perfil', icon: 'user' },
 ] as const satisfies readonly { to: string; label: string; icon: PictogramName }[];
 
-// One navigation landmark: a bottom tab bar in the thumb zone on phones, inline pills in the
-// header from md up.
+// One navigation landmark: a bottom tab bar in the thumb zone on phones, inline pills on the mint
+// header from md up. The current tab is deep green (white text, gold focus ring).
 const tabClass =
-  'pressable flex min-h-14 flex-col items-center justify-center gap-1 rounded-card px-1 text-xs font-bold text-muted ' +
-  'md:min-h-11 md:flex-row md:gap-2 md:rounded-pill md:px-4 md:text-sm md:text-on-primary-muted ' +
-  'md:hover:bg-primary-strong md:hover:text-bg';
-const tabActiveClass = 'text-primary md:bg-primary-strong md:text-bg';
+  'pressable flex min-h-14 flex-col items-center justify-center gap-1 rounded-card px-1 text-xs font-bold ' +
+  'md:min-h-11 md:flex-row md:gap-2 md:rounded-pill md:px-4 md:text-sm';
+// Colour lives only in these two, so the active and inactive states never compete in one variant.
+const tabInactiveClass =
+  'text-muted hover:text-ink md:text-on-band-muted md:hover:bg-primary-soft md:hover:text-ink';
+const tabActiveClass =
+  'text-primary md:bg-primary md:text-bg md:hover:bg-primary-strong md:focus-visible:outline-focus-on-primary';
 const publicLinkClass =
-  'pressable inline-flex min-h-11 items-center rounded-pill px-3 text-sm font-bold whitespace-nowrap text-bg hover:bg-primary-strong md:px-4';
+  'pressable inline-flex min-h-11 items-center rounded-pill px-3 text-sm font-bold whitespace-nowrap text-ink hover:bg-primary-soft md:px-4';
 
 export function RootLayout() {
   const { user } = useAuth();
@@ -32,7 +37,7 @@ export function RootLayout() {
         Saltar al contenido
       </a>
       <AssistantSlot />
-      <header className="on-primary bg-primary text-bg">
+      <header className="bg-band text-ink">
         {/* The assistant trigger is fixed top-left; signed-in headers reserve its slot. */}
         <div
           // Full-width row whose edges line up with the centred 72rem content column, while
@@ -47,14 +52,14 @@ export function RootLayout() {
             to="/"
             className={`inline-flex items-center gap-2 text-sm font-extrabold tracking-tight whitespace-nowrap md:ml-0 md:text-base ${user ? 'ml-auto' : ''}`}
           >
-            <Pictogram name="gown" className="size-6" />
+            <PixelSprite sprite={MISSION_SPRITES.gown} className="size-7" />
             Bata Quirúrgica Edu
           </Link>
           <nav
             aria-label="Principal"
             className={
               user
-                ? 'fixed inset-x-0 bottom-0 z-40 border-t border-grid bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:static md:ml-auto md:border-0 md:bg-transparent md:pb-0 md:backdrop-blur-none'
+                ? 'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:static md:ml-auto md:border-0 md:bg-transparent md:pb-0 md:backdrop-blur-none'
                 : 'ml-auto'
             }
           >
@@ -66,6 +71,7 @@ export function RootLayout() {
                       to={link.to}
                       className={tabClass}
                       activeProps={{ className: tabActiveClass, 'aria-current': 'page' }}
+                      inactiveProps={{ className: tabInactiveClass }}
                       activeOptions={{ exact: link.to === '/' }}
                     >
                       <Pictogram name={link.icon} className="size-6 md:hidden" />
@@ -99,7 +105,7 @@ export function RootLayout() {
       >
         <Outlet />
       </main>
-      <footer className={`border-t border-grid ${user ? 'pb-20 md:pb-0' : ''}`}>
+      <footer className={`border-t border-border ${user ? 'pb-20 md:pb-0' : ''}`}>
         <div className="mx-auto flex max-w-6xl flex-wrap gap-4 px-4 py-4 text-sm text-muted md:px-8">
           <Link to="/privacidad" className="underline underline-offset-4 hover:text-primary">
             Política de tratamiento de datos

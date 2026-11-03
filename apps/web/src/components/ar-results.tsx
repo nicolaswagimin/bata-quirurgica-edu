@@ -8,17 +8,30 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { scoreFor } from '../ar/game-view.ts';
 import { VIOLATION_SHORT, type Violation } from '../ar/posture.ts';
+import { MEDAL, XP_GEM } from '../art/sprites.ts';
 import { ApiError, apiFetch, type Profile } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
+import { Mascot } from './mascot.tsx';
+import { PixelSprite } from './pixel-sprite.tsx';
 
-function xpText(r: PracticeCompleteResponse): string {
-  return r.alreadyCompletedToday
-    ? 'Ya sumaste el XP de práctica de hoy; vuelve mañana por más.'
-    : `¡Práctica completa! +${r.xpAwarded} XP`;
+function XpLine({ r }: { r: PracticeCompleteResponse }) {
+  if (r.alreadyCompletedToday) {
+    return (
+      <p className="text-balance">Ya sumaste el XP de práctica de hoy; vuelve mañana por más.</p>
+    );
+  }
+  return (
+    <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xl font-extrabold landscape:text-base">
+      ¡Práctica completa!{' '}
+      <span className="inline-flex items-center gap-2 rounded-pill bg-xp px-3 py-1.5 font-pixel text-base leading-none font-semibold whitespace-nowrap">
+        <PixelSprite sprite={XP_GEM} className="size-4" />+{r.xpAwarded} XP
+      </span>
+    </p>
+  );
 }
 
 /**
- * End of the game: the notebook seal lands (the screen's one orchestrated moment), then the score,
+ * End of the game: the pixel medal assembles (the screen's one orchestrated moment), then the score,
  * the warnings by kind and the XP. The practice is saved once and XP is decided by
  * POST /quiz/practice, never here.
  */
@@ -63,24 +76,19 @@ export function ArResults({ errors }: { errors: Partial<Record<Violation, number
       aria-label="Resultado de la práctica"
       className="pointer-events-none flex w-[calc(100%-2rem)] max-w-md flex-col items-center gap-3 rounded-card bg-bg/95 px-6 py-6 text-center text-ink shadow-float landscape:max-w-lg landscape:gap-1.5 landscape:py-3"
     >
-      <span
-        aria-hidden="true"
-        className="relative grid size-28 -rotate-12 animate-stamp place-items-center rounded-pill border-[5px] border-seal font-mono text-sm leading-tight font-bold tracking-wider text-seal after:absolute after:inset-2 after:rounded-pill after:border-2 after:border-seal/60 landscape:size-16 landscape:border-[3px] landscape:text-[10px]"
-      >
-        <span>
-          BATA
-          <br />
-          PUESTA
+      <div aria-hidden="true" className="flex items-end gap-3">
+        <Mascot mood="cheer" className="h-20 w-auto landscape:h-12" />
+        <span className="flex animate-medal flex-col items-center">
+          <PixelSprite sprite={MEDAL} className="size-20 landscape:size-12" />
         </span>
-      </span>
+      </div>
+      <p className="font-pixel text-2xl font-semibold text-seal landscape:text-lg">Bata puesta</p>
       <p className="font-mono text-[40px] leading-none font-bold tabular-nums landscape:text-2xl">
         {score}
         <span className="text-xl text-muted">/100</span>
       </p>
       {submit.isPending ? <p className="text-muted">Guardando tu práctica…</p> : null}
-      {submit.data ? (
-        <p className="text-xl font-extrabold landscape:text-base">{xpText(submit.data)}</p>
-      ) : null}
+      {submit.data ? <XpLine r={submit.data} /> : null}
       {submit.isError ? (
         <p className="font-bold text-danger">
           {submit.error instanceof ApiError
@@ -97,7 +105,7 @@ export function ArResults({ errors }: { errors: Partial<Record<Violation, number
             {entries.map(([kind, n]) => (
               <li
                 key={kind}
-                className="flex justify-between gap-3 border-b border-grid py-1 last:border-b-0"
+                className="flex justify-between gap-3 border-b border-border py-1 last:border-b-0"
               >
                 <span>{VIOLATION_SHORT[kind]}</span>
                 <span className="font-mono tabular-nums">×{n}</span>

@@ -23,8 +23,8 @@ import type { z } from 'zod';
 import privacidadJson from '../../../../content/legal/privacidad.json';
 import { FormField } from '../components/form-field.tsx';
 import {
+  formPanel,
   textLink as linkClass,
-  notebookCard,
   buttonPrimary as primaryButtonClass,
   buttonSecondary as secondaryButtonClass,
 } from '../components/ui-classes.ts';
@@ -131,7 +131,7 @@ export function LoginPage() {
   };
 
   return (
-    <section className={notebookCard}>
+    <section className={formPanel}>
       <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">
         Iniciar sesión
       </h1>
@@ -205,7 +205,7 @@ export function RegistroPage() {
   const consentErrorId = 'registro-consent-error';
 
   return (
-    <section className={notebookCard}>
+    <section className={formPanel}>
       <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance">
         Crear cuenta
       </h1>

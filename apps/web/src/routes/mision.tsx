@@ -10,11 +10,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { type FormEvent, useState } from 'react';
+import { missionSprite, SPARKLE, XP_GEM } from '../art/sprites.ts';
 import { LoadingState } from '../components/loading-state.tsx';
+import { MascotNote } from '../components/mascot.tsx';
 import { missionCode } from '../components/mission-sheet.tsx';
 import { Pictogram } from '../components/pictogram.tsx';
+import { PixelSprite } from '../components/pixel-sprite.tsx';
 import { StatsBar } from '../components/stats-bar.tsx';
-import { buttonPrimary, pageTitle, sheet, textLink } from '../components/ui-classes.ts';
+import { buttonPrimary, pageTitle, panel, textLink } from '../components/ui-classes.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { db, useAuth } from '../lib/firebase.tsx';
 import { MissionSchema } from './home.tsx';
@@ -40,7 +43,7 @@ async function loadMission(missionId: string) {
 function AnswerResult({ result }: { result: AnswerResponse }) {
   const { source } = result;
   return (
-    <div className="flex animate-rise flex-col gap-3 rounded-card bg-bg p-4 shadow-sheet">
+    <div className="flex animate-rise flex-col gap-3 border-t-2 border-border pt-4">
       <p
         className={`flex items-center gap-2 text-xl font-extrabold ${
           result.correct ? 'text-success' : 'text-danger'
@@ -48,18 +51,24 @@ function AnswerResult({ result }: { result: AnswerResponse }) {
       >
         {result.correct ? <Pictogram name="check" className="size-6" strokeWidth={3} /> : null}
         {result.correct ? '¡Correcto!' : 'Incorrecto'}
+        {result.correct ? <PixelSprite sprite={SPARKLE} className="size-5" /> : null}
       </p>
       <p className="max-w-[65ch]">{result.explanation}</p>
-      <p className="border-t border-grid pt-2 text-sm text-muted">
+      <p className="border-t border-border pt-2 text-sm text-muted">
         Fuente: {source.org}, «{source.title}» ({source.year}), {source.section}
       </p>
       {result.xpAwarded > 0 ? (
         <p>
-          <span className="rounded-pill bg-xp px-3 py-1.5 text-sm leading-none font-extrabold text-ink">
-            +{result.xpAwarded} XP
+          <span className="inline-flex items-center gap-2 rounded-pill bg-xp px-3 py-1.5 font-pixel text-base leading-none font-semibold text-ink">
+            <PixelSprite sprite={XP_GEM} className="size-4" />+{result.xpAwarded} XP
           </span>
         </p>
       ) : null}
+      <MascotNote on="panel" mood={result.correct ? 'cheer' : 'idle'}>
+        {result.correct
+          ? '¡Así se hace! Cada respuesta correcta es técnica que ya dominas.'
+          : 'Lee la explicación con calma: así se aprende la técnica.'}
+      </MascotNote>
     </div>
   );
 }
@@ -105,7 +114,7 @@ function QuestionCard({ question, index }: { question: Question; index: number }
   const promptId = `pregunta-${question.id}`;
 
   return (
-    <li className="flex flex-col gap-4 border-b border-grid pb-8 last:border-b-0 last:pb-0">
+    <li className="flex flex-col gap-4 border-b border-border pb-8 last:border-b-0 last:pb-0">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <fieldset aria-labelledby={promptId} className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -190,20 +199,25 @@ export default function MisionPage() {
         <Link to="/" className={`${textLink} self-start text-sm`}>
           Volver a las misiones
         </Link>
-        <p
-          aria-hidden="true"
-          className="font-mono text-code leading-none font-bold tracking-tighter text-primary"
-        >
-          {missionCode(mission.order)}
-        </p>
-        <h1 className={pageTitle}>{mission.title}</h1>
+        <div className="flex items-center gap-4">
+          <span className="tile-grid relative grid size-20 shrink-0 place-items-center rounded-card">
+            <PixelSprite sprite={missionSprite(mission.iconKey)} className="size-12" />
+            <span
+              aria-hidden="true"
+              className="absolute -right-2 -bottom-2 rounded-box bg-primary px-1.5 py-0.5 font-pixel text-xs font-semibold text-bg"
+            >
+              {missionCode(mission.order)}
+            </span>
+          </span>
+          <h1 className={pageTitle}>{mission.title}</h1>
+        </div>
         <p className="max-w-[65ch] text-muted">{mission.description}</p>
         {me.data ? <StatsBar profile={me.data} /> : null}
       </header>
       {questions.length === 0 ? (
         <p className="text-muted">Esta misión aún no tiene preguntas publicadas.</p>
       ) : (
-        <ol className={`${sheet} flex flex-col gap-8`}>
+        <ol className={`${panel} flex flex-col gap-8`}>
           {questions.map((question, index) => (
             <QuestionCard key={question.id} question={question} index={index} />
           ))}

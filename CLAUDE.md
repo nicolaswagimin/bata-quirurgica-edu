@@ -84,32 +84,41 @@ workspace por subruta (`@bata/shared/schemas`). Sin alias `@/`, sin barrels.
 
 ## Design system
 
-Mundo visual: **Libreta de prácticas** (tinta de bolígrafo sobre cuaderno cuadriculado; sello violeta
-para lo dominado). Fuente única de tokens: `apps/web/src/styles.css`. Detalle y movimiento: `DESIGN.md`.
+Mundo visual: **Quirófano menta** (la pared de azulejos menta del quirófano: verde quirúrgico profundo
+sobre blanco cálido; el pixel art es el único adorno). Fuente única de tokens:
+`apps/web/src/styles.css`. Detalle y movimiento: `DESIGN.md`.
 
 | Rol | Token | Valor | Uso |
 |---|---|---|---|
-| Fondo | `bg` | `#FFFFFF` | página, hoja |
-| Superficie | `surface` | `#EEF3FB` | paneles, filas en hover |
-| Cuadrícula / margen | `grid` / `margin` | `#DCE7F5` / `#F3A6A6` | solo en la hoja abierta (`paper-grid`); reglas |
-| Primario (bolígrafo) | `primary` | `#1F3FB0` | cabecera, botones, casillas, enlaces |
-| Primario fuerte | `primary-strong` | `#16225C` | hover/activo |
-| Primario suave | `primary-soft` | `#E3EAF8` | fondos de selección |
-| Texto | `ink` | `#16225C` | cuerpo; nunca negro puro |
-| Texto atenuado | `muted` | `#4A5A8A` | ayudas, metadatos, borde de inputs |
-| Sello | `seal` | `#6A3FB5` | misión dominada |
-| XP | `xp` / `xp-soft` | `#F2B705` / `#FFF3C4` | solo en fichas y en la barra de nivel, texto `ink` encima |
-| Racha | `streak` | `#F2711C` | llama decorativa, siempre con número en texto |
-| Éxito / Peligro / Info | `success` / `danger` / `info` | `#1E7A4C` / `#C0352B` / `#2563EB` | estados |
-| Foco | `focus` / `focus-on-primary` | `#16225C` / `#F2B705` | anillo de 3 px |
+| Fondo | `bg` | `#FFFDF8` | página, paneles |
+| Superficie | `surface` | `#F3EFE4` | paneles secundarios, filas en hover |
+| Banda (menta, color principal) | `band` | `#A6E4C9` | cabecera y banda de inicio; encima solo tinta, nunca texto blanco |
+| Texto atenuado en la banda | `on-band-muted` | `#2C4F42` | metadatos sobre la banda |
+| Azulejo | `tile` | `#D3EEE1` | cuadrícula `tile-grid`, solo detrás de pixel art |
+| Primario (verde quirúrgico) | `primary` | `#0C6A4C` | botones, enlaces, pestaña activa, casillas hechas |
+| Primario fuerte | `primary-strong` | `#084E38` | hover/activo, pista de la barra de nivel |
+| Primario suave | `primary-soft` | `#E2F5EC` | selección, fondos de íconos |
+| Texto | `ink` | `#173A2F` | cuerpo; nunca negro puro |
+| Texto atenuado | `muted` | `#4C5D55` | ayudas, metadatos |
+| Borde | `border` | `#D9D1BF` | reglas entre filas, bordes de inputs |
+| Dominada (bronce) | `seal` | `#8A5A00` | medalla y texto de misión dominada |
+| XP | `xp` / `xp-soft` | `#F2B705` / `#FFEFB8` | solo en fichas y en la barra de nivel, texto `ink` encima |
+| Racha | `streak` | `#E4612A` | llama pixel decorativa, siempre con número en texto |
+| Éxito / Peligro / Info | `success` / `danger` / `info` | `#1B7344` / `#B3362B` / `#2A5DB8` | estados |
+| Foco | `focus` / `focus-on-primary` | `#173A2F` / `#F2B705` | anillo de 3 px |
 
-- Tipografía: Atkinson Hyperlegible Next (UI) y Atkinson Hyperlegible Mono (solo códigos y cifras),
-  OFL, autoalojadas en `apps/web/public/fonts/`. Escala 12 / 14 / 16 / 20 / 24 / 32 px + 48 px
-  para el código de misión.
-- Espaciado base 4 px. Radio 4 px casillas, 12 px hojas y paneles, 999 px píldoras. Sin tarjetas con
-  borde: reglas y tipografía separan el contenido.
-- Íconos: `components/pictogram.tsx` (línea 2 px, retícula 24). Sin emoji como ícono.
-- Movimiento: duraciones y curvas solo desde tokens (`--duration-*`, `--ease-*`, `animate-stamp`);
+- Tipografía: Atkinson Hyperlegible Next (UI y contenido) y Atkinson Hyperlegible Mono (solo códigos
+  y cifras); Pixelify Sans solo en titulares de 2–4 palabras e insignias, nunca en párrafos ni
+  botones. Todas OFL, autoalojadas en `apps/web/public/fonts/`. Escala 12 / 14 / 16 / 20 / 24 / 32 px.
+- Pixel art: solo como acento (íconos de misión, insignias de XP y racha, medalla, celebraciones,
+  mascota **Dra. Menta**). Se dibuja por código: grillas de caracteres en `src/art/sprites.ts`
+  sobre la paleta de tokens, pintadas por `components/pixel-sprite.tsx` (SVG nítido, `pixelated`).
+  Nada de arte de terceros. La Dra. Menta nunca muestra una postura incorrecta.
+- Espaciado base 4 px. Radio 4 px casillas, 12 px paneles, 999 px píldoras. Sin tarjetas con borde:
+  reglas, sombra suave y tipografía separan el contenido.
+- Íconos de interfaz (pestañas, botones): `components/pictogram.tsx` (línea 2 px, retícula 24). Sin
+  emoji como ícono.
+- Movimiento: duraciones y curvas solo desde tokens (`--duration-*`, `--ease-*`, `animate-medal`);
   un momento orquestado por pantalla; nada desde escala 0; utilidad `pressable` para presionar.
 - Solo modo claro. Respetar `prefers-reduced-motion`.
 

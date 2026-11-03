@@ -1,6 +1,9 @@
 import { bogotaDate } from '@bata/shared/gamification';
+import { XP_GEM } from '../art/sprites.ts';
 import type { Profile } from '../lib/api.ts';
 import { FlameIcon } from './flame-icon.tsx';
+import { MascotNote } from './mascot.tsx';
+import { PixelSprite } from './pixel-sprite.tsx';
 
 /** XP needed to reach `level` (inverse of levelForXp: level = floor(sqrt(xp / 50)) + 1). */
 function xpForLevel(level: number): number {
@@ -16,7 +19,7 @@ function streakHint(profile: Profile): string {
     : 'Responde una pregunta hoy para mantenerla.';
 }
 
-/** The blue band under the header: greeting, streak and XP chips, progress to the next level. */
+/** The mint band under the header: greeting, streak and XP badges, Dra. Menta, level progress. */
 export function HomeBand({ profile }: { profile: Profile }) {
   const from = xpForLevel(profile.level);
   const to = xpForLevel(profile.level + 1);
@@ -24,14 +27,14 @@ export function HomeBand({ profile }: { profile: Profile }) {
   const streak = profile.streakDays;
 
   return (
-    <section className="on-primary -mx-4 -mt-8 bg-primary px-4 pt-4 pb-8 text-bg md:mx-[calc(50%-50vw)] md:px-[max(2rem,calc(50vw-36rem+2rem))] md:pt-6 md:pb-20">
+    <section className="-mx-4 -mt-8 bg-band px-4 pt-4 pb-8 text-ink md:mx-[calc(50%-50vw)] md:px-[max(2rem,calc(50vw-36rem+2rem))] md:pt-6 md:pb-20">
       <div className="grid gap-6 md:grid-cols-12 md:items-end md:gap-8">
         <div className="flex flex-col gap-3 md:col-span-7">
           <h1 className="text-xl leading-tight font-extrabold tracking-tight text-balance md:text-2xl">
             Hola, {profile.displayName}
           </h1>
           <ul aria-label="Tu progreso" className="flex flex-wrap items-center gap-2 text-sm">
-            <li className="flex items-center gap-1.5 rounded-pill bg-primary-strong px-3 py-2 leading-none font-bold">
+            <li className="flex items-center gap-2 rounded-pill bg-bg px-3 py-2 leading-none font-bold">
               <FlameIcon />
               <span>
                 {streak} {streak === 1 ? 'día' : 'días'} de racha
@@ -39,19 +42,18 @@ export function HomeBand({ profile }: { profile: Profile }) {
             </li>
             <li
               data-testid="xp-pill"
-              className="rounded-pill bg-xp px-3 py-2 leading-none font-extrabold text-ink tabular-nums"
+              className="flex items-center gap-2 rounded-pill bg-xp px-3 py-2 font-pixel text-base leading-none font-semibold text-ink tabular-nums"
             >
+              <PixelSprite sprite={XP_GEM} className="size-4" />
               {profile.xp} XP
             </li>
           </ul>
-          <p className="text-sm text-on-primary-muted">{streakHint(profile)}</p>
+          <MascotNote className="mt-1">{streakHint(profile)}</MascotNote>
         </div>
         <div className="flex flex-col gap-2 md:col-span-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <h2 className="text-xl font-extrabold tracking-tight md:text-2xl">
-              Nivel {profile.level}
-            </h2>
-            <p className="text-xs text-on-primary-muted">
+            <h2 className="font-pixel text-xl font-semibold md:text-2xl">Nivel {profile.level}</h2>
+            <p className="text-xs text-on-band-muted">
               <span className="font-mono tabular-nums">
                 {profile.xp} / {to}
               </span>{' '}
@@ -64,10 +66,10 @@ export function HomeBand({ profile }: { profile: Profile }) {
             aria-valuemin={from}
             aria-valuemax={to}
             aria-valuenow={profile.xp}
-            className="h-2 overflow-hidden rounded-pill bg-primary-strong"
+            className="h-3 overflow-hidden rounded-box bg-primary-strong p-0.5"
           >
             <div
-              className="h-full origin-left animate-fill rounded-pill bg-xp"
+              className="h-full origin-left animate-fill rounded-[2px] bg-xp"
               style={{ width: `${ratio * 100}%` }}
             />
           </div>

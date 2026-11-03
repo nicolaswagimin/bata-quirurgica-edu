@@ -180,7 +180,7 @@ export default function AdminGruposPage() {
               </thead>
               <tbody>
                 {progress.data.map((m) => (
-                  <tr key={m.uid} className="border-t border-grid text-ink">
+                  <tr key={m.uid} className="border-t border-border text-ink">
                     <th scope="row" className="p-3 font-medium">
                       {m.displayName}
                     </th>

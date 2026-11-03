@@ -31,6 +31,14 @@
       "sourceUrl": "https://github.com/googlefonts/atkinson-hyperlegible-next",
       "license": "SIL Open Font License 1.1 (apps/web/public/fonts/OFL.txt)",
       "modifications": "Subconjunto latino en woff2, servido desde el propio sitio."
+    },
+    {
+      "id": "pixelify-sans",
+      "title": "Tipografía Pixelify Sans",
+      "author": "The Pixelify Sans Project Authors",
+      "sourceUrl": "https://github.com/eifetx/Pixelify-Sans",
+      "license": "SIL Open Font License 1.1 (apps/web/public/fonts/OFL-pixelify-sans.txt)",
+      "modifications": "Subconjunto latino en woff2, servido desde el propio sitio. Solo para titulares cortos e insignias."
     }
   ]
 }

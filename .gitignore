@@ -41,4 +41,4 @@ tools/bata-3d/.work/
 apps/web/.impeccable/*
 !apps/web/.impeccable/surfaces/
 apps/web/.impeccable/surfaces/*
-!apps/web/.impeccable/surfaces/apps-web-src-routes-home-tsx.md
+!apps/web/.impeccable/surfaces/src-routes-home-tsx.md

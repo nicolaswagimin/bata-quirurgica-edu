@@ -1,41 +1,44 @@
 @import "tailwindcss";
 
-/* Design tokens — the single source of truth. World: "Libreta de prácticas" (a clinical practice
-   notebook: ballpoint-blue ink on quadrille paper, a violet rubber stamp for mastered missions).
-   Components use the generated utilities (bg-primary, text-ink, border-border, ...) and never raw
-   hex values. test/unit/contrast.test.ts parses the --color-* lines below. Light mode only. */
+/* Design tokens — the single source of truth. World: "Quirófano menta" (the mint-tiled operating
+   room: deep surgical green on warm white, pixel-art tiles as the only ornament). Components use the
+   generated utilities (bg-primary, text-ink, bg-band, ...) and never raw hex values.
+   test/unit/contrast.test.ts parses the --color-* lines below. Light mode only. */
 @theme {
-  /* Paper and ink */
-  --color-bg: #ffffff;
-  --color-surface: #eef3fb;
-  --color-grid: #dce7f5;
-  --color-margin: #f3a6a6;
-  --color-ink: #16225c;
-  --color-muted: #4a5a8a;
-  --color-border: #c3d1ea;
-  /* Ballpoint pen: primary */
-  --color-primary: #1f3fb0;
-  --color-primary-strong: #16225c;
-  --color-primary-soft: #e3eaf8;
-  --color-on-primary-muted: #dce7f5;
-  /* Rubber stamp: mastered */
-  --color-seal: #6a3fb5;
-  --color-seal-soft: #efe8fa;
-  /* Game: only inside chips */
+  /* Warm ground and ink */
+  --color-bg: #fffdf8;
+  --color-surface: #f3efe4;
+  --color-ink: #173a2f;
+  --color-muted: #4c5d55;
+  --color-border: #d9d1bf;
+  /* Mint: the main colour. The band carries ink, never white text. */
+  --color-band: #a6e4c9;
+  --color-on-band-muted: #2c4f42;
+  --color-tile: #d3eee1;
+  /* Deep surgical green: buttons, links, current state */
+  --color-primary: #0c6a4c;
+  --color-primary-strong: #084e38;
+  --color-primary-soft: #e2f5ec;
+  /* Bronze medal: mastered */
+  --color-seal: #8a5a00;
+  --color-seal-soft: #fbeed0;
+  /* Game: XP gold and the streak flame */
   --color-xp: #f2b705;
-  --color-xp-soft: #fff3c4;
-  --color-streak: #f2711c;
+  --color-xp-soft: #ffefb8;
+  --color-streak: #e4612a;
   /* States */
-  --color-success: #1e7a4c;
-  --color-danger: #c0352b;
-  --color-info: #2563eb;
-  --color-focus: #16225c;
+  --color-success: #1b7344;
+  --color-danger: #b3362b;
+  --color-info: #2a5db8;
+  --color-focus: #173a2f;
   --color-focus-on-primary: #f2b705;
 
   --font-sans:
     "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     sans-serif;
   --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Pixel face: two-to-four-word headlines and badges only, never body text or buttons. */
+  --font-pixel: "Pixelify Sans", "Atkinson Hyperlegible Mono", ui-monospace, monospace;
 
   --text-xs: 12px;
   --text-sm: 14px;
@@ -81,43 +84,17 @@
     0.997,
     1
   );
-  /* Damping 0.65, response 0.35 s: the only bounce in the system, for the stamp's physical impact. */
-  --ease-stamp: linear(
-    0,
-    0.07,
-    0.23,
-    0.422,
-    0.61,
-    0.769,
-    0.893,
-    0.979,
-    1.033,
-    1.06,
-    1.068,
-    1.064,
-    1.054,
-    1.041,
-    1.028,
-    1.017,
-    1.008,
-    1.002,
-    0.998,
-    0.996,
-    0.995,
-    0.996,
-    0.996,
-    0.997,
-    1
-  );
 
-  --animate-stamp: stamp var(--duration-stamp) var(--ease-stamp) 200ms both;
+  /* The signature move: a pixel medal assembles from its ribbon down, two pixel rows per step.
+     Rare by design (first time a mission shows as mastered, end of the AR game). */
+  --animate-medal: medal var(--duration-medal) steps(8, jump-end) 200ms both;
   --animate-fill: fill var(--duration-gentle) var(--ease-spring) 320ms both;
   /* Answer feedback on a mission page: that screen's one orchestrated moment. */
   --animate-rise: rise var(--duration-spring) var(--ease-spring) both;
 
-  /* Depth: a sheet lifted off the band, and the floating assistant trigger. */
-  --shadow-sheet: 0 1px 2px rgb(22 34 92 / 0.08), 0 12px 32px -12px rgb(22 34 92 / 0.25);
-  --shadow-float: 0 2px 4px rgb(22 34 92 / 0.12), 0 12px 24px -8px rgb(22 34 92 / 0.35);
+  /* Depth: a panel lifted off the band, and the floating assistant trigger (ink-tinted). */
+  --shadow-sheet: 0 1px 2px rgb(23 58 47 / 0.08), 0 12px 32px -12px rgb(23 58 47 / 0.28);
+  --shadow-float: 0 2px 4px rgb(23 58 47 / 0.12), 0 12px 24px -8px rgb(23 58 47 / 0.35);
 }
 
 /* Canvas-only colours (AR mirror, 3D): read with getComputedStyle, never through a utility, so they
@@ -135,6 +112,14 @@
   /* Circulating nurse (non-sterile): nitrile gloves and a non-sterile gown cuff */
   --color-circulante-glove: #6f7fb8;
   --color-circulante-cuff: #a7b0b8;
+  /* Pixel sprites (src/art/sprites.ts): skin, hair and cheek of Dra. Menta; the rest of a sprite's
+     palette reuses the tokens above (gown, mask, glove, band, primary, xp, seal, ink). */
+  --color-px-skin: #c68a64;
+  --color-px-skin-shade: #a46a47;
+  --color-px-hair: #3b2a22;
+  --color-px-cheek: #d9776a;
+  /* Bronze medal body; the seal token is its shade, so "mastered" never reads as XP gold. */
+  --color-px-bronze: #c7832a;
 }
 
 /* Motion durations (used as duration-(--duration-press), etc.). */
@@ -144,13 +129,21 @@
   --duration-base: 240ms;
   --duration-spring: 405ms;
   --duration-gentle: 607ms;
-  --duration-stamp: 547ms;
+  --duration-medal: 480ms;
 }
 
 @font-face {
   font-family: "Atkinson Hyperlegible Next";
   src: url("/fonts/atkinson-hyperlegible-next-latin.woff2") format("woff2");
   font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("/fonts/pixelify-sans-latin.woff2") format("woff2");
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
@@ -163,19 +156,14 @@
   font-display: swap;
 }
 
-/* Nothing enters from scale 0: the stamp lands from 1.35 with ink blur, the bar grows from 82 %. */
-@keyframes stamp {
+/* Nothing enters from scale 0: the medal is revealed row by row from the ribbon down (clip, not
+   scale); the bar grows from 82 %. */
+@keyframes medal {
   from {
-    rotate: -20deg;
-    scale: 1.35;
-    opacity: 0;
-    filter: blur(2px);
+    clip-path: inset(0 0 100% 0);
   }
   to {
-    rotate: -12deg;
-    scale: 1;
-    opacity: 0.9;
-    filter: blur(0);
+    clip-path: inset(0 0 0 0);
   }
 }
 
@@ -199,11 +187,18 @@
   }
 }
 
-@utility paper-grid {
-  background-color: var(--color-bg);
+/* Pixel art keeps hard edges at every scale. */
+@utility pixelated {
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+/* The mint tile wall: a faint 16 px grid, only behind pixel art and the open mission. */
+@utility tile-grid {
+  background-color: var(--color-primary-soft);
   background-image:
-    linear-gradient(color-mix(in srgb, var(--color-grid) 70%, white) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--color-grid) 70%, white) 1px, transparent 1px);
+    linear-gradient(var(--color-tile) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-tile) 1px, transparent 1px);
   background-size: 16px 16px;
   background-position: -1px -1px;
 }
@@ -237,18 +232,12 @@ html {
   outline-offset: 2px;
 }
 
+/* On deep-green fills (buttons, current tab) the ring turns gold. */
 .on-primary :focus-visible {
   outline-color: var(--color-focus-on-primary);
 }
 
-/* Below md the tab bar sits on white paper even though it lives in the blue header. */
-@media (width < 48rem) {
-  .on-primary nav :focus-visible {
-    outline-color: var(--color-focus);
-  }
-}
-
-/* Floating controls cross both blue and white: navy ring on the control, gold halo beyond it. */
+/* Floating controls cross both mint and white: ink ring on the control, gold halo beyond it. */
 .focus-dual:focus-visible {
   outline-color: var(--color-focus-on-primary);
   outline-offset: 2px;
@@ -258,15 +247,15 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Movement goes and transitions become instant; only the stamp keeps a short opacity fade. */
-  *:not(.animate-stamp),
+  /* Movement goes and transitions become instant; only the medal keeps a short opacity fade. */
+  *:not(.animate-medal),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .animate-stamp {
+  .animate-medal {
     animation: fade var(--duration-fast) ease both;
   }
   .pressable:active {
@@ -277,7 +266,7 @@ html {
       opacity: 0;
     }
     to {
-      opacity: 0.9;
+      opacity: 1;
     }
   }
 }

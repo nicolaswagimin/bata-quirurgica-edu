@@ -35,26 +35,36 @@ describe('contraste de tokens de color', () => {
     ['primary-strong', 'bg'],
     ['danger', 'bg'],
     ['info', 'bg'],
+    ['success', 'bg'],
+    ['seal', 'bg'],
+    ['seal', 'seal-soft'],
     ['bg', 'primary'],
-    ['ink', 'xp'],
-    ['ink', 'xp-soft'],
+    ['bg', 'primary-strong'],
     ['ink', 'surface'],
     ['muted', 'surface'],
+    ['primary', 'surface'],
     ['ink', 'primary-soft'],
-    ['seal', 'bg'],
-    ['success', 'bg'],
-    ['bg', 'primary-strong'],
-    ['on-primary-muted', 'primary'],
+    ['primary', 'primary-soft'],
+    ['muted', 'primary-soft'],
+    // The mint band carries ink and deep green, never white text.
+    ['ink', 'band'],
+    ['on-band-muted', 'band'],
+    ['primary-strong', 'band'],
+    ['ink', 'tile'],
+    ['ink', 'xp'],
+    ['ink', 'xp-soft'],
   ])('%s sobre %s ≥ 4.5:1', (fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 
   it.each([
-    ['success', 'bg'],
     ['muted', 'bg'],
     ['focus', 'bg'],
+    ['focus', 'band'],
     ['focus-on-primary', 'primary'],
     ['primary', 'bg'],
+    ['primary', 'band'],
+    ['streak', 'bg'],
   ])('%s sobre %s ≥ 3:1 (elementos no textuales: bordes, foco, casillas)', (fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(3);
   });

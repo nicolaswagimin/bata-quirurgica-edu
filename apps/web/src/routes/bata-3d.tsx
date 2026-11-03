@@ -2,6 +2,7 @@ import { BataPasosSchema } from '@bata/shared/schemas';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
+import { pageTitle } from '../components/ui-classes.ts';
 import { Mannequin } from '../three/mannequin.tsx';
 import { ModelBoundary } from '../three/model-boundary.tsx';
 import { StepModels } from '../three/step-models.tsx';
@@ -66,7 +67,7 @@ export default function Bata3dPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Modo 3D: bata quirúrgica</h1>
+      <h1 className={pageTitle}>Modo 3D: bata quirúrgica</h1>
       <p className="text-sm text-muted">{pasos.reviewNote}</p>
 
       <div role="tablist" aria-label="Fase" className="flex gap-2">

@@ -15,9 +15,10 @@ import { z } from 'zod';
 import { FormField } from '../components/form-field.tsx';
 import { HomeBand } from '../components/home-band.tsx';
 import { LoadingState } from '../components/loading-state.tsx';
+import { Mascot, MascotNote } from '../components/mascot.tsx';
 import { type IndexEntry, MissionIndex } from '../components/mission-index.tsx';
 import { MissionSheet } from '../components/mission-sheet.tsx';
-import { buttonPrimary as primaryButtonClass } from '../components/ui-classes.ts';
+import { formPanel, panel, buttonPrimary as primaryButtonClass } from '../components/ui-classes.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { db, useAuth } from '../lib/firebase.tsx';
 
@@ -104,11 +105,12 @@ function ConsentForm() {
   const consentErrorId = 'perfil-consent-error';
 
   return (
-    <section className="paper-grid relative mx-auto flex max-w-lg flex-col gap-4 rounded-card py-8 pr-6 pl-16 shadow-sheet before:absolute before:inset-y-0 before:left-11 before:border-l-2 before:border-margin">
+    <section className={`${formPanel} max-w-lg`}>
+      <Mascot className="h-20 w-auto self-start" />
       <h1 className="text-xl font-extrabold tracking-tight">Completa tu perfil</h1>
       <p className="text-sm text-muted">
-        Así abres tu libreta de prácticas: cinco misiones sobre la bata quirúrgica y la
-        bioseguridad, con cada explicación basada en OMS, CDC y la Resolución 3100 de 2019.
+        Así empiezas: cinco misiones sobre la bata quirúrgica y la bioseguridad, con cada
+        explicación basada en OMS, CDC y la Resolución 3100 de 2019.
       </p>
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         <FormField
@@ -224,12 +226,14 @@ function MissionMap({ profile }: { profile: Profile }) {
             {current ? (
               <MissionSheet mission={current} correct={current.correct} className="md:col-span-7" />
             ) : (
-              <section className="paper-grid -mx-4 px-4 py-8 md:col-span-7 md:mx-0 md:rounded-card md:p-10">
-                <h2 className="text-xl font-extrabold tracking-tight">Libreta completa</h2>
-                <p className="mt-2 max-w-[52ch] text-sm text-muted">
-                  Sellaste las {entries.length} misiones. Repasa en 3D o en el AR espejo para
+              <section className={`${panel} flex flex-col items-start gap-4 md:col-span-7`}>
+                <h2 className="font-pixel text-2xl font-semibold text-primary">
+                  ¡Todas dominadas!
+                </h2>
+                <MascotNote on="panel" mood="cheer">
+                  Dominaste las {entries.length} misiones. Repasa en 3D o en el AR espejo para
                   mantener la técnica.
-                </p>
+                </MascotNote>
               </section>
             )}
             <MissionIndex

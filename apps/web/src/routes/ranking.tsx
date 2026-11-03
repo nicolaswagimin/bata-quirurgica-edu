@@ -81,13 +81,13 @@ function RankingList({ tab, groupId, uid }: { tab: Tab; groupId: string | null; 
           <li
             key={entry.uid}
             aria-current={mine ? 'true' : undefined}
-            className={`flex items-center gap-3 border-b border-grid px-2 py-3 last:border-b-0 ${
+            className={`flex items-center gap-3 border-b border-border px-2 py-3 last:border-b-0 ${
               mine ? '-mx-2 rounded-card bg-primary-soft px-4' : ''
             }`}
           >
             <span
               className={`w-10 text-center font-mono text-xl font-bold tabular-nums ${
-                index < 3 ? 'text-seal' : 'text-muted'
+                index < 3 ? 'text-primary' : 'text-muted'
               }`}
             >
               {index + 1}
@@ -97,7 +97,7 @@ function RankingList({ tab, groupId, uid }: { tab: Tab; groupId: string | null; 
               {mine ? <span className="font-normal text-muted"> (tú)</span> : null}
             </span>
             <span className="text-sm text-muted">Nivel {entry.level}</span>
-            <span className="rounded-pill bg-xp px-3 py-1.5 text-sm leading-none font-extrabold whitespace-nowrap text-ink tabular-nums">
+            <span className="rounded-pill bg-xp px-3 py-1.5 font-pixel text-sm leading-none font-semibold whitespace-nowrap text-ink tabular-nums">
               {entry.xp} XP
             </span>
           </li>

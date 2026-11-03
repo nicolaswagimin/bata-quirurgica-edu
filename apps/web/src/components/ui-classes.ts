@@ -1,4 +1,4 @@
-// Shared class strings of the "Libreta de prácticas" world (see DESIGN.md). One source so every
+// Shared class strings of the "Quirófano menta" world (see DESIGN.md). One source so every
 // screen presses, focuses and stacks the same way.
 
 export const buttonPrimary =
@@ -15,13 +15,10 @@ export const textLink =
 
 export const pageTitle = 'text-2xl leading-tight font-extrabold tracking-tight text-balance';
 
-/** The open notebook page: quadrille, red margin rule, lifted on desktop. */
-export const sheet =
-  'paper-grid relative -mx-4 px-4 py-6 pl-16 shadow-[inset_0_-2px_0_var(--color-primary)] ' +
-  'before:absolute before:inset-y-0 before:left-11 before:border-l-2 before:border-margin ' +
-  'md:mx-0 md:rounded-card md:py-8 md:pr-8 md:pl-24 md:shadow-sheet md:before:left-[4.5rem]';
+/** The open working panel (a mission's questions): warm white, lifted off the band on desktop. */
+export const panel =
+  'relative -mx-4 bg-bg px-4 py-6 md:mx-0 md:rounded-card md:p-10 md:shadow-sheet';
 
-/** A small notebook page for focused forms (login, registro, consent). */
-export const notebookCard =
-  'paper-grid relative mx-auto flex w-full max-w-md flex-col gap-4 rounded-card py-8 pr-6 pl-16 shadow-sheet ' +
-  'before:absolute before:inset-y-0 before:left-11 before:border-l-2 before:border-margin';
+/** A small panel for focused forms (login, registro, consent). */
+export const formPanel =
+  'relative mx-auto flex w-full max-w-md flex-col gap-4 rounded-card bg-bg p-6 shadow-sheet md:p-8';

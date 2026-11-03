@@ -10,7 +10,7 @@ export default function CreditosPage() {
       <p className="text-muted">Activos 3D y multimedia usados en la plataforma y sus licencias.</p>
       <ul className="flex flex-col gap-3">
         {credits.assets.map((asset) => (
-          <li key={asset.id} className="border-b border-grid py-4 last:border-b-0">
+          <li key={asset.id} className="border-b border-border py-4 last:border-b-0">
             <h2 className="text-lg font-extrabold">{asset.title}</h2>
             <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
               <dt className="font-bold">Autor</dt>
