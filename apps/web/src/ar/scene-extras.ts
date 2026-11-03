@@ -66,25 +66,44 @@ function bow(ctx: Ctx, at: Vec, size: number, t: number, color: string) {
   ctx.restore();
 }
 
+/** How a hand is painted: solid behind the body, or as a see-through outline over the gown. */
+interface HandStyle {
+  glove: string;
+  cuff: string;
+  outline: string;
+  ghost: boolean;
+}
+
 /** A gloved hand with a gown cuff, pointing along `dir`. */
-function hand(ctx: Ctx, at: Vec, dir: Vec, size: number, glove: string, cuff: string) {
+function hand(ctx: Ctx, at: Vec, dir: Vec, size: number, style: HandStyle) {
   const angle = Math.atan2(dir.y, dir.x);
   ctx.save();
   ctx.translate(at.x, at.y);
   ctx.rotate(angle);
-  ctx.fillStyle = cuff;
-  ctx.beginPath();
-  ctx.roundRect(-size * 2.6, -size * 0.46, size * 2.2, size * 0.92, size * 0.3);
-  ctx.fill();
-  ctx.fillStyle = glove;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, size * 0.55, size * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  for (let f = -1.5; f <= 1.5; f += 1) {
+  if (style.ghost) ctx.globalAlpha *= 0.5;
+  ctx.strokeStyle = style.outline;
+  ctx.lineWidth = Math.max(1.5, size * 0.1);
+  ctx.lineJoin = 'round';
+  if (style.ghost) ctx.setLineDash([size * 0.22, size * 0.16]);
+  const shape = (fill: string, path: () => void, outlined = true) => {
+    ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.ellipse(size * 0.6, f * size * 0.18, size * 0.32, size * 0.09, 0, 0, Math.PI * 2);
+    path();
     ctx.fill();
+    if (outlined) ctx.stroke();
+  };
+  shape(style.cuff, () =>
+    ctx.roundRect(-size * 2.6, -size * 0.46, size * 2.2, size * 0.92, size * 0.3),
+  );
+  for (let f = -1.5; f <= 1.5; f += 1) {
+    // Fingers are too thin for a dashed outline: the see-through layer only fills them.
+    shape(
+      style.glove,
+      () => ctx.ellipse(size * 0.62, f * size * 0.19, size * 0.34, size * 0.1, 0, 0, Math.PI * 2),
+      !style.ghost,
+    );
   }
+  shape(style.glove, () => ctx.ellipse(0, 0, size * 0.58, size * 0.44, 0, 0, Math.PI * 2));
   ctx.restore();
 }
 
@@ -106,33 +125,50 @@ export function drawTieBows(
 
 /**
  * The circulating nurse ties the gown from behind: first the neck ties (t 0–0.45), then the waist
- * ties (0.5–0.95). Draw this BEFORE the gown so the body hides the hands and only what reaches past
- * the silhouette shows, as when someone works behind you.
+ * ties (0.5–0.95). Paint `behind` BEFORE the gown, so the body hides the hands and only what reaches
+ * past the silhouette shows, and `ghost` AFTER it: a dashed, see-through outline that tells the
+ * player where the hands are while they work behind the back.
  */
-export function drawCirculante(ctx: Ctx, body: BodyFrame, t: number, colors: ExtraColors) {
+export function drawCirculante(
+  ctx: Ctx,
+  body: BodyFrame,
+  t: number,
+  colors: ExtraColors,
+  layer: 'behind' | 'ghost',
+) {
   const { neck, waist } = tiePoints(body);
   const sw = body.shoulderWidth;
-  const size = sw * 0.26;
+  const size = sw * 0.34;
   const up = scale(body.down, -1);
-  const outL = add(body.left.shoulder, add(scale(body.across, sw * 0.3), scale(up, sw * 0.25)));
-  const outR = add(body.right.shoulder, add(scale(body.across, -sw * 0.3), scale(up, sw * 0.25)));
+  const outL = add(body.left.shoulder, add(scale(body.across, sw * 0.35), scale(up, sw * 0.3)));
+  const outR = add(body.right.shoulder, add(scale(body.across, -sw * 0.35), scale(up, sw * 0.3)));
   const neckPhase = clamp01(t / 0.45);
   const waistPhase = clamp01((t - 0.5) / 0.45);
-  const glove = colors.circulanteGlove;
-  const cuff = colors.circulanteCuff;
+  const style: HandStyle = {
+    glove: colors.circulanteGlove,
+    cuff: colors.circulanteCuff,
+    outline: layer === 'ghost' ? colors.paper : colors.trim,
+    ghost: layer === 'ghost',
+  };
   if (t < 0.48) {
+    // Fingers peek above the collar on both sides of the neck.
     const k = ease(neckPhase / 0.6);
-    const l = lerp(outL, add(neck, scale(body.across, sw * 0.16)), k);
-    const r = lerp(outR, add(neck, scale(body.across, -sw * 0.16)), k);
-    hand(ctx, l, scale(body.across, -1), size, glove, cuff);
-    hand(ctx, r, body.across, size, glove, cuff);
+    const tie = add(neck, scale(up, sw * 0.1));
+    const l = lerp(outL, add(tie, scale(body.across, sw * 0.2)), k);
+    const r = lerp(outR, add(tie, scale(body.across, -sw * 0.2)), k);
+    hand(ctx, l, scale(body.across, -1), size, style);
+    hand(ctx, r, body.across, size, style);
   } else if (t < 0.97) {
     const side = add(waist, scale(body.across, sw * 0.14));
     const k = ease(waistPhase / 0.6);
-    const a = lerp(outL, add(side, scale(up, sw * 0.1)), k);
-    const b = lerp(add(outL, scale(body.down, sw * 0.9)), add(side, scale(body.down, sw * 0.1)), k);
-    hand(ctx, a, scale(body.across, -1), size, glove, cuff);
-    hand(ctx, b, scale(body.across, -1), size, glove, cuff);
+    const a = lerp(outL, add(side, scale(up, sw * 0.12)), k);
+    const b = lerp(
+      add(outL, scale(body.down, sw * 0.9)),
+      add(side, scale(body.down, sw * 0.12)),
+      k,
+    );
+    hand(ctx, a, scale(body.across, -1), size, style);
+    hand(ctx, b, scale(body.across, -1), size, style);
   }
 }
 
@@ -186,7 +222,12 @@ export function drawGloves(
       ctx.lineWidth = Math.max(1.5, handSize * 0.08);
       ctx.stroke();
     }
-    hand(ctx, add(wrist, scale(unit, handSize * 0.5)), unit, handSize, colors.glove, colors.glove);
+    hand(ctx, add(wrist, scale(unit, handSize * 0.5)), unit, handSize, {
+      glove: colors.glove,
+      cuff: colors.glove,
+      outline: colors.gloveShade,
+      ghost: false,
+    });
     ctx.restore();
   }
 }

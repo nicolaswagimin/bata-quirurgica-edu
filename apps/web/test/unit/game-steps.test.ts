@@ -132,6 +132,7 @@ describe('GameSession', () => {
     const [left, right] = sleeveOpenings(hangingFrame(body));
     let view = feed(s, pose(), 2500, 100);
     expect(view.scene.gown).toBe('hanging');
+    expect(view.exempt).toEqual(['axilas']);
     const inSleeves = pose({
       15: [left.x / 1000, left.y / 1000, -0.3],
       16: [right.x / 1000, right.y / 1000, -0.3],
@@ -147,6 +148,16 @@ describe('GameSession', () => {
     view = feed(s, armsForward, 2900, 700 + DON_MS);
     expect(view.scene.gown).toBe('worn');
     expect(view.completedIds).toEqual(['g1-mascarilla', 'g2-manos', 'g3-bata']);
+    expect(view.exempt).toEqual([]);
+  });
+
+  it('step 3: the gown hangs and armpit warnings are exempt even if a warning is active', () => {
+    const s = new GameSession(steps, true);
+    feed(s, pose(HANDS_AT_FACE), 0, 700);
+    feed(s, pose(), 800, 1600);
+    const view = feed(s, pose(), 2500, 100, new Set<Violation>(['axilas']));
+    expect(view.scene.gown).toBe('hanging');
+    expect(view.exempt).toEqual(['axilas']);
   });
 
   it('a warning from step 2 on resets the hold', () => {

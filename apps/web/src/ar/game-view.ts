@@ -9,6 +9,7 @@ export function sameView(a: GameView | null, b: GameView): boolean {
     a.stepIndex === b.stepIndex &&
     a.hint === b.hint &&
     a.done === b.done &&
+    a.exempt.join() === b.exempt.join() &&
     Math.abs(a.hold - b.hold) < 0.05
   );
 }
@@ -21,6 +22,7 @@ export function doneView(steps: readonly ArGameStep[]): GameView {
     completedIds: steps.map((s) => s.id),
     done: true,
     warningsOn: true,
+    exempt: [],
     scene: {
       mask: 'worn',
       maskT: 1,

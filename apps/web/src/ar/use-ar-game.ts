@@ -168,7 +168,9 @@ export function useArGame(
           const flowState = flowRef.current;
           // Warnings count from game step 2 on (the hands are only "scrubbed" from then).
           const warnings = flowState.phase === 'playing' && (lastView?.warningsOn ?? false);
-          const active = tracker.update(body && warnings ? detectViolations(body) : new Set(), now);
+          const detected = body && warnings ? detectViolations(body) : new Set<Violation>();
+          for (const v of lastView?.exempt ?? []) detected.delete(v);
+          const active = tracker.update(detected, now);
 
           // Phases: framing → countdown → playing → done.
           const view = flowState.update(landmarks, now);

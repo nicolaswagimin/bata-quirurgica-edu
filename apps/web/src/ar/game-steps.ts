@@ -58,6 +58,8 @@ export interface GameView {
   scene: Scene;
   /** Sterile-technique warnings count from step 2 on (hands are scrubbed from then). */
   warningsOn: boolean;
+  /** Warnings that do not apply right now (the sleeve openings sit by the armpits). */
+  exempt: readonly Violation[];
 }
 
 export interface GameInput {
@@ -94,6 +96,10 @@ export class GameSession {
     if (!input.body) {
       this.holdStart = null;
       return this.view(0, 'Colócate de frente a la cámara, con hombros y caderas visibles');
+    }
+    // The gown hangs as soon as its step starts, even while a warning is still being corrected.
+    if (step.id === 'g3-bata' && this.scene.gown === 'hidden') {
+      this.scene = { ...this.scene, gown: 'hanging' };
     }
     const warningsOn = this.index > 0;
     if (warningsOn && input.violations.size > 0) {
@@ -194,7 +200,6 @@ export class GameSession {
   }
 
   private checkGown(step: ArGameStep, body: BodyFrame) {
-    if (this.scene.gown === 'hidden') this.scene = { ...this.scene, gown: 'hanging' };
     if (this.scene.gown === 'donning' || this.scene.gown === 'worn') {
       return { ok: this.scene.gown === 'worn', hint: '¡Bata puesta!', holdMs: 1 };
     }
@@ -285,6 +290,14 @@ export class GameSession {
       done: this.index >= this.steps.length,
       scene: this.scene,
       warningsOn: this.index > 0,
+      exempt: this.exempt(),
     };
+  }
+
+  /** Reaching into the hanging gown's sleeves passes the wrists by the armpits: not a warning. */
+  private exempt(): Violation[] {
+    const gownStep = this.steps[this.index]?.id === 'g3-bata';
+    const reaching = this.scene.gown === 'hanging' || this.scene.gown === 'donning';
+    return gownStep && reaching ? ['axilas'] : [];
   }
 }

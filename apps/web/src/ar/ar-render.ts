@@ -81,10 +81,13 @@ export class ArRenderer {
     if (body && options.scene) {
       const scene = options.scene;
       if (scene.gown === 'worn' && scene.ties === 'tying') {
-        drawCirculante(ctx, body, scene.tieT, this.colors); // behind the body: the gown hides it
+        drawCirculante(ctx, body, scene.tieT, this.colors, 'behind'); // the gown hides it
       }
       const worn = this.drawGown(ctx, body, scene, options.hotspot, options.reducedMotion);
       if (worn) this.drawLateScene(ctx, body, worn, options);
+      if (scene.gown === 'worn' && scene.ties === 'tying') {
+        drawCirculante(ctx, body, scene.tieT, this.colors, 'ghost'); // where the hands are
+      }
       this.drawSceneMask(ctx, body, options.landmarks, options.scene, options.reducedMotion);
     }
     drawPostureGuides(ctx, body, active, this.colors);
