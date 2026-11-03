@@ -80,6 +80,7 @@
       "iconKey": "shield",
       "title": "Lo estéril se protege",
       "summary": "Todo lo que toca lo estéril sin serlo, o deja dudas, se trata como contaminado.",
+      "videoIds": ["paso-1"],
       "keyPoints": [
         {
           "text": "Asepsia es el conjunto de prácticas que impiden que los microorganismos lleguen a lo que está estéril. Antisepsia es otra cosa: aplicar un producto que reduce microorganismos sobre la piel o el tejido vivo.",
@@ -126,6 +127,7 @@
       "iconKey": "gown",
       "title": "La bata es una barrera",
       "summary": "Sirve si está estéril y su empaque llegó íntegro: eso se verifica antes de abrirla.",
+      "videoIds": ["paso-2"],
       "keyPoints": [
         {
           "text": "La bata quirúrgica reduce el paso de microorganismos y fluidos entre el personal y el paciente: protege a los dos.",
@@ -172,6 +174,7 @@
       "iconKey": "gloves",
       "title": "Vestirse sin tocar lo estéril",
       "summary": "Manos preparadas, bata por dentro, guantes sin sacar las manos de las mangas.",
+      "videoIds": ["paso-3", "paso-4", "paso-5", "paso-6"],
       "keyPoints": [
         {
           "text": "El orden es: preparación quirúrgica de manos, secado estéril, bata y, al final, guantes.",
@@ -214,6 +217,7 @@
       "iconKey": "field",
       "title": "Manos al frente, entre cintura y hombros",
       "summary": "Solo el frente y las mangas son estériles; todo lo demás no se vigila y no se cuenta.",
+      "videoIds": ["zona-esteril"],
       "keyPoints": [
         {
           "text": "Con la bata puesta se consideran estériles el frente, del pecho a la cintura, y las mangas, desde un poco arriba del codo hasta el puño. Cuello, axilas, espalda y lo que queda bajo la cintura no.",
@@ -268,6 +272,8 @@
       "iconKey": "checklist",
       "title": "Retirar sin contaminarte y verificar en equipo",
       "summary": "La bata sale enrollada hacia adentro; la Lista OMS se aplica en tres momentos, con todo el equipo.",
+      "videoIds": ["resumen"],
+      "videoNote": "Repaso de la colocación completa. El retiro todavía no tiene video porque sus poses están en desarrollo.",
       "keyPoints": [
         {
           "text": "Primero sale la bata, enrollada con la cara externa hacia adentro y lejos del cuerpo, mientras los guantes aún protegen las manos. Después los guantes, sin que su exterior toque la piel.",

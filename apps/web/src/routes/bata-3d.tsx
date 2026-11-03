@@ -3,6 +3,8 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { pageTitle } from '../components/ui-classes.ts';
+import { VideoClip } from '../components/video-clip.tsx';
+import { VIDEOS } from '../lib/videos.ts';
 import { Mannequin } from '../three/mannequin.tsx';
 import { ModelBoundary } from '../three/model-boundary.tsx';
 import { StepModels } from '../three/step-models.tsx';
@@ -135,33 +137,38 @@ export default function Bata3dPage() {
         </section>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-card bg-surface p-4">
-        <p aria-live="polite" data-testid="paso-actual" className="text-lg font-extrabold">
-          Paso {index + 1} de {steps.length}: {step.title}
-        </p>
-        <p>{step.description}</p>
-        <p className="text-sm text-muted">
-          Fuente: {step.source.org}, {step.source.title} ({step.source.year})
-          {step.source.section ? ` · ${step.source.section}` : ''}
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className={buttonClass}
-            disabled={index === 0}
-            onClick={() => setIndex(index - 1)}
-          >
-            Anterior
-          </button>
-          <button
-            type="button"
-            className={buttonClass}
-            disabled={index === steps.length - 1}
-            onClick={() => setIndex(index + 1)}
-          >
-            Siguiente
-          </button>
+      <div className="grid gap-4 rounded-card bg-surface p-4 lg:grid-cols-[1fr_minmax(0,28rem)] lg:items-start">
+        <div className="flex flex-col gap-2">
+          <p aria-live="polite" data-testid="paso-actual" className="text-lg font-extrabold">
+            Paso {index + 1} de {steps.length}: {step.title}
+          </p>
+          <p>{step.description}</p>
+          <p className="text-sm text-muted">
+            Fuente: {step.source.org}, {step.source.title} ({step.source.year})
+            {step.source.section ? ` · ${step.source.section}` : ''}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={buttonClass}
+              disabled={index === 0}
+              onClick={() => setIndex(index - 1)}
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              className={buttonClass}
+              disabled={index === steps.length - 1}
+              onClick={() => setIndex(index + 1)}
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
+        {mode === 'donning' && VIDEOS[`paso-${step.order}`] ? (
+          <VideoClip key={step.id} id={`paso-${step.order}`} />
+        ) : null}
       </div>
 
       <section aria-labelledby="zonas-titulo" className="flex flex-col gap-2">

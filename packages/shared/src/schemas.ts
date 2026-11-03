@@ -527,6 +527,9 @@ export const LessonSchema = z
     iconKey: IdSchema,
     title: z.string().min(1).max(120),
     summary: z.string().min(1).max(240),
+    /** Teaching videos shown with the lesson (ids of apps/web/public/videos/<id>.*). */
+    videoIds: z.array(IdSchema).max(4),
+    videoNote: z.string().min(1).max(200).optional(),
     keyPoints: z.array(SourcedTextSchema).min(2).max(6),
     mistakes: z.array(LessonMistakeSchema).min(1).max(3),
   })

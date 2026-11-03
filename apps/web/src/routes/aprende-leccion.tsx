@@ -5,6 +5,7 @@ import { Mascot } from '../components/mascot.tsx';
 import { missionCode } from '../components/mission-sheet.tsx';
 import { PixelSprite } from '../components/pixel-sprite.tsx';
 import { buttonPrimary, pageTitle, panel, textLink } from '../components/ui-classes.ts';
+import { VideoClip } from '../components/video-clip.tsx';
 import { lessonFor, numberSources } from '../lib/lessons.ts';
 
 /** /aprende/$missionId: a mission's lesson, its frequent mistakes and the sources behind it. */
@@ -69,6 +70,26 @@ export default function AprendeLeccionPage() {
           ))}
         </ul>
       </section>
+
+      {lesson.videoIds.length > 0 ? (
+        <section aria-labelledby="videos" className="flex flex-col gap-3">
+          <h2 id="videos" className="text-xl font-extrabold tracking-tight">
+            {lesson.videoIds.length === 1 ? 'Video' : 'Videos'}
+          </h2>
+          {lesson.videoNote ? (
+            <p className="max-w-[65ch] text-sm text-muted">{lesson.videoNote}</p>
+          ) : null}
+          <div className="grid gap-6 sm:grid-cols-2">
+            {lesson.videoIds.map((id) => (
+              <VideoClip
+                key={id}
+                id={id}
+                className={lesson.videoIds.length === 1 ? 'sm:col-span-2' : ''}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section aria-labelledby="errores" className={`${panel} flex flex-col gap-6`}>
         <h2 id="errores" className="text-xl font-extrabold tracking-tight">

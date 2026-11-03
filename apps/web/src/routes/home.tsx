@@ -19,6 +19,7 @@ import { Mascot, MascotNote } from '../components/mascot.tsx';
 import { type IndexEntry, MissionIndex } from '../components/mission-index.tsx';
 import { MissionSheet } from '../components/mission-sheet.tsx';
 import { formPanel, panel, buttonPrimary as primaryButtonClass } from '../components/ui-classes.ts';
+import { VideoClip } from '../components/video-clip.tsx';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { db, useAuth } from '../lib/firebase.tsx';
 
@@ -243,6 +244,17 @@ function MissionMap({ profile }: { profile: Profile }) {
             />
           </div>
         )
+      ) : null}
+      {missions.isSuccess ? (
+        <section aria-labelledby="repaso" className="mt-10 flex flex-col gap-3 md:max-w-3xl">
+          <h2 id="repaso" className="text-xl font-extrabold tracking-tight">
+            Repaso en video
+          </h2>
+          <p className="max-w-[60ch] text-sm text-muted">
+            Los seis pasos de colocación y la zona estéril, en minuto y medio.
+          </p>
+          <VideoClip id="resumen" />
+        </section>
       ) : null}
     </div>
   );
