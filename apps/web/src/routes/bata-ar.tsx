@@ -157,7 +157,7 @@ export default function BataArPage() {
         </div>
 
         {/* Centre: countdown and results only */}
-        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+        <div className="pointer-events-none absolute inset-0 grid place-items-center landscape:pt-24 landscape:pr-4 landscape:pb-4 landscape:pl-[36%]">
           {phase === 'countdown' ? <ArCountdown seconds={flow.secondsLeft} /> : null}
           {phase === 'done' ? <ArResults key={game.run} errors={game.errors} /> : null}
         </div>
@@ -167,8 +167,13 @@ export default function BataArPage() {
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] landscape:right-auto landscape:w-[38%] landscape:items-start landscape:md:w-[34%]">
           {phase === 'playing' ? <ArWarnings violations={game.violations} /> : null}
           {/* Instruction low, over the legs: the head stays visible for the mask. */}
-          <ArInstruction text={instruction} sub={!game.hasAnchor && !cameraError ? GUIDE : null} />
-          {game.lowPerformance ? (
+          {phase !== 'done' ? (
+            <ArInstruction
+              text={instruction}
+              sub={!game.hasAnchor && !cameraError ? GUIDE : null}
+            />
+          ) : null}
+          {game.lowPerformance && phase !== 'done' ? (
             <p
               role="status"
               className="rounded-card bg-bg px-4 py-2 text-sm font-bold text-ink landscape:text-xs"

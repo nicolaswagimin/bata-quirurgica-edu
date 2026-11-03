@@ -10,7 +10,8 @@ import { bootCameraAndPose, stopTracks } from './camera-pose.ts';
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
-import { doneView, GameSession, type GameView, type Scene, sameView } from './game-steps.ts';
+import { GameSession, type GameView, type Scene } from './game-steps.ts';
+import { doneView, sameView } from './game-view.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { computeGownAnchor, FpsMonitor } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
@@ -47,7 +48,7 @@ export function useArGame(
   const [violations, setViolations] = useState<Violation[]>([]);
   const [practice, setPractice] = useState<GameView | null>(null);
   const [flow, setFlow] = useState<FlowView>({ phase: 'ready', secondsLeft: 0 });
-  const [errors, setErrors] = useState(0);
+  const [errors, setErrors] = useState<Partial<Record<Violation, number>>>({});
   const [run, setRun] = useState(0);
 
   const feedback = useMemo(() => new ArFeedback(), []);
@@ -74,7 +75,7 @@ export function useArGame(
     feedback.unlock();
     feedback.tick();
     setRun((n) => n + 1);
-    setErrors(0);
+    setErrors({});
     sessionRef.current = null;
     setPractice(null);
     if (e2eFlag('simularPracticaCompleta')) {
@@ -200,10 +201,14 @@ export function useArGame(
 
           const key = [...active].sort().join(',');
           if (key !== violationKey) {
-            const added = [...active].some((v) => !violationKey.split(',').includes(v));
-            if (added) {
+            const added = [...active].filter((v) => !violationKey.split(',').includes(v));
+            if (added.length > 0) {
               feedback.error();
-              setErrors((n) => n + 1);
+              setErrors((prev) => {
+                const next = { ...prev };
+                for (const v of added) next[v] = (next[v] ?? 0) + 1;
+                return next;
+              });
             }
             violationKey = key;
             setViolations(key ? (key.split(',') as Violation[]) : []);

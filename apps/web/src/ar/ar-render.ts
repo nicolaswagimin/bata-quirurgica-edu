@@ -1,7 +1,7 @@
 // Per-frame canvas drawing for the AR mirror: the game scene (mask, hanging / donning / worn gown),
 // the posture guides and the hand cursors.
 import type { Scene } from './game-steps.ts';
-import { gownMesh } from './gown-mesh.ts';
+import { type GownMesh, gownMesh } from './gown-mesh.ts';
 import { createGownTextures, drawGownMesh, type GownTextures } from './gown-render.ts';
 import { hangingFrame, lerpMesh, sleeveOpenings } from './hanging-gown.ts';
 import { HAND_LANDMARKS } from './hover-targets.ts';
@@ -9,6 +9,7 @@ import { drawMask, faceAnchor } from './mask.ts';
 import type { Landmark } from './overlay-math.ts';
 import type { BodyFrame, Violation } from './posture.ts';
 import { drawPostureGuides } from './posture-overlay.ts';
+import { drawCirculante, drawFlap, drawGloves, drawTieBows } from './scene-extras.ts';
 
 export interface ArColors {
   fabric: string;
@@ -18,6 +19,10 @@ export interface ArColors {
   danger: string;
   mask: string;
   maskShade: string;
+  glove: string;
+  gloveShade: string;
+  circulanteGlove: string;
+  circulanteCuff: string;
 }
 
 function token(name: string): string {
@@ -34,6 +39,10 @@ export function readArColors(): ArColors {
     danger: token('danger'),
     mask: token('mask'),
     maskShade: token('mask-shade'),
+    glove: token('glove'),
+    gloveShade: token('glove-shade'),
+    circulanteGlove: token('circulante-glove'),
+    circulanteCuff: token('circulante-cuff'),
   };
 }
 
@@ -70,7 +79,12 @@ export class ArRenderer {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (this.textures === undefined) this.textures = createGownTextures(ctx, this.colors);
     if (body && options.scene) {
-      this.drawGown(ctx, body, options.scene, options.hotspot, options.reducedMotion);
+      const scene = options.scene;
+      if (scene.gown === 'worn' && scene.ties === 'tying') {
+        drawCirculante(ctx, body, scene.tieT, this.colors); // behind the body: the gown hides it
+      }
+      const worn = this.drawGown(ctx, body, scene, options.hotspot, options.reducedMotion);
+      if (worn) this.drawLateScene(ctx, body, worn, options);
       this.drawSceneMask(ctx, body, options.landmarks, options.scene, options.reducedMotion);
     }
     drawPostureGuides(ctx, body, active, this.colors);
@@ -84,9 +98,9 @@ export class ArRenderer {
     scene: Scene,
     hotspot: string | null,
     still: boolean,
-  ) {
+  ): GownMesh | null {
     const textures = this.textures;
-    if (!textures || scene.gown === 'hidden') return;
+    if (!textures || scene.gown === 'hidden') return null;
     const bob = still ? 0 : Math.sin(performance.now() / 700) * body.torsoHeight * 0.015;
     const hanging = hangingFrame(body, bob);
     const mesh =
@@ -97,7 +111,8 @@ export class ArRenderer {
           : gownMesh(body);
     const spot = scene.gown === 'worn' ? hotspot : null;
     drawGownMesh(ctx, mesh, textures, this.colors, body.shoulderWidth, spot);
-    if (scene.gown !== 'hanging') return;
+    if (scene.gown === 'worn') return mesh;
+    if (scene.gown !== 'hanging') return null;
     // Sleeve openings: pulsing rings until a wrist goes in, then filled.
     const pulse = still ? 1 : 1 + Math.sin(performance.now() / 220) * 0.12;
     sleeveOpenings(hanging).forEach((p, i) => {
@@ -113,6 +128,20 @@ export class ArRenderer {
       else ctx.stroke();
       ctx.restore();
     });
+    return null;
+  }
+
+  /** Ties (circulating nurse), wrap-around flap and gloves, over the worn gown. */
+  private drawLateScene(ctx: Ctx, body: BodyFrame, mesh: GownMesh, options: DrawOptions) {
+    const scene = options.scene;
+    if (!scene) return;
+    const c = this.colors;
+    if (scene.flap !== 'open') drawFlap(ctx, body, scene.flapT, scene.flap === 'closed', c);
+    if (scene.ties !== 'open') drawTieBows(ctx, body, scene.tieT, c, scene.ties === 'tied');
+    if (scene.gloves !== 'none') {
+      const size = { width: this.canvas.width, height: this.canvas.height };
+      drawGloves(ctx, body, mesh, options.landmarks, size, scene.gloveT, c);
+    }
   }
 
   private drawSceneMask(

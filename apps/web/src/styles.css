@@ -129,6 +129,12 @@
   /* Surgical mask: median of the 3D model's mask texture (joepal_medical_mouth_protection) */
   --color-mask: #b7d2ff;
   --color-mask-shade: #7f9fd0;
+  /* Sterile surgical glove: latex of the 3D model (tools/bata-3d/common.py LATEX → sRGB) */
+  --color-glove: #cbaf8b;
+  --color-glove-shade: #a58a68;
+  /* Circulating nurse (non-sterile): nitrile gloves and a non-sterile gown cuff */
+  --color-circulante-glove: #6f7fb8;
+  --color-circulante-cuff: #a7b0b8;
 }
 
 /* Motion durations (used as duration-(--duration-press), etc.). */

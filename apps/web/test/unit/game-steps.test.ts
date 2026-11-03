@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BataPasosSchema } from '@bata/shared/schemas';
 import { describe, expect, it } from 'vitest';
-import { DON_MS, GameSession } from '../../src/ar/game-steps.ts';
+import { DON_MS, GameSession, GLOVE_MS, TIE_MS } from '../../src/ar/game-steps.ts';
+import { scoreFor } from '../../src/ar/game-view.ts';
 import { gownMesh } from '../../src/ar/gown-mesh.ts';
 import { hangingFrame, lerpMesh, sleeveOpenings } from '../../src/ar/hanging-gown.ts';
 import { faceAnchor, handsAtFace } from '../../src/ar/mask.ts';
@@ -155,5 +156,77 @@ describe('GameSession', () => {
     const view = feed(s, pose(), 1900, 100, new Set<Violation>(['bajo-cintura']));
     expect(view.hold).toBe(0);
     expect(view.hint).toBe('Corrige el aviso para seguir');
+  });
+});
+
+describe('GameSession, late steps', () => {
+  const armsForward = (): Record<number, Pt> => ({
+    13: [0.6, 0.33, -0.3],
+    14: [0.4, 0.33, -0.3],
+    15: [0.58, 0.3, -0.6],
+    16: [0.42, 0.3, -0.6],
+  });
+
+  /** Plays steps 1–3 (reduced motion) and returns the time reached. */
+  function throughGown(s: GameSession): number {
+    feed(s, pose(HANDS_AT_FACE), 0, 700);
+    feed(s, pose(), 800, 1600);
+    const body = bodyFrame(pose(), SIZE);
+    if (!body) throw new Error('no body');
+    const [l, r] = sleeveOpenings(hangingFrame(body));
+    feed(
+      s,
+      pose({ 15: [l.x / 1000, l.y / 1000, -0.3], 16: [r.x / 1000, r.y / 1000, -0.3] }),
+      2500,
+      100,
+    );
+    feed(s, pose(armsForward()), 2700, 700);
+    return 3500;
+  }
+
+  it('step 4: the ties progress only while the player stays still, then stay tied', () => {
+    const s = new GameSession(steps, true);
+    let t = throughGown(s);
+    let view = feed(s, pose(), t, 1000);
+    expect(view.scene.ties).toBe('tying');
+    expect(view.scene.tieT).toBeGreaterThan(0.2);
+    // A big wrist movement means "not still": the tying restarts.
+    t += 1050;
+    view = s.update({
+      body: bodyFrame(pose({ 15: [0.62, 0.42, -0.1] }), SIZE),
+      landmarks: pose({ 15: [0.62, 0.42, -0.1] }),
+      size: SIZE,
+      violations: new Set(),
+      now: t,
+    });
+    expect(view.scene.tieT).toBe(0);
+    view = feed(s, pose(), t + 100, TIE_MS + 200);
+    expect(view.scene.ties).toBe('tied');
+    expect(view.completedIds).toContain('g4-lazos');
+  });
+
+  it('steps 5 and 6: gloves slide on over the cuffs, then the quarter turn closes the flap', () => {
+    const s = new GameSession(steps, true);
+    let t = throughGown(s);
+    feed(s, pose(), t, TIE_MS + 300);
+    t += TIE_MS + 400;
+    const together = pose({ 15: [0.52, 0.42, -0.2], 16: [0.48, 0.42, -0.2] });
+    let view = feed(s, together, t, 1300 + GLOVE_MS);
+    expect(view.scene.gloves).toBe('on');
+    expect(view.completedIds).toContain('g5-guantes');
+    t += 1400 + GLOVE_MS;
+    feed(s, pose(), t, 200); // facing: baseline
+    const turned = pose({ 11: [0.53, 0.3], 12: [0.47, 0.3], 23: [0.52, 0.6], 24: [0.48, 0.6] });
+    view = feed(s, turned, t + 300, 200);
+    expect(view.scene.flap).toBe('closing');
+    view = feed(s, pose(), t + 600, 1400);
+    expect(view.scene.flap).toBe('closed');
+    expect(view.done).toBe(true);
+  });
+
+  it('scores 100 for a clean run and 10 less per warning', () => {
+    expect(scoreFor(0)).toBe(100);
+    expect(scoreFor(3)).toBe(70);
+    expect(scoreFor(20)).toBe(0);
   });
 });

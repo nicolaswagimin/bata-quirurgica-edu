@@ -6,11 +6,16 @@ import type { ArGameStep } from '@bata/shared/schemas';
 import { hangingFrame, sleeveOpenings } from './hanging-gown.ts';
 import { handsAtFace } from './mask.ts';
 import type { FrameSize, Landmark } from './overlay-math.ts';
-import { type BodyFrame, dist, torsoDepth, type Violation } from './posture.ts';
-import { STEP_RULES, type TurnState } from './practice.ts';
+import { type BodyFrame, dist, torsoDepth, type Vec, type Violation } from './posture.ts';
+import { inSterileBand, STEP_RULES, type TurnState } from './practice.ts';
 
 export const MASK_SNAP_MS = 450;
 export const DON_MS = 900;
+export const GLOVE_MS = 800;
+export const FLAP_MS = 700;
+export const TIE_MS = 3500;
+/** Wrist speed (shoulder widths per second) under which the player counts as standing still. */
+const STILL_SPEED = 0.6;
 
 export interface Scene {
   mask: 'floating' | 'snapping' | 'worn';
@@ -21,7 +26,28 @@ export interface Scene {
   gownT: number;
   /** Which sleeve openings already have a wrist in them (player's left, right). */
   sleeves: [boolean, boolean];
+  ties: 'open' | 'tying' | 'tied';
+  /** 0..1 of the circulating nurse's tying, driven by how long the player stays still. */
+  tieT: number;
+  gloves: 'none' | 'putting' | 'on';
+  gloveT: number;
+  flap: 'open' | 'closing' | 'closed';
+  flapT: number;
 }
+
+export const INITIAL_SCENE: Scene = {
+  mask: 'floating',
+  maskT: 0,
+  gown: 'hidden',
+  gownT: 0,
+  sleeves: [false, false],
+  ties: 'open',
+  tieT: 0,
+  gloves: 'none',
+  gloveT: 0,
+  flap: 'open',
+  flapT: 0,
+};
 
 export interface GameView {
   stepIndex: number;
@@ -49,14 +75,11 @@ export class GameSession {
   private holdStart: number | null = null;
   private completed: string[] = [];
   private turn: TurnState = { baselineRatio: null, turned: false };
-  private scene: Scene = {
-    mask: 'floating',
-    maskT: 0,
-    gown: 'hidden',
-    gownT: 0,
-    sleeves: [false, false],
-  };
+  private scene: Scene = INITIAL_SCENE;
   private animStart = 0;
+  private lastWrists: [Vec | null, Vec | null] = [null, null];
+  private lastT = 0;
+  private still = false;
 
   constructor(
     private readonly steps: readonly ArGameStep[],
@@ -66,6 +89,7 @@ export class GameSession {
   update(input: GameInput): GameView {
     const step = this.steps[this.index];
     this.animate(input.now);
+    this.trackStillness(input);
     if (!step) return this.view(1, '');
     if (!input.body) {
       this.holdStart = null;
@@ -79,10 +103,12 @@ export class GameSession {
     const result = this.check(step, input);
     if (!result.ok) {
       this.holdStart = null;
+      result.onProgress?.(0);
       return this.view(0, result.hint);
     }
     this.holdStart ??= input.now;
     const hold = Math.min(1, (input.now - this.holdStart) / result.holdMs);
+    result.onProgress?.(hold);
     if (hold < 1) return this.view(hold, result.hint);
     this.holdStart = null;
     if (result.onHeld && !result.onHeld(input.now)) return this.view(0, result.hint);
@@ -94,7 +120,13 @@ export class GameSession {
   private check(
     step: ArGameStep,
     input: GameInput,
-  ): { ok: boolean; hint: string; holdMs: number; onHeld?: (now: number) => boolean } {
+  ): {
+    ok: boolean;
+    hint: string;
+    holdMs: number;
+    onHeld?: (now: number) => boolean;
+    onProgress?: (hold: number) => void;
+  } {
     const body = input.body as BodyFrame;
     switch (step.id) {
       case 'g1-mascarilla': {
@@ -114,17 +146,49 @@ export class GameSession {
       }
       case 'g3-bata':
         return this.checkGown(step, body);
+      case 'g4-lazos': {
+        // Hands up in front and still while the circulating nurse ties from behind.
+        const band = inSterileBand(body);
+        const ok = band && this.still;
+        return {
+          ok,
+          hint: ok
+            ? 'No te muevas: el circulante amarra los lazos'
+            : band
+              ? 'Quieto, por favor: te están amarrando'
+              : step.instruction,
+          holdMs: TIE_MS,
+          onProgress: (hold) => {
+            this.scene = { ...this.scene, ties: 'tying', tieT: hold };
+          },
+        };
+      }
+      case 'g5-guantes': {
+        if (this.scene.gloves !== 'none') {
+          return { ok: this.scene.gloves === 'on', hint: '¡Guantes puestos!', holdMs: 1 };
+        }
+        const r = ruleFor('d5')?.check(body, this.turn);
+        return {
+          ok: !!r?.ok,
+          hint: r?.ok ? 'Así, dentro de los puños… llegan los guantes' : step.instruction,
+          holdMs: 1200,
+          onHeld: (now) => {
+            this.scene = { ...this.scene, gloves: 'putting', gloveT: 0 };
+            this.animStart = now;
+            return this.reducedMotion;
+          },
+        };
+      }
       default: {
-        const legacy = {
-          'g2-manos': 'd1',
-          'g4-lazos': 'd4',
-          'g5-guantes': 'd5',
-          'g6-solapa': 'd6',
-        }[step.id];
+        const legacy = { 'g2-manos': 'd1', 'g6-solapa': 'd6' }[step.id];
         const rule = legacy ? ruleFor(legacy) : undefined;
         if (!rule) return { ok: false, hint: step.instruction, holdMs: 1000 };
         const r = rule.check(body, this.turn);
-        return { ok: r.ok, hint: r.ok ? r.hint : step.instruction, holdMs: rule.holdMs };
+        if (step.id === 'g6-solapa' && this.turn.turned && this.scene.flap === 'open') {
+          this.scene = { ...this.scene, flap: 'closing', flapT: 0 };
+          this.animStart = input.now;
+        }
+        return { ok: r.ok, hint: r.ok ? r.hint : r.hint || step.instruction, holdMs: rule.holdMs };
       }
     }
   }
@@ -180,7 +244,27 @@ export class GameSession {
     } else if (s.gown === 'donning') {
       const t = this.reducedMotion ? 1 : (now - this.animStart) / DON_MS;
       this.scene = t >= 1 ? { ...s, gown: 'worn', gownT: 1 } : { ...s, gownT: t };
+    } else if (s.gloves === 'putting') {
+      const t = this.reducedMotion ? 1 : (now - this.animStart) / GLOVE_MS;
+      this.scene = t >= 1 ? { ...s, gloves: 'on', gloveT: 1 } : { ...s, gloveT: t };
+    } else if (s.flap === 'closing') {
+      const t = this.reducedMotion ? 1 : (now - this.animStart) / FLAP_MS;
+      this.scene = { ...s, flapT: Math.min(1, t) };
     }
+  }
+
+  private trackStillness({ body, now }: GameInput) {
+    const wrists: [Vec | null, Vec | null] = [body?.left.wrist ?? null, body?.right.wrist ?? null];
+    const dt = (now - this.lastT) / 1000;
+    if (body && dt > 0 && dt < 0.5) {
+      const speeds = wrists.map((w, i) => {
+        const prev = this.lastWrists[i];
+        return w && prev ? dist(w, prev) / dt / body.shoulderWidth : 0;
+      });
+      this.still = Math.max(...speeds) < STILL_SPEED;
+    }
+    this.lastWrists = wrists;
+    this.lastT = now;
   }
 
   private advance(id: string) {
@@ -188,6 +272,8 @@ export class GameSession {
     this.index += 1;
     this.turn = { baselineRatio: null, turned: false };
     if (this.scene.mask !== 'worn') this.scene = { ...this.scene, mask: 'worn', maskT: 1 };
+    if (id === 'g4-lazos') this.scene = { ...this.scene, ties: 'tied', tieT: 1 };
+    if (id === 'g6-solapa') this.scene = { ...this.scene, flap: 'closed', flapT: 1 };
   }
 
   private view(hold: number, hint: string): GameView {
@@ -201,27 +287,4 @@ export class GameSession {
       warningsOn: this.index > 0,
     };
   }
-}
-
-/** Whether the HUD needs a re-render (hold rounded to 5 %). */
-export function sameView(a: GameView | null, b: GameView): boolean {
-  return (
-    !!a &&
-    a.stepIndex === b.stepIndex &&
-    a.hint === b.hint &&
-    a.done === b.done &&
-    Math.abs(a.hold - b.hold) < 0.05
-  );
-}
-
-export function doneView(steps: readonly ArGameStep[]): GameView {
-  return {
-    stepIndex: steps.length,
-    hold: 0,
-    hint: '',
-    completedIds: steps.map((s) => s.id),
-    done: true,
-    warningsOn: true,
-    scene: { mask: 'worn', maskT: 1, gown: 'worn', gownT: 1, sleeves: [true, true] },
-  };
 }
