@@ -66,7 +66,7 @@ Lecturas en vivo (ranking, progreso) van directo del navegador a Firestore con r
 | Env y secretos (lectura perezosa) | `services/api/src/lib/config.ts` |
 | Acceso a Firestore | `services/api/src/lib/repos.ts` |
 | Reglas e índices | `firestore.rules` · `firestore.indexes.json` |
-| Preguntas, pasos, créditos, fuentes KB, privacidad | `content/**` |
+| Preguntas, pasos, lecciones de Aprende, créditos, fuentes KB, privacidad | `content/**` |
 
 **Convención de imports:** especificadores relativos con extensión `.ts` (`./http.ts`) y paquetes del
 workspace por subruta (`@bata/shared/schemas`). Sin alias `@/`, sin barrels.

@@ -99,6 +99,17 @@ export function MissionSheet({
         {started ? 'Seguir practicando' : 'Empezar misión'}
         <Pictogram name="arrow" className="size-5" />
       </Link>
+      <p className="mt-3 text-sm text-muted">
+        <Link
+          to="/aprende/$missionId"
+          params={{ missionId: mission.id }}
+          className="inline-flex items-center gap-1.5 font-bold text-primary underline underline-offset-4 hover:text-primary-strong"
+        >
+          <Pictogram name="book" className="size-4" />
+          Lee la lección
+        </Link>{' '}
+        antes si es tu primera vez.
+      </p>
       {mission.topic === 'colocacion' ? (
         <p className="mt-3 text-sm text-muted">
           ¿Prefieres verlo primero?{' '}

@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { MEDAL, missionSprite } from '../art/sprites.ts';
 import { missionCode, type SheetMission } from './mission-sheet.tsx';
+import { Pictogram } from './pictogram.tsx';
 import { PixelSprite } from './pixel-sprite.tsx';
 
 export type IndexEntry = SheetMission & {
@@ -78,6 +79,12 @@ export function MissionIndex({
         <h2 id="indice-misiones" className="text-base font-extrabold">
           Misiones
         </h2>
+        <Link
+          to="/aprende"
+          className="ml-auto text-xs font-bold text-primary underline underline-offset-4"
+        >
+          Aprende
+        </Link>
         <p className="text-xs text-muted">
           {mastered} {mastered === 1 ? 'dominada' : 'dominadas'} de {entries.length}
         </p>
@@ -86,13 +93,16 @@ export function MissionIndex({
         {entries.map((entry) => {
           const current = entry.id === currentId;
           return (
-            <li key={entry.id} className="border-b border-border last:border-b-0">
+            <li
+              key={entry.id}
+              className="flex items-center gap-1 border-b border-border last:border-b-0"
+            >
               <span className="sr-only">Misión {entry.order}: </span>
               <Link
                 to="/mision/$missionId"
                 params={{ missionId: entry.id }}
                 aria-current={current ? 'step' : undefined}
-                className="pressable -mx-2 grid grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-card px-2 py-3 hover:bg-surface"
+                className="pressable -ml-2 grid min-w-0 flex-1 grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-card px-2 py-3 hover:bg-surface"
               >
                 {entry.completed ? (
                   <Medal fresh={fresh.has(entry.id)} />
@@ -123,6 +133,14 @@ export function MissionIndex({
                 >
                   +{entry.xpReward} XP
                 </span>
+              </Link>
+              <Link
+                to="/aprende/$missionId"
+                params={{ missionId: entry.id }}
+                aria-label={`Lección de la misión ${missionCode(entry.order)}`}
+                className="pressable -mr-2 grid size-11 shrink-0 place-items-center rounded-card text-primary hover:bg-primary-soft"
+              >
+                <Pictogram name="book" className="size-5" />
               </Link>
             </li>
           );

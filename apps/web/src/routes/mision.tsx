@@ -212,6 +212,14 @@ export default function MisionPage() {
           <h1 className={pageTitle}>{mission.title}</h1>
         </div>
         <p className="max-w-[65ch] text-muted">{mission.description}</p>
+        <Link
+          to="/aprende/$missionId"
+          params={{ missionId: mission.id }}
+          className={`${textLink} inline-flex items-center gap-1.5 self-start text-sm`}
+        >
+          <Pictogram name="book" className="size-4" />
+          Lee la lección de esta misión
+        </Link>
         {me.data ? <StatsBar profile={me.data} /> : null}
       </header>
       {questions.length === 0 ? (

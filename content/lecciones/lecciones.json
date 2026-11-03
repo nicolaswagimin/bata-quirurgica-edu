@@ -1,0 +1,384 @@
+{
+  "reviewNote": "Borrador pendiente de validación del director de tesis. Los textos son una redacción propia de lo que dicen las fuentes citadas; ninguna frase se copió de las guías. Ante cualquier diferencia, manda el protocolo de tu institución.",
+  "sources": {
+    "oms2018-manos": {
+      "org": "OMS",
+      "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+      "year": 2018,
+      "section": "4.9 Preparación quirúrgica de las manos (p. 95–96)"
+    },
+    "oms2018-batas": {
+      "org": "OMS",
+      "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+      "year": 2018,
+      "section": "4.16 Campos y batas quirúrgicas (p. 132–133)"
+    },
+    "oms2018-instrumental": {
+      "org": "OMS",
+      "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+      "year": 2018,
+      "section": "3. Uso de instrumental estéril en el quirófano (p. 54–55)"
+    },
+    "oms2009": {
+      "org": "OMS",
+      "title": "WHO Guidelines for Safe Surgery",
+      "year": 2009,
+      "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+    },
+    "oms2009-lista": {
+      "org": "OMS",
+      "title": "WHO Guidelines for Safe Surgery",
+      "year": 2009,
+      "section": "Lista OMS de verificación de la seguridad de la cirugía: Entrada, Pausa quirúrgica y Salida"
+    },
+    "cdc2008-def": {
+      "org": "CDC",
+      "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+      "year": 2008,
+      "section": "Definiciones y terminología"
+    },
+    "cdc2008-almacenamiento": {
+      "org": "CDC",
+      "title": "Guideline for Disinfection and Sterilization in Healthcare Facilities",
+      "year": 2008,
+      "section": "Almacenamiento y monitoreo de elementos estériles"
+    },
+    "en13795": {
+      "org": "CEN",
+      "title": "EN 13795 Ropa y paños quirúrgicos (citada solo como referencia técnica)",
+      "year": 2019,
+      "section": "Zonas críticas del producto"
+    },
+    "r3100-areas": {
+      "org": "MinSalud Colombia",
+      "title": "Resolución 3100 de 2019, Manual de inscripción de prestadores y habilitación de servicios de salud",
+      "year": 2019,
+      "section": "Definiciones: área restringida y área semi-restringida (p. 26)"
+    },
+    "r3100-practicas": {
+      "org": "MinSalud Colombia",
+      "title": "Resolución 3100 de 2019, Manual de inscripción de prestadores y habilitación de servicios de salud",
+      "year": 2019,
+      "section": "Estándar de procesos prioritarios: prácticas seguras 4.3 y 4.11 (p. 73)"
+    },
+    "r3100-esterilizacion": {
+      "org": "MinSalud Colombia",
+      "title": "Resolución 3100 de 2019, Manual de inscripción de prestadores y habilitación de servicios de salud",
+      "year": 2019,
+      "section": "Estándar de procesos prioritarios: buenas prácticas de esterilización, 13.1 (p. 74–75)"
+    },
+    "r3100-cirugia": {
+      "org": "MinSalud Colombia",
+      "title": "Resolución 3100 de 2019, Manual de inscripción de prestadores y habilitación de servicios de salud",
+      "year": 2019,
+      "section": "11.5.1 Servicio de cirugía, estándar de talento humano (p. 199)"
+    }
+  },
+  "lessons": [
+    {
+      "missionId": "m1-fundamentos",
+      "iconKey": "shield",
+      "title": "Lo estéril se protege",
+      "summary": "Todo lo que toca lo estéril sin serlo, o deja dudas, se trata como contaminado.",
+      "keyPoints": [
+        {
+          "text": "Asepsia es el conjunto de prácticas que impiden que los microorganismos lleguen a lo que está estéril. Antisepsia es otra cosa: aplicar un producto que reduce microorganismos sobre la piel o el tejido vivo.",
+          "sourceIds": ["cdc2008-def"]
+        },
+        {
+          "text": "La esterilización acaba con toda forma de vida microbiana, esporas incluidas. La desinfección no garantiza eliminar todas las esporas, por eso no la reemplaza.",
+          "sourceIds": ["cdc2008-def"]
+        },
+        {
+          "text": "Antes de ponerte los guantes estériles preparas las manos: lavado con jabón antimicrobiano y agua, o fricción con un preparado de base alcohólica, según el protocolo de tu institución.",
+          "sourceIds": ["oms2018-manos"]
+        },
+        {
+          "text": "Si un elemento estéril toca algo que no lo es, o dudas de si se mantuvo estéril, se retira o se reemplaza.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "En Colombia, los prestadores deben tener documentadas prácticas para prevenir infecciones asociadas a la atención, incluido el protocolo de higiene de manos.",
+          "sourceIds": ["r3100-practicas"]
+        }
+      ],
+      "mistakes": [
+        {
+          "id": "m1-caida",
+          "wrong": "Seguir usando una pinza estéril que rozó el piso.",
+          "right": "Separarla y pedir otra: al tocar una superficie no estéril perdió la esterilidad.",
+          "wrongArt": "tool-floor",
+          "rightArt": "tool-drape",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "id": "m1-guantes",
+          "wrong": "Saltarse la preparación quirúrgica de manos porque «igual voy a usar guantes».",
+          "right": "Preparar las manos siempre: un guante puede perforarse durante el procedimiento sin que lo notes.",
+          "wrongArt": "glove-hole",
+          "rightArt": "hands-scrub",
+          "sourceIds": ["oms2018-manos"]
+        }
+      ]
+    },
+    {
+      "missionId": "m2-tipos-bata",
+      "iconKey": "gown",
+      "title": "La bata es una barrera",
+      "summary": "Sirve si está estéril y su empaque llegó íntegro: eso se verifica antes de abrirla.",
+      "keyPoints": [
+        {
+          "text": "La bata quirúrgica reduce el paso de microorganismos y fluidos entre el personal y el paciente: protege a los dos.",
+          "sourceIds": ["oms2018-batas"]
+        },
+        {
+          "text": "Puede ser desechable o reutilizable de tela. La OMS no encontró diferencias entre ambas en la infección del sitio quirúrgico; lo que importa es que esté estéril.",
+          "sourceIds": ["oms2018-batas"]
+        },
+        {
+          "text": "El frente del tronco y las mangas son las zonas que más contacto tienen con fluidos y con el campo, y por eso a ellas se les exige más como barrera.",
+          "sourceIds": ["en13795"]
+        },
+        {
+          "text": "Antes de abrir un paquete estéril revisa que esté seco, sin roturas ni marcas de agua, y que su indicador químico haya cambiado de color de manera uniforme.",
+          "sourceIds": ["oms2018-instrumental", "cdc2008-almacenamiento"]
+        },
+        {
+          "text": "Quien esteriliza debe tener documentadas buenas prácticas que incluyen empaque, almacenamiento y verificación de la integridad del material estéril.",
+          "sourceIds": ["r3100-esterilizacion"]
+        }
+      ],
+      "mistakes": [
+        {
+          "id": "m2-paquete-roto",
+          "wrong": "Abrir un paquete húmedo, roto o que se cayó al piso.",
+          "right": "Usar solo paquetes secos e íntegros; el que tuvo un evento así no se usa.",
+          "wrongArt": "pack-wet",
+          "rightArt": "pack-ok",
+          "sourceIds": ["oms2018-instrumental", "cdc2008-almacenamiento"]
+        },
+        {
+          "id": "m2-indicador",
+          "wrong": "Abrir el paquete sin mirar el indicador químico externo.",
+          "right": "Confirmar que el indicador cambió de color de manera uniforme antes de abrir.",
+          "wrongArt": "pack-unchanged",
+          "rightArt": "pack-ok",
+          "sourceIds": ["oms2018-instrumental"]
+        }
+      ]
+    },
+    {
+      "missionId": "m3-colocacion",
+      "iconKey": "gloves",
+      "title": "Vestirse sin tocar lo estéril",
+      "summary": "Manos preparadas, bata por dentro, guantes sin sacar las manos de las mangas.",
+      "keyPoints": [
+        {
+          "text": "El orden es: preparación quirúrgica de manos, secado estéril, bata y, al final, guantes.",
+          "sourceIds": ["oms2018-manos"]
+        },
+        {
+          "text": "La bata se toma por la cara interna, a la altura del cuello, y se deja desplegar sola lejos de superficies. No se sacude.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "En la técnica cerrada las manos no salen de los puños hasta que el guante las cubre; así la piel nunca toca el exterior estéril.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "Los lazos del cuello y de la espalda los amarra el circulante, que toca solo esa zona posterior. Para la solapa envolvente se entrega la lengüeta y se gira.",
+          "sourceIds": ["oms2009"]
+        }
+      ],
+      "mistakes": [
+        {
+          "id": "m3-dedos-fuera",
+          "wrong": "Sacar los dedos por el puño para acomodar el guante.",
+          "right": "Mantener las manos dentro de las mangas hasta que el guante cubra el puño.",
+          "wrongArt": "hand-out",
+          "rightArt": "cuff-closed",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "id": "m3-sacudir",
+          "wrong": "Sacudir la bata para desplegarla.",
+          "right": "Sostenerla por la cara interna del cuello y dejar que se despliegue sola.",
+          "wrongArt": "gown-shake",
+          "rightArt": "gown-held",
+          "sourceIds": ["oms2009"]
+        }
+      ]
+    },
+    {
+      "missionId": "m4-campo-esteril",
+      "iconKey": "field",
+      "title": "Manos al frente, entre cintura y hombros",
+      "summary": "Solo el frente y las mangas son estériles; todo lo demás no se vigila y no se cuenta.",
+      "keyPoints": [
+        {
+          "text": "Con la bata puesta se consideran estériles el frente, del pecho a la cintura, y las mangas, desde un poco arriba del codo hasta el puño. Cuello, axilas, espalda y lo que queda bajo la cintura no.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "La espalda nunca es estéril, aunque la cubra la solapa: no la puedes vigilar.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "Mientras esperas, las manos van al frente, por encima de la cintura y por debajo de los hombros.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "Para cruzarse, dos personas vestidas de forma estéril pasan frente a frente o espalda con espalda.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "El quirófano es un área restringida: tránsito limitado y condiciones específicas de comportamiento y bioseguridad.",
+          "sourceIds": ["r3100-areas"]
+        }
+      ],
+      "mistakes": [
+        {
+          "id": "m4-manos-bajas",
+          "wrong": "Bajar las manos enguantadas por debajo de la cintura.",
+          "right": "Mantenerlas al frente, entre la cintura y los hombros.",
+          "wrongArt": "posture-low",
+          "rightArt": "posture-ok",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "id": "m4-axilas",
+          "wrong": "Cruzar los brazos o guardar las manos bajo las axilas.",
+          "right": "Las axilas no son zona estéril: manos al frente, sin cruzar los brazos.",
+          "wrongArt": "posture-armpits",
+          "rightArt": "posture-ok",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "id": "m4-mascarilla",
+          "wrong": "Ajustarte la mascarilla con los guantes estériles.",
+          "right": "No tocarla con los guantes: la mascarilla no es estéril y tocarla los contamina.",
+          "wrongArt": "posture-mask",
+          "rightArt": "posture-ok",
+          "sourceIds": ["oms2009"]
+        }
+      ]
+    },
+    {
+      "missionId": "m5-retiro-oms",
+      "iconKey": "checklist",
+      "title": "Retirar sin contaminarte y verificar en equipo",
+      "summary": "La bata sale enrollada hacia adentro; la Lista OMS se aplica en tres momentos, con todo el equipo.",
+      "keyPoints": [
+        {
+          "text": "Primero sale la bata, enrollada con la cara externa hacia adentro y lejos del cuerpo, mientras los guantes aún protegen las manos. Después los guantes, sin que su exterior toque la piel.",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "text": "La Lista OMS de verificación tiene tres momentos: Entrada (antes de la inducción anestésica), Pausa quirúrgica (antes de la incisión) y Salida (antes de que el paciente salga del quirófano).",
+          "sourceIds": ["oms2009-lista"]
+        },
+        {
+          "text": "En la Pausa quirúrgica el equipo confirma la identidad del paciente, el sitio y el procedimiento. En la Salida, el procedimiento realizado, los recuentos de instrumental, gasas y agujas, y el etiquetado de las muestras.",
+          "sourceIds": ["oms2009-lista"]
+        },
+        {
+          "text": "Los prestadores deben tener documentadas prácticas para mejorar la seguridad en los procedimientos quirúrgicos.",
+          "sourceIds": ["r3100-practicas"]
+        }
+      ],
+      "mistakes": [
+        {
+          "id": "m5-cara-externa",
+          "wrong": "Quitarte la bata dejando que la cara externa roce tu ropa.",
+          "right": "Enrollarla con la cara externa hacia adentro y alejarla del cuerpo.",
+          "wrongArt": "gown-hug",
+          "rightArt": "gown-rolled",
+          "sourceIds": ["oms2009"]
+        },
+        {
+          "id": "m5-solo-cirujano",
+          "wrong": "Pensar que la Lista OMS la completa solo el cirujano.",
+          "right": "Es una herramienta de equipo: participan cirugía, anestesia y enfermería, y una persona coordina.",
+          "wrongArt": "team-one",
+          "rightArt": "team-all",
+          "sourceIds": ["oms2009-lista"]
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "campo-esteril",
+      "term": "Campo estéril",
+      "definition": "Superficie preparada con elementos estériles (campos, instrumental) donde se trabaja durante el procedimiento. Antes de la incisión debe estar estéril y claramente delimitado, y solo lo estéril lo toca.",
+      "sourceIds": ["oms2018-instrumental", "oms2009"]
+    },
+    {
+      "id": "zona-esteril",
+      "term": "Zona estéril (de la bata)",
+      "definition": "Parte de la bata puesta que se considera estéril: el frente del pecho a la cintura y las mangas desde un poco arriba del codo hasta el puño.",
+      "sourceIds": ["oms2009"]
+    },
+    {
+      "id": "tecnica-cerrada",
+      "term": "Técnica cerrada",
+      "definition": "Forma de ponerse los guantes estériles sin sacar las manos de los puños de la bata, de modo que la piel nunca toca el exterior del guante.",
+      "sourceIds": ["oms2009"]
+    },
+    {
+      "id": "circulante",
+      "term": "Circulante",
+      "definition": "Integrante del equipo que no está vestido de forma estéril. Entre otras tareas, amarra los lazos posteriores de la bata tocando solo la zona de la espalda.",
+      "sourceIds": ["oms2009"]
+    },
+    {
+      "id": "instrumentador",
+      "term": "Instrumentador quirúrgico",
+      "definition": "Profesional que se viste de forma estéril, prepara el instrumental y verifica que esté listo, completo y en buen estado. En Colombia, el servicio de cirugía debe contar con este profesional en los procedimientos que lo requieran.",
+      "sourceIds": ["oms2018-instrumental", "r3100-cirugia"]
+    },
+    {
+      "id": "asepsia",
+      "term": "Asepsia",
+      "definition": "Prácticas que impiden que los microorganismos lleguen a un área o material estéril.",
+      "sourceIds": ["cdc2008-def"]
+    },
+    {
+      "id": "antisepsia",
+      "term": "Antisepsia",
+      "definition": "Aplicación de un agente que reduce los microorganismos sobre la piel o el tejido vivo.",
+      "sourceIds": ["cdc2008-def"]
+    }
+  ],
+  "checklist": {
+    "before": [
+      {
+        "id": "antes-paquete",
+        "text": "El paquete de la bata está seco, íntegro, sin marcas de agua y no se cayó.",
+        "sourceIds": ["oms2018-instrumental", "cdc2008-almacenamiento"]
+      },
+      {
+        "id": "antes-indicador",
+        "text": "El indicador químico externo cambió de color de manera uniforme.",
+        "sourceIds": ["oms2018-instrumental"]
+      },
+      {
+        "id": "antes-espacio",
+        "text": "Hay espacio para que la bata se despliegue sin rozar superficies no estériles.",
+        "sourceIds": ["oms2009"]
+      }
+    ],
+    "during": [
+      {
+        "id": "durante-manos",
+        "text": "Mantengo las manos al frente, entre la cintura y los hombros, y nunca bajo las axilas.",
+        "sourceIds": ["oms2009"]
+      },
+      {
+        "id": "durante-duda",
+        "text": "Si algo estéril toca una superficie no estéril, o tengo dudas, lo informo y se reemplaza.",
+        "sourceIds": ["oms2009"]
+      }
+    ]
+  }
+}

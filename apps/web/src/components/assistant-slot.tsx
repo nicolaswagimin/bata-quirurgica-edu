@@ -10,7 +10,7 @@ export function AssistantSlot() {
   const { user } = useAuth();
   if (!user || !AssistantPanel) return null;
   return (
-    <div className="fixed top-2 left-2 z-40">
+    <div className="fixed top-2 left-2 z-40 print:hidden">
       <Suspense fallback={null}>
         <AssistantPanel />
       </Suspense>

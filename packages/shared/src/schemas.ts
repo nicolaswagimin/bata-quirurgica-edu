@@ -495,3 +495,90 @@ export const PrivacyPolicySchema = z
   })
   .strict();
 export type PrivacyPolicy = z.infer<typeof PrivacyPolicySchema>;
+
+// ---------- Aprende (content/lecciones/lecciones.json) ----------
+// Lessons are a draft pending the thesis director's validation. Every statement names the sources
+// that back it (ids into `sources`); nothing is said without one.
+
+const SourceIdsSchema = z.array(IdSchema).min(1);
+
+export const SourcedTextSchema = z
+  .object({ text: z.string().min(1).max(600), sourceIds: SourceIdsSchema })
+  .strict();
+export type SourcedText = z.infer<typeof SourcedTextSchema>;
+
+/** A frequent mistake shown as a pair of pixel illustrations: what not to do, and the fix. */
+export const LessonMistakeSchema = z
+  .object({
+    id: IdSchema,
+    wrong: z.string().min(1).max(300),
+    right: z.string().min(1).max(300),
+    wrongArt: IdSchema,
+    rightArt: IdSchema,
+    sourceIds: SourceIdsSchema,
+  })
+  .strict();
+export type LessonMistake = z.infer<typeof LessonMistakeSchema>;
+
+export const LessonSchema = z
+  .object({
+    missionId: IdSchema,
+    /** Same as the mission's iconKey in the seed (the web never bundles the seed: it has answers). */
+    iconKey: IdSchema,
+    title: z.string().min(1).max(120),
+    summary: z.string().min(1).max(240),
+    keyPoints: z.array(SourcedTextSchema).min(2).max(6),
+    mistakes: z.array(LessonMistakeSchema).min(1).max(3),
+  })
+  .strict();
+export type Lesson = z.infer<typeof LessonSchema>;
+
+export const GlossaryTermSchema = z
+  .object({
+    id: IdSchema,
+    term: z.string().min(1).max(60),
+    definition: z.string().min(1).max(400),
+    sourceIds: SourceIdsSchema,
+  })
+  .strict();
+export type GlossaryTerm = z.infer<typeof GlossaryTermSchema>;
+
+const ChecklistItemSchema = SourcedTextSchema.extend({ id: IdSchema }).strict();
+
+export const LessonsFileSchema = z
+  .object({
+    reviewNote: z.string().min(1),
+    sources: z.record(IdSchema, SourceRefSchema),
+    lessons: z.array(LessonSchema).min(1),
+    glossary: z.array(GlossaryTermSchema).min(1),
+    /** Donning checklist: what to check before and while dressing; the steps come from bata-pasos. */
+    checklist: z
+      .object({
+        before: z.array(ChecklistItemSchema).min(1),
+        during: z.array(ChecklistItemSchema).min(1),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((file, ctx) => {
+    const known = new Set(Object.keys(file.sources));
+    const check = (ids: string[], path: (string | number)[]) => {
+      for (const id of ids) {
+        if (!known.has(id))
+          ctx.addIssue({ code: 'custom', message: `fuente ${id} no existe`, path });
+      }
+    };
+    for (const [i, l] of file.lessons.entries()) {
+      for (const [j, k] of l.keyPoints.entries())
+        check(k.sourceIds, ['lessons', i, 'keyPoints', j]);
+      for (const [j, m] of l.mistakes.entries()) check(m.sourceIds, ['lessons', i, 'mistakes', j]);
+    }
+    for (const [i, g] of file.glossary.entries()) check(g.sourceIds, ['glossary', i]);
+    for (const [i, c] of file.checklist.before.entries()) {
+      check(c.sourceIds, ['checklist', 'before', i]);
+    }
+    for (const [i, c] of file.checklist.during.entries()) {
+      check(c.sourceIds, ['checklist', 'during', i]);
+    }
+  });
+export type LessonsFile = z.infer<typeof LessonsFileSchema>;

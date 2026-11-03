@@ -77,6 +77,21 @@ const userRoutes = [
   }),
   createRoute({
     getParentRoute: () => authRoute,
+    path: '/aprende',
+    component: page('aprende', 'Aprende'),
+  }),
+  createRoute({
+    getParentRoute: () => authRoute,
+    path: '/aprende/lista',
+    component: page('aprende-lista', 'Lista de verificación'),
+  }),
+  createRoute({
+    getParentRoute: () => authRoute,
+    path: '/aprende/$missionId',
+    component: page('aprende-leccion', 'Lección'),
+  }),
+  createRoute({
+    getParentRoute: () => authRoute,
     path: '/ranking',
     component: page('ranking', 'Ranking'),
   }),

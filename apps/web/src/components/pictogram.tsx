@@ -44,6 +44,20 @@ const PATHS = {
   ),
   check: <path d="M5 13l4 4L19 6" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  close: <path d="M6 6l12 12M18 6 6 18" />,
+  book: (
+    <>
+      <path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5Z" />
+      <path d="M12 6v13.5" />
+    </>
+  ),
+  print: (
+    <>
+      <path d="M7 9V4h10v5" />
+      <rect x="4" y="9" width="16" height="7" rx="2" />
+      <path d="M7 14h10v6H7z" />
+    </>
+  ),
   home: <path d="M4 10.5 12 4l8 6.5V20h-5v-5.5H9V20H4z" />,
   rank: <path d="M4 20h16M6 20v-6h4v6M10 20V9h4v11M14 20v-8h4v8" />,
   cube: (

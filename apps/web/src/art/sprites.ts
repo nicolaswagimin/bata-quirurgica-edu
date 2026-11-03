@@ -24,6 +24,11 @@ export const PIXEL_PALETTE = {
   B: 'px-bronze',
   o: 'streak',
   t: 'tile',
+  f: 'border',
+  d: 'surface',
+  u: 'muted',
+  p: 'info',
+  r: 'danger',
 } as const;
 
 export type PixelChar = keyof typeof PIXEL_PALETTE;

@@ -8,6 +8,7 @@ import {
   CreditsSchema,
   DONNING_STEP_IDS,
   KbSourcesSchema,
+  LessonsFileSchema,
   messageForStatus,
   POLICY_VERSION,
   PracticeCompleteRequestSchema,
@@ -27,6 +28,7 @@ describe('archivos de content/', () => {
     ['credits.json', CreditsSchema],
     ['kb/sources.json', KbSourcesSchema],
     ['legal/privacidad.json', PrivacyPolicySchema],
+    ['lecciones/lecciones.json', LessonsFileSchema],
   ] as const)('%s cumple su esquema', (path, schema) => {
     const result = schema.safeParse(readJson(path));
     expect(result.error?.issues ?? []).toEqual([]);
@@ -55,6 +57,45 @@ describe('SeedFileSchema', () => {
         questions: [{ ...first, missionId: 'no-existe' }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('LessonsFileSchema', () => {
+  const lessons = LessonsFileSchema.parse(readJson('lecciones/lecciones.json'));
+  const seed = SeedFileSchema.parse(readJson('questions/seed.json'));
+
+  it('hay exactamente una lección por misión del seed, en su orden', () => {
+    expect(lessons.lessons.map((l) => l.missionId)).toEqual(
+      [...seed.missions].sort((a, b) => a.order - b.order).map((m) => m.id),
+    );
+  });
+
+  it('cada lección usa el ícono de su misión', () => {
+    const icons = new Map(seed.missions.map((m) => [m.id, m.iconKey]));
+    for (const l of lessons.lessons) expect(l.iconKey).toBe(icons.get(l.missionId));
+  });
+
+  it('el glosario incluye los términos pedidos', () => {
+    const ids = lessons.glossary.map((g) => g.id);
+    for (const id of [
+      'campo-esteril',
+      'tecnica-cerrada',
+      'circulante',
+      'instrumentador',
+      'zona-esteril',
+    ]) {
+      expect(ids).toContain(id);
+    }
+  });
+
+  it('rechaza una afirmación que cita una fuente inexistente', () => {
+    const [first, ...rest] = lessons.lessons;
+    if (!first) throw new Error('sin lecciones');
+    const keyPoints = [{ text: 'x', sourceIds: ['no-existe'] }, ...first.keyPoints];
+    const broken = { ...lessons, lessons: [{ ...first, keyPoints }, ...rest] };
+    const result = LessonsFileSchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['lessons', 0, 'keyPoints', 0]);
   });
 });
 

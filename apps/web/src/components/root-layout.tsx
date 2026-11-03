@@ -37,7 +37,7 @@ export function RootLayout() {
         Saltar al contenido
       </a>
       <AssistantSlot />
-      <header className="bg-band text-ink">
+      <header className="bg-band text-ink print:hidden">
         {/* The assistant trigger is fixed top-left; signed-in headers reserve its slot. */}
         <div
           // Full-width row whose edges line up with the centred 72rem content column, while
@@ -105,7 +105,7 @@ export function RootLayout() {
       >
         <Outlet />
       </main>
-      <footer className={`border-t border-border ${user ? 'pb-20 md:pb-0' : ''}`}>
+      <footer className={`print:hidden border-t border-border ${user ? 'pb-20 md:pb-0' : ''}`}>
         <div className="mx-auto flex max-w-6xl flex-wrap gap-4 px-4 py-4 text-sm text-muted md:px-8">
           <Link to="/privacidad" className="underline underline-offset-4 hover:text-primary">
             Política de tratamiento de datos

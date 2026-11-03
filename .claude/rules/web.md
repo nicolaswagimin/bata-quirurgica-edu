@@ -10,7 +10,8 @@ paths:
   `import.meta.glob('./routes/*.tsx')`; si el archivo aún no existe el router muestra "Próximamente".
   Agregar una de esas páginas NO requiere editar el router.
 - Mapa ruta → archivo: `/` home · `/mision/$missionId` mision · `/ranking` ranking · `/perfil` perfil ·
-  `/bata-3d` bata-3d · `/bata-ar` bata-ar · `/bata-espacio` bata-espacio · `/creditos` creditos
+  `/bata-3d` bata-3d · `/bata-ar` bata-ar · `/aprende` aprende · `/aprende/lista`
+  aprende-lista · `/aprende/$missionId` aprende-leccion · `/bata-espacio` bata-espacio · `/creditos` creditos
   (pública) · `/admin/preguntas` admin-preguntas · `/admin/grupos` admin-grupos.
 - El panel del asistente se monta igual: `import.meta.glob('./assistant/assistant-panel.tsx')`.
 - Colores solo con utilidades generadas por los tokens de `src/styles.css` (`bg-primary`,
