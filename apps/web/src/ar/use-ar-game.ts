@@ -1,7 +1,7 @@
 // The AR mirror game loop. Everything runs in the browser: frames go from the <video> to the pose
 // model and the canvas and are never uploaded. React state only changes when something visible
 // changes; per-frame values (dwell rings, drawing) bypass React.
-import { DONNING_STEP_IDS } from '@bata/shared/schemas';
+import type { ArGameStep } from '@bata/shared/schemas';
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArTargetRegistry } from '../components/ar-hover-button.tsx';
@@ -10,6 +10,7 @@ import { bootCameraAndPose, stopTracks } from './camera-pose.ts';
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
+import { doneView, GameSession, type GameView, type Scene, sameView } from './game-steps.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { computeGownAnchor, FpsMonitor } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
@@ -20,7 +21,6 @@ import {
   type Violation,
   ViolationTracker,
 } from './posture.ts';
-import { PracticeSession, type PracticeView } from './practice.ts';
 import { pressTargets, type TargetMap } from './press-targets.ts';
 import { syntheticPose } from './synthetic-pose.ts';
 
@@ -28,29 +28,14 @@ export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'mod
 
 const FPS_REFRESH_MS = 500;
 
-function sameView(a: PracticeView | null, b: PracticeView): boolean {
-  return (
-    !!a &&
-    a.stepIndex === b.stepIndex &&
-    a.hint === b.hint &&
-    a.done === b.done &&
-    Math.abs(a.hold - b.hold) < 0.05
-  );
-}
-
-const DONE_VIEW: PracticeView = {
-  stepIndex: DONNING_STEP_IDS.length,
-  hold: 0,
-  hint: '',
-  completedIds: [...DONNING_STEP_IDS],
-  done: true,
-};
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function useArGame(
   videoRef: RefObject<HTMLVideoElement | null>,
   canvasRef: RefObject<HTMLCanvasElement | null>,
   stageRef: RefObject<HTMLElement | null>,
   hotspotRef: RefObject<string | null>,
+  steps: readonly ArGameStep[],
 ) {
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
@@ -60,7 +45,7 @@ export function useArGame(
   const [hasAnchor, setHasAnchor] = useState(false);
   const [inFrame, setInFrame] = useState(false);
   const [violations, setViolations] = useState<Violation[]>([]);
-  const [practice, setPractice] = useState<PracticeView | null>(null);
+  const [practice, setPractice] = useState<GameView | null>(null);
   const [flow, setFlow] = useState<FlowView>({ phase: 'ready', secondsLeft: 0 });
   const [errors, setErrors] = useState(0);
   const [run, setRun] = useState(0);
@@ -69,7 +54,7 @@ export function useArGame(
   const [voice, setVoiceState] = useState(feedback.voice);
   const [sound, setSoundState] = useState(feedback.sound);
   const flowRef = useRef(new GameFlow());
-  const sessionRef = useRef<PracticeSession | null>(null);
+  const sessionRef = useRef<GameSession | null>(null);
   const targets = useRef<TargetMap>(new Map());
 
   const registry = useMemo<ArTargetRegistry>(
@@ -95,12 +80,12 @@ export function useArGame(
     if (e2eFlag('simularPracticaCompleta')) {
       flowRef.current.finish();
       setFlow({ phase: 'done', secondsLeft: 0 });
-      setPractice(DONE_VIEW);
+      setPractice(doneView(steps));
       return;
     }
     flowRef.current.start();
     setFlow({ phase: 'framing', secondsLeft: 0 });
-  }, [feedback]);
+  }, [feedback, steps]);
 
   const stop = useCallback(() => {
     flowRef.current.reset();
@@ -160,7 +145,9 @@ export function useArGame(
       let anchored = false;
       let framed = false;
       let violationKey = '';
-      let lastView: PracticeView | null = null;
+      let lastView: GameView | null = null;
+      let scene: Scene | null = null;
+      const still = reducedMotion();
       let lastFlow = '';
       let renderMs = 0;
 
@@ -178,8 +165,9 @@ export function useArGame(
           const body = bodyFrame(landmarks, size);
           if (!body) tracker.reset();
           const flowState = flowRef.current;
-          const playing = flowState.phase === 'playing';
-          const active = tracker.update(body && playing ? detectViolations(body) : new Set(), now);
+          // Warnings count from game step 2 on (the hands are only "scrubbed" from then).
+          const warnings = flowState.phase === 'playing' && (lastView?.warningsOn ?? false);
+          const active = tracker.update(body && warnings ? detectViolations(body) : new Set(), now);
 
           // Phases: framing → countdown → playing → done.
           const view = flowState.update(landmarks, now);
@@ -190,12 +178,13 @@ export function useArGame(
             setFlow(view);
           }
           if (view.phase === 'playing' && !sessionRef.current) {
-            sessionRef.current = new PracticeSession();
+            sessionRef.current = new GameSession(steps, still);
             feedback.success();
           }
           const session = sessionRef.current;
           if (session && view.phase === 'playing') {
-            const pv = session.update(body, active, now);
+            const pv = session.update({ body, landmarks, size, violations: active, now });
+            scene = pv.scene;
             if (lastView && pv.completedIds.length > lastView.completedIds.length)
               feedback.success();
             if (!sameView(lastView, pv)) {
@@ -225,7 +214,8 @@ export function useArGame(
 
           if (renderer) {
             const ms = renderer.draw(video, body, active, {
-              gown: flowState.phase === 'playing' || flowState.phase === 'done',
+              scene: flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null,
+              reducedMotion: still,
               hotspot: hotspotRef.current,
               cursors: !body, // with a body the posture rings already mark the hands
               landmarks,
@@ -267,7 +257,7 @@ export function useArGame(
       landmarker?.close();
       feedback.dispose();
     };
-  }, [videoRef, canvasRef, stageRef, hotspotRef, feedback]);
+  }, [videoRef, canvasRef, stageRef, hotspotRef, feedback, steps]);
 
   return {
     status,

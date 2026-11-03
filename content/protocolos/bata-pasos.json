@@ -1,5 +1,5 @@
 {
-  "reviewNote": "Secuencia didáctica pendiente de validación por el director de tesis contra el protocolo institucional.",
+  "reviewNote": "Secuencia didáctica pendiente de validación por el director de tesis contra el protocolo institucional. La secuencia del juego AR (juegoAr) también está pendiente de validación por el director de tesis.",
   "hotspots": [
     {
       "id": "cuello",
@@ -159,6 +159,50 @@
         "year": 2018,
         "section": "Uso de guantes"
       }
+    }
+  ],
+  "juegoAr": [
+    {
+      "id": "g1-mascarilla",
+      "order": 1,
+      "title": "Mascarilla",
+      "instruction": "Lleva las dos manos a la cara para ponerte la mascarilla",
+      "covers": []
+    },
+    {
+      "id": "g2-manos",
+      "order": 2,
+      "title": "Manos sobre la cintura",
+      "instruction": "Sube las manos frente al pecho, por encima de la cintura",
+      "covers": ["d1"]
+    },
+    {
+      "id": "g3-bata",
+      "order": 3,
+      "title": "Ponte la bata",
+      "instruction": "Mete las manos en las mangas y extiende los brazos al frente",
+      "covers": ["d2", "d3"]
+    },
+    {
+      "id": "g4-lazos",
+      "order": 4,
+      "title": "Lazos",
+      "instruction": "Quédate quieto con las manos arriba: el circulante amarra los lazos",
+      "covers": ["d4"]
+    },
+    {
+      "id": "g5-guantes",
+      "order": 5,
+      "title": "Guantes",
+      "instruction": "Junta las manos dentro de los puños para calzar los guantes",
+      "covers": ["d5"]
+    },
+    {
+      "id": "g6-solapa",
+      "order": 6,
+      "title": "Solapa",
+      "instruction": "Gira un cuarto de vuelta para cerrar la solapa",
+      "covers": ["d6"]
     }
   ]
 }

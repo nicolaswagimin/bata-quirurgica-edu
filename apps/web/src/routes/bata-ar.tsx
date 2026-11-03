@@ -9,8 +9,8 @@ import { ArCountdown, ArInstruction, ArStepProgress, ArWarnings } from '../compo
 import { ArResults } from '../components/ar-results.tsx';
 import { Pictogram } from '../components/pictogram.tsx';
 
-const { hotspots, donning } = BataPasosSchema.parse(pasosJson);
-const steps = [...donning].sort((a, b) => a.order - b.order);
+const { hotspots, juegoAr } = BataPasosSchema.parse(pasosJson);
+const steps = [...juegoAr].sort((a, b) => a.order - b.order);
 
 const STATUS_TEXT: Record<ArStatus, string> = {
   loading: 'Cargando modelo',
@@ -31,7 +31,7 @@ export default function BataArPage() {
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   hotspotRef.current = hotspotId;
   const navigate = useNavigate();
-  const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef);
+  const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, steps);
   const { flow, practice, status } = game;
   const phase = flow.phase;
   const current = practice && !practice.done ? steps[practice.stepIndex] : null;
@@ -49,7 +49,11 @@ export default function BataArPage() {
 
   // Voice reads what changes meaning: phase prompts, each new step and every new warning.
   const spoken =
-    phase === 'playing' ? (current ? `Paso ${current.order}. ${current.title}` : '') : instruction;
+    phase === 'playing'
+      ? current
+        ? `Paso ${current.order}. ${current.instruction}`
+        : ''
+      : instruction;
   useEffect(() => {
     game.feedback.say(spoken);
   }, [spoken, game.feedback]);
@@ -103,7 +107,7 @@ export default function BataArPage() {
           <ArBodyGuide fitted={game.inFrame} />
         ) : null}
 
-        {/* Top stack: status and toggles, then steps, then the instruction. The body stays clear. */}
+        {/* Top: status, steps and toggles only, so the head and body stay clear. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-2 p-3 md:gap-3 md:p-5">
           <div className="flex w-full items-start justify-between gap-2">
             <div className="flex flex-col items-start gap-1.5">
@@ -120,27 +124,29 @@ export default function BataArPage() {
                 </p>
               ) : null}
             </div>
-            {practice && phase === 'playing' ? (
-              <div className="hidden landscape:block">
-                <ArStepProgress steps={steps} view={practice} />
+            <div className="flex flex-col items-end gap-3">
+              <div className="pointer-events-auto flex gap-2">
+                <ArHoverButton
+                  id="voz"
+                  size="sm"
+                  tone="quiet"
+                  label={game.voice ? 'Voz: sí' : 'Voz: no'}
+                  onActivate={() => game.setVoice(!game.voice)}
+                />
+                <ArHoverButton
+                  id="salir"
+                  size="sm"
+                  tone="quiet"
+                  label="Salir"
+                  icon={<Pictogram name="arrow" className="size-5 rotate-180" />}
+                  onActivate={() => void navigate({ to: '/' })}
+                />
               </div>
-            ) : null}
-            <div className="pointer-events-auto flex gap-2">
-              <ArHoverButton
-                id="voz"
-                size="sm"
-                tone="quiet"
-                label={game.voice ? 'Voz: sí' : 'Voz: no'}
-                onActivate={() => game.setVoice(!game.voice)}
-              />
-              <ArHoverButton
-                id="salir"
-                size="sm"
-                tone="quiet"
-                label="Salir"
-                icon={<Pictogram name="arrow" className="size-5 rotate-180" />}
-                onActivate={() => void navigate({ to: '/' })}
-              />
+              {practice && phase === 'playing' ? (
+                <div className="hidden landscape:block">
+                  <ArStepProgress steps={steps} view={practice} vertical />
+                </div>
+              ) : null}
             </div>
           </div>
           {practice && phase === 'playing' ? (
@@ -148,7 +154,6 @@ export default function BataArPage() {
               <ArStepProgress steps={steps} view={practice} />
             </div>
           ) : null}
-          <ArInstruction text={instruction} sub={!game.hasAnchor && !cameraError ? GUIDE : null} />
         </div>
 
         {/* Centre: countdown and results only */}
@@ -158,10 +163,16 @@ export default function BataArPage() {
         </div>
 
         {/* Bottom: the actions of the current phase */}
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* Landscape: a left column, so the centred body stays clear. */}
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] landscape:right-auto landscape:w-[38%] landscape:items-start landscape:md:w-[34%]">
           {phase === 'playing' ? <ArWarnings violations={game.violations} /> : null}
+          {/* Instruction low, over the legs: the head stays visible for the mask. */}
+          <ArInstruction text={instruction} sub={!game.hasAnchor && !cameraError ? GUIDE : null} />
           {game.lowPerformance ? (
-            <p role="status" className="rounded-card bg-bg px-4 py-2 text-sm font-bold text-ink">
+            <p
+              role="status"
+              className="rounded-card bg-bg px-4 py-2 text-sm font-bold text-ink landscape:text-xs"
+            >
               Tu dispositivo va lento con la cámara.{' '}
               <Link to="/bata-3d" className="text-primary underline">
                 Prueba el modo 3D
@@ -176,32 +187,34 @@ export default function BataArPage() {
           {phase === 'ready' && !cameraError ? (
             <>
               <ArHoverButton id="comenzar" label="Comenzar" onActivate={game.start} />
-              <div className="flex max-w-2xl flex-wrap justify-center gap-2">
-                {hotspots.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    aria-pressed={h.id === hotspotId}
-                    onClick={() => setHotspotId(h.id === hotspotId ? null : h.id)}
-                    className="pressable min-h-11 rounded-pill bg-ink/60 px-4 text-sm font-bold text-bg ring-2 ring-bg/70 backdrop-blur-sm aria-pressed:bg-bg aria-pressed:text-ink"
-                  >
-                    {h.label}
-                  </button>
-                ))}
+              <div className="flex flex-col items-center gap-3 landscape:fixed landscape:right-4 landscape:bottom-4 landscape:w-[34%] landscape:items-end">
+                <div className="flex max-w-2xl flex-wrap justify-center gap-2 landscape:justify-end">
+                  {hotspots.map((h) => (
+                    <button
+                      key={h.id}
+                      type="button"
+                      aria-pressed={h.id === hotspotId}
+                      onClick={() => setHotspotId(h.id === hotspotId ? null : h.id)}
+                      className="pressable min-h-11 rounded-pill bg-ink/60 px-4 text-sm font-bold text-bg ring-2 ring-bg/70 backdrop-blur-sm aria-pressed:bg-bg aria-pressed:text-ink"
+                    >
+                      {h.label}
+                    </button>
+                  ))}
+                </div>
+                <p
+                  aria-live="polite"
+                  className="max-w-xl text-center text-sm font-bold text-bg empty:hidden landscape:text-right"
+                >
+                  {hotspots.find((h) => h.id === hotspotId)?.description}
+                </p>
+                <p className="max-w-xl text-center text-xs text-bg/85 landscape:text-right">
+                  La imagen de tu cámara se procesa solo en este dispositivo y nunca se envía a
+                  internet. Secuencia didáctica pendiente de validación por el director de tesis.{' '}
+                  <Link to="/bata-espacio" className="font-bold underline">
+                    Ver en tu espacio
+                  </Link>
+                </p>
               </div>
-              <p
-                aria-live="polite"
-                className="max-w-xl text-center text-sm font-bold text-bg empty:hidden"
-              >
-                {hotspots.find((h) => h.id === hotspotId)?.description}
-              </p>
-              <p className="max-w-xl text-center text-xs text-bg/85">
-                La imagen de tu cámara se procesa solo en este dispositivo y nunca se envía a
-                internet. Secuencia didáctica pendiente de validación por el director de tesis.{' '}
-                <Link to="/bata-espacio" className="font-bold underline">
-                  Ver en tu espacio
-                </Link>
-              </p>
             </>
           ) : null}
           {phase === 'done' ? (

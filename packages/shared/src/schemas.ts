@@ -391,12 +391,25 @@ export const ProtocolStepSchema = z
   .strict();
 export type ProtocolStep = z.infer<typeof ProtocolStepSchema>;
 
+/** One step of the AR mirror game; `covers` names the donning steps it practises. */
+export const ArGameStepSchema = z
+  .object({
+    id: IdSchema,
+    order: z.number().int().min(1),
+    title: z.string().min(1),
+    instruction: z.string().min(1),
+    covers: z.array(IdSchema),
+  })
+  .strict();
+export type ArGameStep = z.infer<typeof ArGameStepSchema>;
+
 export const BataPasosSchema = z
   .object({
     reviewNote: z.string(),
     hotspots: z.array(HotspotSchema).min(1),
     donning: z.array(ProtocolStepSchema).min(1),
     doffing: z.array(ProtocolStepSchema).min(1),
+    juegoAr: z.array(ArGameStepSchema).min(1),
   })
   .strict()
   .superRefine((file, ctx) => {
@@ -413,6 +426,25 @@ export const BataPasosSchema = z
           }
         }
       });
+    }
+    // The game must practise every donning step (the practice POST sends all of them).
+    const donningIds = new Set(file.donning.map((s) => s.id));
+    const covered = new Set(file.juegoAr.flatMap((s) => s.covers));
+    file.juegoAr.forEach((step, i) => {
+      for (const id of step.covers) {
+        if (!donningIds.has(id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `paso inexistente: ${id}`,
+            path: ['juegoAr', i, 'covers'],
+          });
+        }
+      }
+    });
+    for (const id of donningIds) {
+      if (!covered.has(id)) {
+        ctx.addIssue({ code: 'custom', message: `el juego no cubre ${id}`, path: ['juegoAr'] });
+      }
     }
   });
 export type BataPasos = z.infer<typeof BataPasosSchema>;

@@ -8,7 +8,6 @@ import {
   type Violation,
   ViolationTracker,
 } from '../../src/ar/posture.ts';
-import { PracticeSession, STEP_RULES } from '../../src/ar/practice.ts';
 
 const SIZE = { width: 1000, height: 1000 };
 
@@ -117,77 +116,5 @@ describe('LandmarkSmoother', () => {
     s.smooth([{ x: 0, y: 0, visibility: 1 }]);
     const [p] = s.smooth([{ x: 1, y: 1, visibility: 1 }]);
     expect(p?.x).toBeCloseTo(0.5);
-  });
-});
-
-describe('PracticeSession', () => {
-  const hold = (session: PracticeSession, lms: Landmark[], from: number, ms: number) => {
-    let view = session.update(bodyFrame(lms, SIZE), new Set(), from);
-    for (let t = from + 100; t <= from + ms; t += 100) {
-      view = session.update(bodyFrame(lms, SIZE), new Set(), t);
-    }
-    return view;
-  };
-
-  const chest = pose();
-  const atShoulders = pose({
-    leftWrist: { x: 0.58, y: 0.3, z: -0.6 },
-    rightWrist: { x: 0.42, y: 0.3, z: -0.6 },
-    leftElbow: { x: 0.6, y: 0.33, z: -0.3 },
-    rightElbow: { x: 0.4, y: 0.33, z: -0.3 },
-  });
-  const handsTogether = pose({
-    leftWrist: { x: 0.52, y: 0.42, z: -0.1 },
-    rightWrist: { x: 0.48, y: 0.42, z: -0.1 },
-  });
-  // Quarter turn: shoulders and hips foreshortened to a third of their width.
-  const turned = pose({
-    leftShoulder: { x: 0.53, y: 0.3 },
-    rightShoulder: { x: 0.47, y: 0.3 },
-    leftHip: { x: 0.52, y: 0.6 },
-    rightHip: { x: 0.48, y: 0.6 },
-    leftWrist: { x: 0.51, y: 0.42, z: -0.2 },
-    rightWrist: null,
-  });
-
-  it('walks the six donning steps in order and only then reports done', () => {
-    expect(STEP_RULES.map((r) => r.id)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5', 'd6']);
-    const s = new PracticeSession();
-    let t = 0;
-    let view = hold(s, chest, t, 1600);
-    expect(view.completedIds).toEqual(['d1']);
-    t += 2000;
-    view = hold(s, atShoulders, t, 1600);
-    expect(view.completedIds).toEqual(['d1', 'd2']);
-    t += 2000;
-    view = hold(s, atShoulders, t, 1600);
-    expect(view.completedIds).toEqual(['d1', 'd2', 'd3']);
-    t += 2000;
-    view = hold(s, chest, t, 1600);
-    expect(view.completedIds).toHaveLength(3); // d4 needs 3 s
-    t += 2000;
-    view = hold(s, chest, t, 3100);
-    expect(view.completedIds).toEqual(['d1', 'd2', 'd3', 'd4']);
-    t += 4000;
-    view = hold(s, handsTogether, t, 1600);
-    expect(view.completedIds).toHaveLength(5);
-    t += 2000;
-    hold(s, handsTogether, t, 200); // frontal baseline
-    t += 300;
-    hold(s, turned, t, 300);
-    t += 400;
-    expect(s.update(bodyFrame(chest, SIZE), new Set(), t).done).toBe(false);
-    t += 100;
-    view = hold(s, chest, t, 1300);
-    expect(view.done).toBe(true);
-    expect(view.completedIds).toEqual(['d1', 'd2', 'd3', 'd4', 'd5', 'd6']);
-  });
-
-  it('a violation resets the hold of the current step', () => {
-    const s = new PracticeSession();
-    hold(s, chest, 0, 1000);
-    const view = s.update(bodyFrame(chest, SIZE), new Set<Violation>(['bajo-cintura']), 1100);
-    expect(view.hold).toBe(0);
-    expect(hold(s, chest, 1200, 1000).completedIds).toEqual([]);
   });
 });

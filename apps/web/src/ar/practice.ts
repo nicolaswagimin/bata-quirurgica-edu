@@ -1,7 +1,6 @@
-// Guided practice for the six donning steps of content/protocolos/bata-pasos.json. Pure state
-// machine: each step has a posture check that must hold, free of violations, for its hold time.
-// The client only decides when the sequence is done; XP is awarded by POST /quiz/practice.
-import { type BodyFrame, dist, sideOffset, torsoDepth, type Violation } from './posture.ts';
+// Posture rules for the donning steps (d1–d6 of content/protocolos/bata-pasos.json), reused by
+// the AR game steps in game-steps.ts. Pure: no DOM.
+import { type BodyFrame, dist, sideOffset, torsoDepth } from './posture.ts';
 
 export interface StepCheck {
   ok: boolean;
@@ -24,7 +23,7 @@ const bothWrists = (f: BodyFrame) =>
   f.left.wrist && f.right.wrist ? ([f.left.wrist, f.right.wrist] as const) : null;
 
 /** Chest band: below the shoulder line, above the waist, in front of the torso. */
-function inSterileBand(f: BodyFrame): boolean {
+export function inSterileBand(f: BodyFrame): boolean {
   const w = bothWrists(f);
   return (
     !!w &&
@@ -131,55 +130,3 @@ export const STEP_RULES: readonly StepRule[] = [
     },
   },
 ];
-
-export interface PracticeView {
-  stepIndex: number;
-  /** 0..1 of the current step's hold. */
-  hold: number;
-  hint: string;
-  completedIds: string[];
-  done: boolean;
-}
-
-export class PracticeSession {
-  private index = 0;
-  private holdStart: number | null = null;
-  private completed: string[] = [];
-  private turn: TurnState = { baselineRatio: null, turned: false };
-  private lastHint = 'Colócate de frente a la cámara, con hombros y caderas visibles.';
-
-  update(frame: BodyFrame | null, violations: ReadonlySet<Violation>, now: number): PracticeView {
-    const rule = STEP_RULES[this.index];
-    if (!rule) return this.view(1);
-    if (!frame) {
-      this.holdStart = null;
-      return this.view(0, 'Colócate de frente a la cámara, con hombros y caderas visibles.');
-    }
-    const result = rule.check(frame, this.turn);
-    if (!result.ok || violations.size > 0) {
-      this.holdStart = null;
-      return this.view(0, violations.size > 0 ? 'Corrige el aviso para seguir.' : result.hint);
-    }
-    this.holdStart ??= now;
-    const hold = Math.min(1, (now - this.holdStart) / rule.holdMs);
-    if (hold >= 1) {
-      this.completed.push(rule.id);
-      this.index += 1;
-      this.holdStart = null;
-      this.turn = { baselineRatio: null, turned: false };
-      return this.view(0, result.hint);
-    }
-    return this.view(hold, result.hint);
-  }
-
-  private view(hold: number, hint = this.lastHint): PracticeView {
-    this.lastHint = hint;
-    return {
-      stepIndex: this.index,
-      hold,
-      hint,
-      completedIds: [...this.completed],
-      done: this.index >= STEP_RULES.length,
-    };
-  }
-}

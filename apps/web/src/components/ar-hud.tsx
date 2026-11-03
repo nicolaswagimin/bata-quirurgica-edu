@@ -1,18 +1,16 @@
-import type { BataPasos } from '@bata/shared/schemas';
+import type { ArGameStep } from '@bata/shared/schemas';
+import type { GameView } from '../ar/game-steps.ts';
 import { VIOLATION_SHORT, VIOLATION_TEXT, type Violation } from '../ar/posture.ts';
-import type { PracticeView } from '../ar/practice.ts';
 import { Pictogram } from './pictogram.tsx';
-
-type Step = BataPasos['donning'][number];
 
 /** Big instruction at the top of the camera image, readable at ~2 m. */
 export function ArInstruction({ text, sub }: { text: string; sub?: string | null }) {
   return (
-    <div className="pointer-events-none flex flex-col items-center gap-2 px-4 text-center">
+    <div className="pointer-events-none flex flex-col items-center gap-2 px-4 text-center landscape:items-start landscape:px-0">
       <p
         aria-live="polite"
         data-testid="ar-instruction"
-        className="max-w-[24ch] rounded-card bg-ink/70 px-4 py-2.5 text-xl leading-tight font-extrabold text-balance text-bg shadow-float backdrop-blur-sm md:max-w-[34ch] md:px-5 md:py-3 md:text-[32px] landscape:max-w-[40ch]"
+        className="max-w-[24ch] rounded-card bg-ink/70 px-4 py-2.5 text-xl leading-tight font-extrabold text-balance text-bg shadow-float backdrop-blur-sm portrait:md:max-w-[34ch] portrait:md:px-5 portrait:md:py-3 portrait:md:text-[32px] landscape:max-w-none landscape:text-left landscape:text-lg landscape:lg:text-[28px]"
       >
         {text}
       </p>
@@ -26,11 +24,19 @@ export function ArInstruction({ text, sub }: { text: string; sub?: string | null
 }
 
 /** Six numbered stamps: done ones inked, the current one ringed, with the hold filling under it. */
-export function ArStepProgress({ steps, view }: { steps: readonly Step[]; view: PracticeView }) {
+export function ArStepProgress({
+  steps,
+  view,
+  vertical = false,
+}: {
+  steps: readonly ArGameStep[];
+  view: GameView;
+  vertical?: boolean;
+}) {
   return (
     <ol
       aria-label="Pasos de la colocación"
-      className="pointer-events-none flex items-center gap-1.5 rounded-pill bg-ink/60 px-3 py-2 backdrop-blur-sm"
+      className={`pointer-events-none flex items-center gap-1.5 rounded-pill bg-ink/60 backdrop-blur-sm ${vertical ? 'flex-col gap-1 px-1.5 py-2' : 'px-3 py-2'}`}
     >
       {steps.map((step, i) => {
         const done = view.completedIds.includes(step.id);
@@ -39,7 +45,7 @@ export function ArStepProgress({ steps, view }: { steps: readonly Step[]; view: 
           <li
             key={step.id}
             aria-current={current ? 'step' : undefined}
-            className={`relative grid size-8 place-items-center overflow-hidden rounded-pill font-mono text-sm font-bold md:size-11 ${
+            className={`relative grid size-8 place-items-center overflow-hidden rounded-pill font-mono text-sm font-bold ${vertical ? '' : 'md:size-11'} ${
               done
                 ? 'bg-bg text-primary'
                 : current
@@ -69,9 +75,13 @@ export function ArStepProgress({ steps, view }: { steps: readonly Step[]; view: 
 /** Live sterile-technique warnings, over the video. Assertive so each new one is announced. */
 export function ArWarnings({ violations }: { violations: readonly Violation[] }) {
   return (
-    <div aria-live="assertive" data-testid="ar-alerts" className="pointer-events-none px-4">
+    <div
+      aria-live="assertive"
+      data-testid="ar-alerts"
+      className="pointer-events-none px-4 landscape:px-0"
+    >
       {violations.length > 0 ? (
-        <ul className="mx-auto flex max-w-xl flex-col items-center gap-1 rounded-pill bg-danger px-6 py-3 text-center text-xl leading-snug font-extrabold text-bg shadow-float md:text-[28px]">
+        <ul className="mx-auto flex max-w-xl flex-col items-center gap-1 rounded-pill bg-danger px-6 py-3 text-center text-xl leading-snug font-extrabold text-bg shadow-float portrait:md:text-[28px] landscape:mx-0 landscape:rounded-card landscape:text-lg landscape:lg:text-2xl">
           {violations.map((v) => (
             <li key={v}>
               <span aria-hidden="true">{VIOLATION_SHORT[v]}</span>
