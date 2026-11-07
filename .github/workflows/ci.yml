@@ -35,7 +35,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test:coverage
+      - run: pnpm test
+        env:
+          COVERAGE: '1'
 
       # Informative: reports bugs, smells and coverage to SonarQube Cloud without blocking the gate.
       # Skipped until the SONAR_TOKEN repository secret exists (and on forks, which cannot read it).
