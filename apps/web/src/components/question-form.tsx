@@ -34,7 +34,6 @@ type Draft = {
   year: string;
   section: string;
   difficulty: string;
-  xp: string;
 };
 
 function toDraft(q: AdminQuestion | null, missionIds: string[]): Draft {
@@ -51,7 +50,6 @@ function toDraft(q: AdminQuestion | null, missionIds: string[]): Draft {
       year: String(new Date().getFullYear()),
       section: '',
       difficulty: '1',
-      xp: '10',
     };
   }
   return {
@@ -66,7 +64,6 @@ function toDraft(q: AdminQuestion | null, missionIds: string[]): Draft {
     year: String(q.source.year),
     section: q.source.section,
     difficulty: String(q.difficulty),
-    xp: String(q.xp),
   };
 }
 
@@ -85,7 +82,6 @@ function toInput(d: Draft): unknown {
       section: d.section.trim(),
     },
     difficulty: Number(d.difficulty),
-    xp: Number(d.xp),
   };
 }
 
@@ -104,7 +100,7 @@ function fieldFor(path: PropertyKey[]): keyof Draft | 'root' {
   }
   if (first === 'options') return 'options';
   if (first === 'correctOptionIds') return 'correct';
-  const plain = ['missionId', 'prompt', 'explanation', 'difficulty', 'xp'] as const;
+  const plain = ['missionId', 'prompt', 'explanation', 'difficulty'] as const;
   return plain.find((k) => k === first) ?? 'root';
 }
 
@@ -267,7 +263,6 @@ export function QuestionForm({ question, missionIds, onSubmit, onCancel }: Quest
         {text('year', 'Fuente: año', true)}
         {text('section', 'Fuente: sección')}
         {text('difficulty', 'Dificultad (1–3)', true)}
-        {text('xp', 'XP (1–100)', true)}
       </div>
       {errors.root ? (
         <p role="alert" className="text-sm text-danger">

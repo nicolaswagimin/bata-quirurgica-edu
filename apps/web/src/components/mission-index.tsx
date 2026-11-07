@@ -4,11 +4,14 @@ import { MEDAL, missionSprite } from '../art/sprites.ts';
 import { missionCode, type SheetMission } from './mission-sheet.tsx';
 import { Pictogram } from './pictogram.tsx';
 import { PixelSprite } from './pixel-sprite.tsx';
+import { StarRating } from './star-rating.tsx';
 
 export type IndexEntry = SheetMission & {
   iconKey: string;
-  /** null when progress could not be read. */
-  correct: number | null;
+  /** Mejor intento; null cuando progress no se pudo leer. */
+  bestCorrect: number | null;
+  /** Estrellas del récord (0 a 3). */
+  stars: number;
   completed: boolean;
 };
 
@@ -51,13 +54,13 @@ function Medal({ fresh }: { fresh: boolean }) {
 }
 
 function status(entry: IndexEntry, current: boolean): string {
-  if (entry.completed) return `dominada · ${entry.questionCount} de ${entry.questionCount}`;
-  if (entry.correct === null) return 'progreso no disponible';
-  if (current) return `abierta hoy · ${entry.correct} de ${entry.questionCount}`;
-  return `${entry.correct} de ${entry.questionCount} correctas`;
+  if (entry.completed) return `dominada · ${entry.stars} de 3 estrellas`;
+  if (entry.bestCorrect === null) return 'progreso no disponible';
+  const record = `récord ${entry.bestCorrect} de ${entry.questionCount}`;
+  return current ? `abierta hoy · ${record}` : record;
 }
 
-/** Every mission in order; mastered ones carry the bronze pixel medal. */
+/** Every mission in order; mastered ones carry the bronze pixel medal and their stars. */
 export function MissionIndex({
   entries,
   currentId,
@@ -119,11 +122,12 @@ export function MissionIndex({
                   <span className="block text-sm leading-snug font-bold text-ink">
                     {entry.title}
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted">
+                  <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
                     <span aria-hidden="true" className="font-mono font-bold text-primary">
                       {missionCode(entry.order)}
-                    </span>{' '}
-                    · {status(entry, current)}
+                    </span>
+                    <span>· {status(entry, current)}</span>
+                    {entry.completed ? <StarRating stars={entry.stars} size="size-4" /> : null}
                   </span>
                 </span>
                 <span

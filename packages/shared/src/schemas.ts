@@ -142,7 +142,6 @@ const questionBody = {
   explanation: z.string().min(1).max(2000),
   source: SourceRefSchema,
   difficulty: z.number().int().min(1).max(3),
-  xp: z.number().int().min(1).max(100),
 };
 
 type KeyedQuestion = {
@@ -232,23 +231,102 @@ export const MemberProgressSchema = z
   .strict();
 export type MemberProgress = z.infer<typeof MemberProgressSchema>;
 
+// ---------- Intento de misión (quiz con un solo intento por pregunta) ----------
+
+export const StartAttemptRequestSchema = z.object({ missionId: IdSchema }).strict();
+export type StartAttemptRequest = z.infer<typeof StartAttemptRequestSchema>;
+
+/** Pregunta tal como la ve el cliente durante un intento: sin clave de respuesta. */
+export const AttemptQuestionSchema = z
+  .object({
+    id: IdSchema,
+    type: QuestionTypeSchema,
+    prompt: z.string().min(1),
+    options: z.array(OptionSchema).min(2),
+    explanation: z.string().min(1),
+    source: SourceRefSchema,
+    status: QuestionStatusSchema,
+  })
+  .strict();
+export type AttemptQuestion = z.infer<typeof AttemptQuestionSchema>;
+
+export const StartAttemptResponseSchema = z
+  .object({
+    attemptId: IdSchema,
+    missionId: IdSchema,
+    /** Preguntas barajadas (opciones también barajadas). Sin correctOptionIds. */
+    questions: z.array(AttemptQuestionSchema).min(1),
+    /** true si la misión ya fue sellada antes: el XP de este intento será 0. */
+    alreadySealed: z.boolean(),
+  })
+  .strict();
+export type StartAttemptResponse = z.infer<typeof StartAttemptResponseSchema>;
+
 export const AnswerRequestSchema = z
-  .object({ questionId: IdSchema, selectedOptionIds: z.array(IdSchema).min(1).max(6) })
+  .object({
+    attemptId: IdSchema,
+    questionId: IdSchema,
+    selectedOptionIds: z.array(IdSchema).min(1).max(6),
+  })
   .strict();
 export type AnswerRequest = z.infer<typeof AnswerRequestSchema>;
 
 export const AnswerResponseSchema = z
   .object({
     correct: z.boolean(),
+    /** IDs de las opciones correctas: se revelan al cliente tras responder. */
+    correctOptionIds: z.array(IdSchema).min(1),
     explanation: z.string(),
     source: SourceRefSchema,
+    /** La racha se mueve con cada acierto; el XP solo se paga al aprobar la misión. */
+    streakDays: z.number().int().min(0),
+  })
+  .strict();
+export type AnswerResponse = z.infer<typeof AnswerResponseSchema>;
+
+export const FinishAttemptRequestSchema = z.object({ attemptId: IdSchema }).strict();
+export type FinishAttemptRequest = z.infer<typeof FinishAttemptRequestSchema>;
+
+/** Resumen de una pregunta fallada que se muestra en la pantalla de resultados. */
+export const FailedQuestionSummarySchema = z
+  .object({
+    id: IdSchema,
+    prompt: z.string().min(1),
+    /** Todas las opciones, para poder mostrar el texto de la respuesta correcta. */
+    options: z.array(OptionSchema).min(2),
+    correctOptionIds: z.array(IdSchema).min(1),
+    source: SourceRefSchema,
+  })
+  .strict();
+export type FailedQuestionSummary = z.infer<typeof FailedQuestionSummarySchema>;
+
+export const FinishAttemptResponseSchema = z
+  .object({
+    correct: z.number().int().min(0),
+    total: z.number().int().min(1),
+    /** Preguntas que el estudiante llegó a responder. */
+    answered: z.number().int().min(0),
+    /** true si cerró el intento con preguntas sin responder. */
+    abandoned: z.boolean(),
+    /** true solo si respondió todo y alcanzó el mínimo. */
+    passed: z.boolean(),
+    /** Estrellas de este intento (0 cuando no aprueba o abandona). */
+    stars: z.number().int().min(0).max(3),
+    /** Mejor cantidad de aciertos que ha logrado en esta misión. */
+    bestCorrect: z.number().int().min(0),
+    /** XP de la misión; 0 si no aprobó o si era un repaso. */
     xpAwarded: z.number().int().min(0),
+    bonusXp: z.number().int().min(0),
+    missionSealed: z.boolean(),
+    /** true si la misión ya estaba sellada antes de este intento. */
+    alreadySealed: z.boolean(),
+    failedQuestions: z.array(FailedQuestionSummarySchema),
     totalXp: z.number().int().min(0),
     level: z.number().int().min(1),
     streakDays: z.number().int().min(0),
   })
   .strict();
-export type AnswerResponse = z.infer<typeof AnswerResponseSchema>;
+export type FinishAttemptResponse = z.infer<typeof FinishAttemptResponseSchema>;
 
 // ---------- Práctica guiada (AR espejo) ----------
 

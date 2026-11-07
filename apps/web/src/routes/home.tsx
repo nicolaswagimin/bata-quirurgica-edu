@@ -31,9 +31,15 @@ export const MissionSchema = SeedMissionSchema.omit({ id: true }).extend({
 });
 export type Mission = z.infer<typeof MissionSchema>;
 
+// Documento `progress/{uid}/missions/{missionId}`. Los campos nuevos llevan default para que un
+// progreso antiguo (solo `completed`) siga leyéndose.
 const MissionProgressSchema = z.object({
-  answeredCorrectIds: z.array(z.string()),
-  completed: z.boolean(),
+  answeredCorrectIds: z.array(z.string()).default([]),
+  completed: z.boolean().default(false),
+  sealed: z.boolean().default(false),
+  stars: z.number().int().min(0).max(3).default(0),
+  bestCorrect: z.number().int().min(0).default(0),
+  questionCount: z.number().int().min(0).optional(),
 });
 type MissionProgress = z.infer<typeof MissionProgressSchema>;
 
@@ -196,9 +202,11 @@ function MissionMap({ profile }: { profile: Profile }) {
       topic: m.topic,
       xpReward: m.xpReward,
       iconKey: m.iconKey,
-      questionCount: m.questionIds.length,
-      correct: progressKnown ? (p?.answeredCorrectIds.length ?? 0) : null,
-      completed: p?.completed ?? false,
+      // El intento filtrado (solo validadas) manda sobre la lista de preguntas de la misión.
+      questionCount: p?.questionCount ?? m.questionIds.length,
+      bestCorrect: progressKnown ? (p?.bestCorrect ?? 0) : null,
+      stars: p?.stars ?? 0,
+      completed: p ? p.sealed || p.completed : false,
     };
   });
   const current = entries.find((e) => !e.completed) ?? null;
@@ -225,7 +233,20 @@ function MissionMap({ profile }: { profile: Profile }) {
         ) : (
           <div className="grid gap-8 md:-mt-12 md:grid-cols-12 md:items-start">
             {current ? (
-              <MissionSheet mission={current} correct={current.correct} className="md:col-span-7" />
+              <MissionSheet
+                mission={current}
+                progress={
+                  progressKnown
+                    ? {
+                        bestCorrect: current.bestCorrect ?? 0,
+                        questionCount: current.questionCount,
+                        stars: current.stars,
+                        sealed: current.completed,
+                      }
+                    : null
+                }
+                className="md:col-span-7"
+              />
             ) : (
               <section className={`${panel} flex flex-col items-start gap-4 md:col-span-7`}>
                 <h2 className="font-pixel text-2xl font-semibold text-primary">

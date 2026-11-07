@@ -6,6 +6,100 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** XP por completar una práctica guiada del AR espejo; se suma una sola vez por día de Bogotá. */
 export const PRACTICE_XP = 30;
 
+/**
+ * Proporción mínima de aciertos para aprobar una misión. El intento se corrige al final: por debajo
+ * de este umbral la misión no se sella y no se gana ningún XP (como un examen).
+ */
+export const PASS_THRESHOLD = 0.6;
+
+/** Aciertos mínimos para aprobar una misión de `total` preguntas (60 % redondeado hacia arriba). */
+export function minCorrectToPass(total: number): number {
+  if (total <= 0) return 0;
+  // El epsilon evita que 5 × 0.6 = 3.0000000000000004 exija 4 aciertos.
+  return Math.max(1, Math.ceil(total * PASS_THRESHOLD - 1e-9));
+}
+
+/** Bono de XP por aprobar una misión con todas las respuestas correctas. */
+export const PERFECT_BONUS_XP = 20;
+
+/** Proporciones mínimas de aciertos para 1, 2 y 3 estrellas (la perfección da 3). */
+export const STAR_THRESHOLDS = [PASS_THRESHOLD, 0.8, 1] as const;
+
+/** Cuántas estrellas de 3 da un intento: 0 si no aprueba, 1 al aprobar, 2 sobre 80 %, 3 perfecto. */
+export function starsForScore(correct: number, total: number): 0 | 1 | 2 | 3 {
+  if (total <= 0) return 0;
+  const ratio = correct / total;
+  if (ratio >= STAR_THRESHOLDS[2]) return 3;
+  if (ratio >= STAR_THRESHOLDS[1]) return 2;
+  if (ratio >= STAR_THRESHOLDS[0]) return 1;
+  return 0;
+}
+
+export type MissionScore = {
+  /** true si alcanzó el mínimo de aciertos. */
+  passed: boolean;
+  /** true si acertó todas las preguntas. */
+  perfect: boolean;
+  /** Estrellas de 0 a 3. */
+  stars: 0 | 1 | 2 | 3;
+  /** true si el intento se cerró con preguntas sin responder. */
+  abandoned: boolean;
+};
+
+/** Corrige un intento ya cerrado. No sabe de XP ni de reintentos: solo de aciertos. */
+export function scoreMission(correct: number, total: number): MissionScore {
+  return {
+    passed: total > 0 && correct >= minCorrectToPass(total),
+    perfect: total > 0 && correct === total,
+    stars: starsForScore(correct, total),
+    abandoned: false,
+  };
+}
+
+export type MissionXpResult = MissionScore & {
+  /** XP de la misión; 0 si no aprobó o si era un repaso. */
+  baseXp: number;
+  /** Bono por misión perfecta; 0 si no fue perfecta o si era un repaso. */
+  bonusXp: number;
+  /** baseXp + bonusXp. */
+  totalXp: number;
+};
+
+export type MissionXpInput = {
+  /** Respuestas correctas del intento. */
+  correct: number;
+  /** Preguntas del intento. */
+  total: number;
+  /** Preguntas que el estudiante llegó a responder. */
+  answered: number;
+  /** XP que promete la misión (`missions/{id}.xpReward`). */
+  missionXp: number;
+  /** true si la misión ya estaba sellada: repetirla es repaso y no da XP. */
+  isRepeat: boolean;
+};
+
+/**
+ * XP de un intento de misión.
+ *
+ * El XP es del examen, no de cada pregunta: solo se paga si el intento se respondió completo y
+ * alcanzó `PASS_THRESHOLD`. Un intento fallido o abandonado deja 0, y repetir una misión ya
+ * sellada también (el repaso sirve para mejorar las estrellas, no para farmear XP).
+ */
+export function missionXpAward(input: MissionXpInput): MissionXpResult {
+  const { correct, total, answered, missionXp, isRepeat } = input;
+  const abandoned = total > 0 && answered < total;
+  const score = abandoned
+    ? { passed: false, perfect: false, stars: 0 as const, abandoned: true }
+    : scoreMission(correct, total);
+
+  if (!score.passed || isRepeat) {
+    return { ...score, baseXp: 0, bonusXp: 0, totalXp: 0 };
+  }
+  const baseXp = Math.max(0, missionXp);
+  const bonusXp = score.perfect ? PERFECT_BONUS_XP : 0;
+  return { ...score, baseXp, bonusXp, totalXp: baseXp + bonusXp };
+}
+
 /** Nivel = floor(sqrt(xp / 50)) + 1. */
 export function levelForXp(xp: number): number {
   return Math.floor(Math.sqrt(Math.max(0, xp) / 50)) + 1;

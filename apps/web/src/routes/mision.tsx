@@ -1,187 +1,171 @@
-import { bogotaDate } from '@bata/shared/gamification';
-import {
-  type AnswerRequest,
-  type AnswerResponse,
-  AnswerResponseSchema,
-  type Question,
-  QuestionSchema,
+import type {
+  AnswerResponse,
+  FinishAttemptResponse,
+  StartAttemptResponse,
 } from '@bata/shared/schemas';
+import { FinishAttemptResponseSchema, StartAttemptResponseSchema } from '@bata/shared/schemas';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from '@tanstack/react-router';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { type FormEvent, useState } from 'react';
-import { missionSprite, SPARKLE, XP_GEM } from '../art/sprites.ts';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { doc, getDoc } from 'firebase/firestore';
+import { useState } from 'react';
+import { missionSprite } from '../art/sprites.ts';
 import { LoadingState } from '../components/loading-state.tsx';
 import { MascotNote } from '../components/mascot.tsx';
 import { missionCode } from '../components/mission-sheet.tsx';
 import { Pictogram } from '../components/pictogram.tsx';
 import { PixelSprite } from '../components/pixel-sprite.tsx';
+import { ExitDialog } from '../components/quiz-exit-dialog.tsx';
+import { QuestionCard } from '../components/quiz-question.tsx';
+import { QuizResults } from '../components/quiz-results.tsx';
 import { StatsBar } from '../components/stats-bar.tsx';
-import { buttonPrimary, pageTitle, panel, textLink } from '../components/ui-classes.ts';
-import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
-import { db, useAuth } from '../lib/firebase.tsx';
+import {
+  buttonPrimary,
+  buttonSecondary,
+  pageTitle,
+  panel,
+  textLink,
+} from '../components/ui-classes.ts';
+import { ApiError, apiFetch, useMe } from '../lib/api.ts';
+import { db } from '../lib/firebase.tsx';
 import { MissionSchema } from './home.tsx';
 
-async function loadMission(missionId: string) {
-  const [missionSnap, flagsSnap] = await Promise.all([
-    getDoc(doc(db, 'missions', missionId)),
-    getDoc(doc(db, 'appConfig', 'flags')),
-  ]);
-  if (!missionSnap.exists()) return null;
-  const mission = MissionSchema.parse({ ...missionSnap.data(), id: missionSnap.id });
-  // Rules reject (not filter) draft reads unless drafts are enabled, so the query must match.
-  const showDrafts = flagsSnap.data()?.showDraftQuestions === true;
-  const filters = [where('missionId', '==', missionId)];
-  if (!showDrafts) filters.push(where('status', '==', 'validated'));
-  const snap = await getDocs(query(collection(db, 'questions'), ...filters));
-  const questions = snap.docs
-    .map((d) => QuestionSchema.parse({ ...d.data(), id: d.id }))
-    .sort((a, b) => mission.questionIds.indexOf(a.id) - mission.questionIds.indexOf(b.id));
-  return { mission, questions };
+type QuizPhase =
+  | { kind: 'start' }
+  | { kind: 'question'; attempt: StartAttemptResponse; index: number }
+  | { kind: 'finish'; attempt: StartAttemptResponse; result: FinishAttemptResponse };
+
+// ---------- carga de la misión desde Firestore (solo metadatos, sin claves) ----------
+
+async function loadMissionMeta(missionId: string) {
+  const snap = await getDoc(doc(db, 'missions', missionId));
+  if (!snap.exists()) return null;
+  return MissionSchema.parse({ ...snap.data(), id: snap.id });
 }
 
-function AnswerResult({ result }: { result: AnswerResponse }) {
-  const { source } = result;
+// ---------- progreso del intento ----------
+
+function AttemptHeader({
+  index,
+  total,
+  combo,
+  alreadySealed,
+}: {
+  index: number;
+  total: number;
+  combo: number;
+  alreadySealed: boolean;
+}) {
   return (
-    <div className="flex animate-rise flex-col gap-3 border-t-2 border-border pt-4">
-      <p
-        className={`flex items-center gap-2 text-xl font-extrabold ${
-          result.correct ? 'text-success' : 'text-danger'
-        }`}
-      >
-        {result.correct ? <Pictogram name="check" className="size-6" strokeWidth={3} /> : null}
-        {result.correct ? '¡Correcto!' : 'Incorrecto'}
-        {result.correct ? <PixelSprite sprite={SPARKLE} className="size-5" /> : null}
-      </p>
-      <p className="max-w-[65ch]">{result.explanation}</p>
-      <p className="border-t border-border pt-2 text-sm text-muted">
-        Fuente: {source.org}, «{source.title}» ({source.year}), {source.section}
-      </p>
-      {result.xpAwarded > 0 ? (
-        <p>
-          <span className="inline-flex items-center gap-2 rounded-pill bg-xp px-3 py-1.5 font-pixel text-base leading-none font-semibold text-ink">
-            <PixelSprite sprite={XP_GEM} className="size-4" />+{result.xpAwarded} XP
+    <div className="mb-5 flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-bold text-muted tabular-nums">
+          Pregunta {index + 1} de {total}
+        </span>
+        {combo >= 2 ? (
+          <span className="rounded-pill bg-primary-soft px-2 py-1 text-xs font-bold leading-none text-primary">
+            {combo} seguidas
           </span>
+        ) : null}
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Progreso de la misión"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={index}
+        className="h-2 overflow-hidden rounded-pill bg-primary-soft"
+      >
+        <div
+          className="h-full rounded-pill bg-primary transition-[width] duration-300 motion-reduce:transition-none"
+          style={{ width: `${total > 0 ? (index / total) * 100 : 0}%` }}
+        />
+      </div>
+      {alreadySealed ? (
+        <p className="mt-1 flex items-center gap-2 rounded-card bg-seal-soft px-3 py-2 text-sm font-bold text-seal">
+          <Pictogram name="check" className="size-4" strokeWidth={3} />
+          Misión ya sellada · En este repaso el XP es 0
         </p>
       ) : null}
-      <MascotNote on="panel" mood={result.correct ? 'cheer' : 'idle'}>
-        {result.correct
-          ? '¡Así se hace! Cada respuesta correcta es técnica que ya dominas.'
-          : 'Lee la explicación con calma: así se aprende la técnica.'}
-      </MascotNote>
     </div>
   );
 }
 
-function QuestionCard({ question, index }: { question: Question; index: number }) {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<string[]>([]);
-  const multiple = question.type === 'multiple';
-  const answer = useMutation({
-    mutationFn: async (body: AnswerRequest) =>
-      AnswerResponseSchema.parse(await apiFetch<unknown>('/quiz/answer', { method: 'POST', body })),
-    onSuccess: async (result) => {
-      queryClient.setQueryData<Profile | null>(['me', user?.uid], (old) =>
-        old
-          ? {
-              ...old,
-              xp: result.totalXp,
-              level: result.level,
-              streakDays: result.streakDays,
-              ...(result.correct ? { lastActiveDate: bogotaDate(new Date()) } : {}),
-            }
-          : old,
-      );
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['me'] }),
-        queryClient.invalidateQueries({ queryKey: ['progress'] }),
-      ]);
-    },
-  });
-
-  const toggle = (optionId: string, checked: boolean) => {
-    if (!multiple) return setSelected([optionId]);
-    setSelected((prev) => (checked ? [...prev, optionId] : prev.filter((id) => id !== optionId)));
-  };
-
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    if (selected.length === 0) return;
-    answer.mutate({ questionId: question.id, selectedOptionIds: selected });
-  };
-
-  const promptId = `pregunta-${question.id}`;
-
-  return (
-    <li className="flex flex-col gap-4 border-b border-border pb-8 last:border-b-0 last:pb-0">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <fieldset aria-labelledby={promptId} className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 id={promptId} className="text-lg leading-snug font-extrabold text-balance">
-              {index + 1}. {question.prompt}
-            </h2>
-            {question.status === 'draft' ? (
-              <span className="rounded-pill bg-surface px-2 py-1 text-xs leading-none font-bold text-muted">
-                Borrador
-              </span>
-            ) : null}
-          </div>
-          {multiple ? <p className="text-sm text-muted">Selecciona todas las correctas.</p> : null}
-          {question.options.map((option) => {
-            const id = `${question.id}-${option.id}`;
-            return (
-              <label
-                key={option.id}
-                htmlFor={id}
-                className="pressable flex min-h-12 cursor-pointer items-start gap-3 rounded-card bg-bg px-3 py-3 ring-1 ring-border ring-inset hover:bg-primary-soft has-checked:bg-primary-soft has-checked:ring-2 has-checked:ring-primary"
-              >
-                <input
-                  id={id}
-                  type={multiple ? 'checkbox' : 'radio'}
-                  name={question.id}
-                  value={option.id}
-                  checked={selected.includes(option.id)}
-                  onChange={(e) => toggle(option.id, e.target.checked)}
-                  className="mt-0.5 size-5 flex-none accent-primary"
-                />
-                <span>{option.text}</span>
-              </label>
-            );
-          })}
-        </fieldset>
-        <button
-          type="submit"
-          disabled={selected.length === 0 || answer.isPending}
-          className={`${buttonPrimary} self-start`}
-        >
-          Responder
-        </button>
-      </form>
-      <div aria-live="polite">
-        {answer.data ? <AnswerResult result={answer.data} /> : null}
-        {answer.isError ? (
-          <p role="alert" className="text-danger">
-            {answer.error instanceof ApiError
-              ? answer.error.message
-              : 'Ocurrió un error inesperado.'}
-          </p>
-        ) : null}
-      </div>
-    </li>
-  );
-}
+// ---------- página principal ----------
 
 export default function MisionPage() {
   const { missionId = '' } = useParams({ strict: false });
   const me = useMe();
-  const data = useQuery({
-    queryKey: ['mission', missionId],
-    queryFn: () => loadMission(missionId),
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const missionQuery = useQuery({
+    queryKey: ['mission-meta', missionId],
+    queryFn: () => loadMissionMeta(missionId),
   });
 
-  if (data.isPending) return <LoadingState />;
-  if (data.isError || !data.data) {
+  const [phase, setPhase] = useState<QuizPhase>({ kind: 'start' });
+  const [combo, setCombo] = useState(0);
+  const [showExitDialog, setShowExitDialog] = useState(false);
+
+  const startMutation = useMutation({
+    mutationFn: async () =>
+      StartAttemptResponseSchema.parse(
+        await apiFetch<unknown>('/quiz/attempt', { method: 'POST', body: { missionId } }),
+      ),
+    onSuccess: (attempt) => {
+      setCombo(0);
+      setPhase({ kind: 'question', attempt, index: 0 });
+    },
+  });
+
+  const finishMutation = useMutation({
+    mutationFn: async (attemptId: string) =>
+      FinishAttemptResponseSchema.parse(
+        await apiFetch<unknown>('/quiz/finish', { method: 'POST', body: { attemptId } }),
+      ),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      setPhase((prev) =>
+        prev.kind === 'question' ? { kind: 'finish', attempt: prev.attempt, result } : prev,
+      );
+    },
+  });
+
+  const handleAnswered = (response: AnswerResponse) => {
+    setCombo((current) => (response.correct ? current + 1 : 0));
+  };
+
+  const handleNext = () => {
+    if (phase.kind !== 'question') return;
+    const nextIndex = phase.index + 1;
+    if (nextIndex < phase.attempt.questions.length) {
+      setPhase({ ...phase, index: nextIndex });
+    } else {
+      finishMutation.mutate(phase.attempt.attemptId);
+    }
+  };
+
+  const handleExit = async () => {
+    if (phase.kind !== 'question') {
+      await navigate({ to: '/' });
+      return;
+    }
+    // Cerrar el intento antes de salir: queda como abandonado y no da XP.
+    try {
+      await apiFetch('/quiz/finish', {
+        method: 'POST',
+        body: { attemptId: phase.attempt.attemptId },
+      });
+    } catch {
+      // Si falla, igualmente salimos.
+    }
+    queryClient.invalidateQueries({ queryKey: ['me'] });
+    await navigate({ to: '/' });
+  };
+
+  if (missionQuery.isPending) return <LoadingState />;
+  if (missionQuery.isError || !missionQuery.data) {
     return (
       <section className="flex flex-col gap-4">
         <h1 className={pageTitle}>Misión no disponible</h1>
@@ -192,45 +176,140 @@ export default function MisionPage() {
     );
   }
 
-  const { mission, questions } = data.data;
+  const mission = missionQuery.data;
+  const total = phase.kind === 'start' ? 0 : phase.attempt.questions.length;
+  const question = phase.kind === 'question' ? phase.attempt.questions[phase.index] : undefined;
+
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <Link to="/" className={`${textLink} self-start text-sm`}>
-          Volver a las misiones
-        </Link>
-        <div className="flex items-center gap-4">
-          <span className="tile-grid relative grid size-20 shrink-0 place-items-center rounded-card">
-            <PixelSprite sprite={missionSprite(mission.iconKey)} className="size-12" />
-            <span
-              aria-hidden="true"
-              className="absolute -right-2 -bottom-2 rounded-box bg-primary px-1.5 py-0.5 font-pixel text-xs font-semibold text-bg"
-            >
-              {missionCode(mission.order)}
+    <>
+      {showExitDialog ? (
+        <ExitDialog
+          onConfirm={() => {
+            setShowExitDialog(false);
+            void handleExit();
+          }}
+          onCancel={() => setShowExitDialog(false)}
+        />
+      ) : null}
+
+      <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <header className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <Link to="/" className={`${textLink} self-start text-sm`}>
+              Volver a las misiones
+            </Link>
+            {phase.kind === 'question' ? (
+              <button
+                type="button"
+                onClick={() => setShowExitDialog(true)}
+                className={`${textLink} text-sm text-muted`}
+              >
+                Salir
+              </button>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="tile-grid relative grid size-20 shrink-0 place-items-center rounded-card">
+              <PixelSprite sprite={missionSprite(mission.iconKey)} className="size-12" />
+              <span
+                aria-hidden="true"
+                className="absolute -right-2 -bottom-2 rounded-box bg-primary px-1.5 py-0.5 font-pixel text-xs font-semibold text-bg"
+              >
+                {missionCode(mission.order)}
+              </span>
             </span>
-          </span>
-          <h1 className={pageTitle}>{mission.title}</h1>
+            <h1 className={pageTitle}>{mission.title}</h1>
+          </div>
+          <p className="max-w-[65ch] text-muted">{mission.description}</p>
+          {me.data ? <StatsBar profile={me.data} /> : null}
+        </header>
+
+        <div className={panel}>
+          {phase.kind === 'start' ? (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <h2 className="text-lg font-extrabold text-ink">Así funciona el examen</h2>
+                <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted">
+                  <li>Respondes cada pregunta una sola vez: no puedes corregirla después.</li>
+                  <li>Apruebas con el 60 % de las respuestas correctas o más.</li>
+                  <li>
+                    Ganas <strong className="text-ink">{mission.xpReward} XP</strong> al aprobar, y{' '}
+                    <strong className="text-ink">+20 XP</strong> si aciertas todas.
+                  </li>
+                  <li>Si no apruebas, no ganas XP y puedes intentarlo de nuevo.</li>
+                </ul>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => startMutation.mutate()}
+                  disabled={startMutation.isPending}
+                  className={buttonPrimary}
+                >
+                  {startMutation.isPending ? 'Preparando…' : 'Empezar misión'}
+                  <Pictogram name="arrow" className="size-5" />
+                </button>
+                <Link
+                  to="/aprende/$missionId"
+                  params={{ missionId: mission.id }}
+                  className={`${buttonSecondary} inline-flex items-center gap-1.5`}
+                >
+                  <Pictogram name="book" className="size-4" />
+                  Leer la lección
+                </Link>
+              </div>
+              <MascotNote on="panel" mood="idle">
+                Un examen se aprueba o no se aprueba: el XP llega cuando dominas la misión.
+              </MascotNote>
+              {startMutation.isError ? (
+                <p role="alert" className="text-sm text-danger">
+                  {startMutation.error instanceof ApiError
+                    ? startMutation.error.message
+                    : 'No se pudo iniciar la misión. Intenta de nuevo.'}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {phase.kind === 'question' && question ? (
+            <>
+              <AttemptHeader
+                index={phase.index}
+                total={total}
+                combo={combo}
+                alreadySealed={phase.attempt.alreadySealed}
+              />
+              <QuestionCard
+                key={`${phase.attempt.attemptId}-${phase.index}`}
+                question={question}
+                attemptId={phase.attempt.attemptId}
+                isLast={phase.index + 1 === total}
+                onAnswered={handleAnswered}
+                onNext={handleNext}
+              />
+              {finishMutation.isPending ? (
+                <p className="mt-4 text-sm text-muted">Calculando resultados…</p>
+              ) : null}
+              {finishMutation.isError ? (
+                <p role="alert" className="mt-4 text-sm text-danger">
+                  Error al cerrar el intento. Intenta de nuevo.
+                </p>
+              ) : null}
+            </>
+          ) : null}
+
+          {phase.kind === 'finish' ? (
+            <QuizResults
+              result={phase.result}
+              missionId={mission.id}
+              onRetry={() => {
+                setCombo(0);
+                setPhase({ kind: 'start' });
+              }}
+            />
+          ) : null}
         </div>
-        <p className="max-w-[65ch] text-muted">{mission.description}</p>
-        <Link
-          to="/aprende/$missionId"
-          params={{ missionId: mission.id }}
-          className={`${textLink} inline-flex items-center gap-1.5 self-start text-sm`}
-        >
-          <Pictogram name="book" className="size-4" />
-          Lee la lección de esta misión
-        </Link>
-        {me.data ? <StatsBar profile={me.data} /> : null}
-      </header>
-      {questions.length === 0 ? (
-        <p className="text-muted">Esta misión aún no tiene preguntas publicadas.</p>
-      ) : (
-        <ol className={`${panel} flex flex-col gap-8`}>
-          {questions.map((question, index) => (
-            <QuestionCard key={question.id} question={question} index={index} />
-          ))}
-        </ol>
-      )}
-    </section>
+      </section>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { randomInt } from 'node:crypto';
 import {
   bogotaDate,
   levelForXp,
+  missionXpAward,
   nextStreak,
   PRACTICE_XP,
   sameSet,
@@ -9,11 +10,15 @@ import {
 import type {
   AdminQuestion,
   AnswerResponse,
+  AttemptQuestion,
+  FailedQuestionSummary,
+  FinishAttemptResponse,
   MemberProgress,
   PracticeCompleteResponse,
   Question,
   QuestionInput,
   Role,
+  StartAttemptResponse,
 } from '@bata/shared/schemas';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { consumeQuota, type QuotaDoc, type QuotaKind } from './quota.ts';
@@ -141,13 +146,156 @@ export function consumeQuotaTx(
 export type QuestionDoc = Omit<Question, 'id'>;
 
 export type MissionProgressDoc = {
+  /** IDs de preguntas respondidas correctamente en algún intento. */
   answeredCorrectIds: string[];
-  completed: boolean;
-  completedAt: string | null;
+  /** true si la misión está aprobada (sello de dominio). */
+  sealed: boolean;
+  sealedAt: string | null;
+  /** Récord de estrellas de 0 a 3; un repaso puede mejorarlo. */
+  stars: number;
+  /** Récord de aciertos en un intento completo. */
+  bestCorrect: number;
+  /** Intento abierto de esta misión; empezar otro lo abandona. */
+  openAttemptId?: string | null;
+  /** Legado: el mapa de misiones antiguo leía `completed`. */
+  completed?: boolean;
+  completedAt?: string | null;
 };
+
+// ---------- Intento de misión ----------
+
+export type AttemptStatus = 'open' | 'finished' | 'abandoned';
+
+export type AttemptDoc = {
+  uid: string;
+  missionId: string;
+  /** IDs de preguntas en orden barajado para este intento. */
+  questionIds: string[];
+  /** IDs de preguntas ya respondidas en este intento. */
+  answeredQuestionIds: string[];
+  /** IDs de preguntas respondidas correctamente en este intento. */
+  correctQuestionIds: string[];
+  status: AttemptStatus;
+  /** true si la misión ya estaba sellada al iniciar (repaso). */
+  wasAlreadySealed: boolean;
+  startedAt: string;
+  finishedAt: string | null;
+};
+
+/** Baraja un arreglo usando Fisher-Yates con randomInt del módulo crypto. */
+function shuffle<T>(arr: readonly T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [result[i], result[j]] = [result[j] as T, result[i] as T];
+  }
+  return result;
+}
+
+export type StartAttemptInput = {
+  uid: string;
+  missionId: string;
+  allowDrafts: boolean;
+  now: Date;
+};
+
+export type StartAttemptOutcome =
+  | { status: 'mission_not_found' }
+  | { status: 'profile_not_found' }
+  | { status: 'ok'; response: StartAttemptResponse; attemptId: string };
+
+// Todas las lecturas antes de cualquier escritura (requisito de Firestore).
+export function startAttemptTx(
+  db: Firestore,
+  input: StartAttemptInput,
+): Promise<StartAttemptOutcome> {
+  const { uid, missionId } = input;
+  const nowIso = input.now.toISOString();
+  return db.runTransaction(async (tx) => {
+    const userSnap = await tx.get(db.doc(`users/${uid}`));
+    if (!userSnap.exists) return { status: 'profile_not_found' } as const;
+
+    const missionSnap = await tx.get(db.doc(`missions/${missionId}`));
+    if (!missionSnap.exists) return { status: 'mission_not_found' } as const;
+
+    const progressRef = db.doc(`progress/${uid}/missions/${missionId}`);
+    const progressSnap = await tx.get(progressRef);
+    const progress = progressSnap.exists ? (progressSnap.data() as MissionProgressDoc) : null;
+    const alreadySealed = progress?.sealed === true || progress?.completed === true;
+
+    // Un intento abierto no sobrevive a empezar otro (recarga, otra pestaña, volver atrás).
+    // Solo se lee aquí; la escritura va al final, después de todas las lecturas.
+    const openAttemptId = progress?.openAttemptId ?? null;
+    let abandonOpen = false;
+    if (openAttemptId) {
+      const openSnap = await tx.get(db.doc(`progress/${uid}/attempts/${openAttemptId}`));
+      abandonOpen = openSnap.exists && openSnap.get('status') === 'open';
+    }
+
+    const questionIds = (missionSnap.get('questionIds') as string[] | undefined) ?? [];
+    if (questionIds.length === 0) return { status: 'mission_not_found' } as const;
+
+    const questionSnaps = await tx.getAll(...questionIds.map((id) => db.doc(`questions/${id}`)));
+    const questions: Array<QuestionDoc & { id: string }> = questionSnaps
+      .filter((s) => s.exists && (input.allowDrafts || s.data()?.status === 'validated'))
+      .map((s) => ({ id: s.id, ...(s.data() as QuestionDoc) }));
+
+    if (questions.length === 0) return { status: 'mission_not_found' } as const;
+
+    // Barajar preguntas y opciones: el mismo examen nunca se ve igual dos veces.
+    const shuffledQuestions = shuffle(questions).map((q) => ({
+      ...q,
+      options: shuffle(q.options),
+    }));
+
+    const attemptRef = db.collection(`progress/${uid}/attempts`).doc();
+    const doc: AttemptDoc = {
+      uid,
+      missionId,
+      questionIds: shuffledQuestions.map((q) => q.id),
+      answeredQuestionIds: [],
+      correctQuestionIds: [],
+      status: 'open',
+      wasAlreadySealed: alreadySealed,
+      startedAt: nowIso,
+      finishedAt: null,
+    };
+
+    const responseQuestions: AttemptQuestion[] = shuffledQuestions.map((q) => ({
+      id: q.id,
+      type: q.type,
+      prompt: q.prompt,
+      options: q.options,
+      explanation: q.explanation,
+      source: q.source,
+      status: q.status,
+    }));
+
+    tx.set(attemptRef, doc);
+    tx.set(progressRef, { openAttemptId: attemptRef.id }, { merge: true });
+    if (abandonOpen && openAttemptId) {
+      tx.update(db.doc(`progress/${uid}/attempts/${openAttemptId}`), {
+        status: 'abandoned',
+        finishedAt: nowIso,
+      });
+    }
+
+    return {
+      status: 'ok',
+      attemptId: attemptRef.id,
+      response: {
+        attemptId: attemptRef.id,
+        missionId,
+        questions: responseQuestions,
+        alreadySealed,
+      },
+    } as const;
+  });
+}
 
 export type AnswerInput = {
   uid: string;
+  attemptId: string;
   questionId: string;
   selectedOptionIds: string[];
   allowDrafts: boolean;
@@ -155,6 +303,10 @@ export type AnswerInput = {
 };
 
 export type AnswerOutcome =
+  | { status: 'attempt_not_found' }
+  | { status: 'question_not_in_attempt' }
+  | { status: 'already_answered' }
+  | { status: 'attempt_closed' }
   | { status: 'question_not_found' }
   | { status: 'profile_not_found' }
   | { status: 'ok'; response: AnswerResponse };
@@ -162,82 +314,211 @@ export type AnswerOutcome =
 // Todas las lecturas antes de cualquier escritura (requisito de las transacciones de Firestore).
 export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<AnswerOutcome> {
   const { uid, questionId } = input;
+  const nowIso = input.now.toISOString();
   return db.runTransaction(async (tx) => {
-    const questionSnap = await tx.get(db.doc(`questions/${questionId}`));
-    const question = questionSnap.exists ? (questionSnap.data() as QuestionDoc) : null;
+    const attemptRef = db.doc(`progress/${uid}/attempts/${input.attemptId}`);
+    const attemptSnap = await tx.get(attemptRef);
+    if (!attemptSnap.exists) return { status: 'attempt_not_found' } as const;
+    const attempt = attemptSnap.data() as AttemptDoc;
+
+    if (attempt.status !== 'open') return { status: 'attempt_closed' } as const;
+    if (!attempt.questionIds.includes(questionId))
+      return { status: 'question_not_in_attempt' } as const;
+    if (attempt.answeredQuestionIds.includes(questionId))
+      return { status: 'already_answered' } as const;
+
+    const userRef = db.doc(`users/${uid}`);
+    const answerSnaps = await tx.getAll(
+      db.doc(`questions/${questionId}`),
+      db.doc(`questionKeys/${questionId}`),
+      userRef,
+    );
+    const questionSnap = answerSnaps[0];
+    const keySnap = answerSnaps[1];
+    const userSnap = answerSnaps[2];
+    const question = questionSnap?.exists ? (questionSnap.data() as QuestionDoc) : null;
     if (!question || (question.status === 'draft' && !input.allowDrafts)) {
       return { status: 'question_not_found' } as const;
     }
-    const keySnap = await tx.get(db.doc(`questionKeys/${questionId}`));
-    const userSnap = await tx.get(db.doc(`users/${uid}`));
-    if (!userSnap.exists) return { status: 'profile_not_found' } as const;
+    if (!userSnap?.exists) return { status: 'profile_not_found' } as const;
     const user = userSnap.data() as UserDoc;
-    const missionSnap = await tx.get(db.doc(`missions/${question.missionId}`));
-    const progressRef = db.doc(`progress/${uid}/missions/${question.missionId}`);
-    const progressSnap = await tx.get(progressRef);
 
-    const correctOptionIds = (keySnap.get('correctOptionIds') as string[] | undefined) ?? [];
+    const correctOptionIds = (keySnap?.get('correctOptionIds') as string[] | undefined) ?? [];
     const correct =
       correctOptionIds.length > 0 && sameSet(input.selectedOptionIds, correctOptionIds);
-    const progress: MissionProgressDoc = progressSnap.exists
-      ? (progressSnap.data() as MissionProgressDoc)
-      : { answeredCorrectIds: [], completed: false, completedAt: null };
-    const firstCorrect = correct && !progress.answeredCorrectIds.includes(questionId);
-    const xpAwarded = firstCorrect ? question.xp : 0;
-    const nowIso = input.now.toISOString();
 
-    tx.create(db.collection(`progress/${uid}/attempts`).doc(), {
-      questionId,
-      missionId: question.missionId,
-      selectedOptionIds: input.selectedOptionIds,
-      correct,
-      xpAwarded,
-      createdAt: nowIso,
+    // Un solo disparo por pregunta: se guarda la respuesta y no se puede cambiar.
+    tx.update(attemptRef, {
+      answeredQuestionIds: [...attempt.answeredQuestionIds, questionId],
+      correctQuestionIds: correct
+        ? [...attempt.correctQuestionIds, questionId]
+        : attempt.correctQuestionIds,
     });
 
-    let next = user;
+    // El XP se paga al aprobar la misión; aquí solo se mueve la racha de días.
+    let streakDays = user.streakDays;
     if (correct) {
       const today = bogotaDate(input.now);
-      const xp = user.xp + xpAwarded;
-      next = {
-        ...user,
-        xp,
-        level: levelForXp(xp),
-        streakDays: nextStreak(user, today),
-        lastActiveDate: today,
-        updatedAt: nowIso,
-      };
-      tx.update(db.doc(`users/${uid}`), {
-        xp: next.xp,
-        level: next.level,
-        streakDays: next.streakDays,
-        lastActiveDate: next.lastActiveDate,
-        updatedAt: nowIso,
-      });
-      tx.set(db.doc(`leaderboard/${uid}`), leaderboardEntry(next));
-    }
-    if (firstCorrect) {
-      const answeredCorrectIds = [...progress.answeredCorrectIds, questionId];
-      const missionIds = (missionSnap.get('questionIds') as string[] | undefined) ?? [];
-      const completed =
-        missionIds.length > 0 && missionIds.every((id) => answeredCorrectIds.includes(id));
-      tx.set(progressRef, {
-        answeredCorrectIds,
-        completed,
-        completedAt: completed ? (progress.completedAt ?? nowIso) : null,
-      } satisfies MissionProgressDoc);
+      streakDays = nextStreak(user, today);
+      if (user.streakDays !== streakDays || user.lastActiveDate !== today) {
+        tx.update(userRef, { streakDays, lastActiveDate: today, updatedAt: nowIso });
+      }
     }
 
     return {
       status: 'ok',
       response: {
         correct,
+        correctOptionIds,
         explanation: question.explanation,
         source: question.source,
-        xpAwarded,
-        totalXp: next.xp,
-        level: next.level,
-        streakDays: next.streakDays,
+        streakDays,
+      },
+    } as const;
+  });
+}
+
+export type FinishAttemptInput = {
+  uid: string;
+  attemptId: string;
+  now: Date;
+};
+
+export type FinishAttemptOutcome =
+  | { status: 'attempt_not_found' }
+  | { status: 'attempt_closed' }
+  | { status: 'profile_not_found' }
+  | { status: 'ok'; response: FinishAttemptResponse };
+
+export function finishAttemptTx(
+  db: Firestore,
+  input: FinishAttemptInput,
+): Promise<FinishAttemptOutcome> {
+  const { uid } = input;
+  const nowIso = input.now.toISOString();
+  return db.runTransaction(async (tx) => {
+    const attemptRef = db.doc(`progress/${uid}/attempts/${input.attemptId}`);
+    const attemptSnap = await tx.get(attemptRef);
+    if (!attemptSnap.exists) return { status: 'attempt_not_found' } as const;
+    const attempt = attemptSnap.data() as AttemptDoc;
+    if (attempt.status !== 'open') return { status: 'attempt_closed' } as const;
+
+    const userRef = db.doc(`users/${uid}`);
+    const progressRef = db.doc(`progress/${uid}/missions/${attempt.missionId}`);
+    const finishSnaps = await tx.getAll(
+      userRef,
+      db.doc(`missions/${attempt.missionId}`),
+      progressRef,
+    );
+    const userSnap = finishSnaps[0];
+    const missionSnap = finishSnaps[1];
+    const progressSnap = finishSnaps[2];
+    if (!userSnap?.exists) return { status: 'profile_not_found' } as const;
+    const user = userSnap.data() as UserDoc;
+
+    const prev: MissionProgressDoc | null = progressSnap?.exists
+      ? (progressSnap.data() as MissionProgressDoc)
+      : null;
+    // Si otra pestaña selló la misión mientras este intento estaba abierto, esto es un repaso.
+    const wasSealed = attempt.wasAlreadySealed || prev?.sealed === true || prev?.completed === true;
+
+    const correctCount = attempt.correctQuestionIds.length;
+    const totalCount = attempt.questionIds.length;
+    const answeredCount = attempt.answeredQuestionIds.length;
+    const reward = missionSnap?.get('xpReward');
+    const award = missionXpAward({
+      correct: correctCount,
+      total: totalCount,
+      answered: answeredCount,
+      missionXp: typeof reward === 'number' ? reward : 0,
+      isRepeat: wasSealed,
+    });
+
+    // Preguntas falladas, con sus opciones para poder mostrar la respuesta correcta.
+    const failedIds = attempt.questionIds.filter(
+      (id) => attempt.answeredQuestionIds.includes(id) && !attempt.correctQuestionIds.includes(id),
+    );
+    const [failedSnaps, failedKeySnaps] =
+      failedIds.length > 0
+        ? [
+            await tx.getAll(...failedIds.map((id) => db.doc(`questions/${id}`))),
+            await tx.getAll(...failedIds.map((id) => db.doc(`questionKeys/${id}`))),
+          ]
+        : [[], []];
+    const failedQuestions: FailedQuestionSummary[] = failedSnaps
+      .map((snap, i) => {
+        if (!snap.exists) return null;
+        const q = snap.data() as QuestionDoc;
+        const keyIds = (failedKeySnaps[i]?.get('correctOptionIds') as string[] | undefined) ?? [];
+        return {
+          id: snap.id,
+          prompt: q.prompt,
+          options: q.options,
+          correctOptionIds: keyIds,
+          source: q.source,
+        };
+      })
+      .filter((x): x is FailedQuestionSummary => x !== null);
+
+    const nowSealed = !wasSealed && award.passed;
+    const sealed = wasSealed || nowSealed;
+    const sealedAt = nowSealed ? nowIso : (prev?.sealedAt ?? prev?.completedAt ?? null);
+    // Un intento abandonado no deja récord: salir a mitad de camino no cuenta.
+    const stars = Math.max(prev?.stars ?? 0, award.stars);
+    const bestCorrect = Math.max(prev?.bestCorrect ?? 0, award.abandoned ? 0 : correctCount);
+    const answeredCorrectIds = [
+      ...new Set([...(prev?.answeredCorrectIds ?? []), ...attempt.correctQuestionIds]),
+    ];
+
+    const finalXp = user.xp + award.totalXp;
+    const finalLevel = levelForXp(finalXp);
+
+    tx.set(
+      progressRef,
+      {
+        answeredCorrectIds,
+        sealed,
+        sealedAt,
+        stars,
+        bestCorrect,
+        completed: sealed,
+        completedAt: sealedAt,
+        openAttemptId: null,
+      },
+      { merge: true },
+    );
+
+    if (award.totalXp > 0) {
+      tx.update(userRef, { xp: finalXp, level: finalLevel, updatedAt: nowIso });
+      tx.set(
+        db.doc(`leaderboard/${uid}`),
+        leaderboardEntry({ ...user, xp: finalXp, level: finalLevel, updatedAt: nowIso }),
+      );
+    }
+
+    tx.update(attemptRef, {
+      status: award.abandoned ? 'abandoned' : 'finished',
+      finishedAt: nowIso,
+    });
+
+    return {
+      status: 'ok',
+      response: {
+        correct: correctCount,
+        total: totalCount,
+        answered: answeredCount,
+        abandoned: award.abandoned,
+        passed: award.passed,
+        stars: award.stars,
+        bestCorrect,
+        xpAwarded: award.totalXp,
+        bonusXp: award.bonusXp,
+        missionSealed: sealed,
+        alreadySealed: wasSealed,
+        failedQuestions,
+        totalXp: finalXp,
+        level: finalLevel,
+        streakDays: user.streakDays,
       },
     } as const;
   });

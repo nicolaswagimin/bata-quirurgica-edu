@@ -10,6 +10,7 @@ import {
   PIXEL_PALETTE,
   SPARKLE,
   type Sprite,
+  STAR,
   XP_GEM,
 } from '../../src/art/sprites.ts';
 import { spriteRuns } from '../../src/components/pixel-sprite.tsx';
@@ -28,6 +29,7 @@ const ALL: Record<string, Sprite> = {
   XP_GEM,
   MEDAL,
   SPARKLE,
+  STAR,
   ...Object.fromEntries(Object.entries(MISSION_SPRITES).map(([k, v]) => [`mission:${k}`, v])),
   ...Object.fromEntries(Object.entries(LESSON_ART).map(([k, v]) => [`lesson:${k}`, v])),
 };

@@ -1,7 +1,9 @@
+import { minCorrectToPass } from '@bata/shared/gamification';
 import { Link } from '@tanstack/react-router';
 import { missionSprite } from '../art/sprites.ts';
 import { Pictogram } from './pictogram.tsx';
 import { PixelSprite } from './pixel-sprite.tsx';
+import { StarRating } from './star-rating.tsx';
 import { panel } from './ui-classes.ts';
 
 export type SheetMission = {
@@ -15,27 +17,39 @@ export type SheetMission = {
   iconKey?: string;
 };
 
+/** Lo que el inicio sabe del progreso de una misión; `null` si Firestore no respondió. */
+export type MissionProgressView = {
+  bestCorrect: number;
+  questionCount: number;
+  stars: number;
+  sealed: boolean;
+};
+
 /** Mission code: order 2 → "M-02". */
 export function missionCode(order: number): string {
   return `M-${String(order).padStart(2, '0')}`;
 }
 
 /**
- * Today's open mission: its pixel icon on the mint tile wall, one progress tile per question and
- * one action.
- * `correct` is null when progress could not be read, so the page never shows a false 0.
+ * Today's open mission: its pixel icon on the mint tile wall, one tile per question of the best
+ * attempt, the pass bar and one action.
+ * `progress` is null when progress could not be read, so the page never shows a false 0.
  */
 export function MissionSheet({
   mission,
-  correct,
+  progress,
   className = '',
 }: {
   mission: SheetMission;
-  correct: number | null;
+  progress: MissionProgressView | null;
   className?: string;
 }) {
-  const started = (correct ?? 0) > 0;
-  const boxes = Array.from({ length: mission.questionCount }, (_, i) => i < (correct ?? 0));
+  const best = progress?.bestCorrect ?? 0;
+  const total = progress?.questionCount ?? mission.questionCount;
+  const sealed = progress?.sealed ?? false;
+  const started = best > 0;
+  const minimum = minCorrectToPass(total);
+  const boxes = Array.from({ length: total }, (_, i) => i < best);
 
   return (
     <section aria-labelledby="mision-de-hoy" className={`${panel} ${className}`}>
@@ -61,14 +75,14 @@ export function MissionSheet({
         </h2>
       </div>
       <p className="mt-4 max-w-[52ch] text-sm text-muted">{mission.description}</p>
-      {correct === null ? (
+      {progress === null ? (
         <p className="mt-4 text-sm text-muted">
           Tu progreso no está disponible ahora. Puedes seguir practicando igual.
         </p>
       ) : (
         <>
           <ol
-            aria-label={`${correct} de ${mission.questionCount} preguntas correctas`}
+            aria-label={`Mejor intento: ${best} de ${total} preguntas correctas`}
             className="mt-4 flex flex-wrap gap-2"
           >
             {boxes.map((done, i) => (
@@ -83,12 +97,19 @@ export function MissionSheet({
               </li>
             ))}
           </ol>
-          <p className="mt-2 text-sm text-muted">
-            <span className="font-bold text-ink">
-              {correct} de {mission.questionCount}
-            </span>{' '}
-            correctas · +{mission.xpReward} XP al completar
-          </p>
+          {sealed ? (
+            <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
+              <StarRating stars={progress.stars} size="size-5" />
+              <span className="font-bold text-seal">Misión dominada</span>· récord {best} de {total}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              <span className="font-bold text-ink">
+                Necesitas {minimum} de {total} correctas
+              </span>{' '}
+              para aprobar · +{mission.xpReward} XP
+            </p>
+          )}
         </>
       )}
       <Link
@@ -96,7 +117,7 @@ export function MissionSheet({
         params={{ missionId: mission.id }}
         className="pressable mt-5 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-pill bg-primary px-6 text-base font-extrabold text-bg hover:bg-primary-strong sm:w-auto sm:min-w-72"
       >
-        {started ? 'Seguir practicando' : 'Empezar misión'}
+        {sealed ? 'Repasar misión' : started ? 'Volver a intentarlo' : 'Empezar misión'}
         <Pictogram name="arrow" className="size-5" />
       </Link>
       <p className="mt-3 text-sm text-muted">

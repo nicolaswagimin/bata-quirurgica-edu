@@ -239,6 +239,21 @@ export const MEDAL: Sprite = {
   ],
 };
 
+/** A gold star: the score of a mission (0 to 3 of them). */
+export const STAR: Sprite = {
+  rows: [
+    '....k....',
+    '...kyk...',
+    '...kyk...',
+    'kkkkykkkk',
+    'kyyyyyyyk',
+    '.kyyyyyk.',
+    '..kyyyk..',
+    '.kyk.kyk.',
+    '.kkk.kkk.',
+  ],
+};
+
 /** A four-point sparkle for celebrations. */
 export const SPARKLE: Sprite = {
   rows: ['...y...', '...y...', '..ywy..', 'yywwwyy', '..ywy..', '...y...', '...y...'],

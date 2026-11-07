@@ -48,7 +48,6 @@ const input: QuestionInput = {
     section: 'Batas',
   },
   difficulty: 1,
-  xp: 10,
   correctOptionIds: ['a'],
 };
 

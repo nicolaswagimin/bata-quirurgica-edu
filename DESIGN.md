@@ -370,16 +370,19 @@ Tactile, rounded, one primary per view.
 The mint wall: greeting h1, streak and XP chips, Dra. Menta with her signed streak hint, then the pixel headline "Nivel n" with "xp / next" in mono and a 12 px level bar (Deep Scrub track, 2 px inset, XP Gold fill).
 
 ### Mission Panel
-Today's mission on warm white: the pixel mission icon (48 px, 64 px from md) on an 80 px (96 px md) tile-wall frame with its code badge, the extrabold title (no eyebrow), the muted description, a row of 32 px progress tiles (one per question; Mint Wash with a Faded Ink stroke when empty, 6.2:1, Surgical Green with a white check when answered correctly), a meta line ("2 de 6 correctas · +50 XP al completar"), the CTA. If progress cannot be read it says so instead of showing a false zero.
+Today's mission on warm white: the pixel mission icon (48 px, 64 px from md) on an 80 px (96 px md) tile-wall frame with its code badge, the extrabold title (no eyebrow), the muted description, a row of 32 px progress tiles (one per question; Mint Wash with a Faded Ink stroke when empty, 6.2:1, Surgical Green with a white check when answered correctly), a meta line that names the pass bar ("Necesitas 4 de 6 correctas para aprobar · +50 XP") or, once mastered, the stars and the record ("Misión dominada · récord 6 de 6"), the CTA. If progress cannot be read it says so instead of showing a false zero.
 
 ### Mission List
-Rows separated by Sand Rule hairlines, each a three-column grid: a 44 px tile holding the 32 px pixel icon (Mint Wash; Mint Band with a 2 px green ring for today's mission) or, once mastered, the bronze medal on the tile wall; bold 14 px title over a 12 px meta line led by the mono code; the reward chip. Rows hover to Warm Sand. Header: "Misiones" and "n dominadas de 5".
+Rows separated by Sand Rule hairlines, each a three-column grid: a 44 px tile holding the 32 px pixel icon (Mint Wash; Mint Band with a 2 px green ring for today's mission) or, once mastered, the bronze medal on the tile wall; bold 14 px title over a 12 px meta line led by the mono code and, once mastered, its three stars; the reward chip. Rows hover to Warm Sand. Header: "Misiones" and "n dominadas de 5".
 
 ### Dra. Menta (signature)
 The pixel scrub nurse (16 × 22 cells) in mint cap, mask, gown and gloves held in the sterile posture; she never shows a wrong technique. `MascotNote` places her (64 px) beside a 12 px-radius bubble of 14 px ink text with a rotated-square tail and a "— Dra. Menta" signature in Pixelify, Surgical Green. Two bubble variants: **band** (warm white with the Sheet shadow, on mint) and **panel** (flat Mint Wash, on white). `cheer` adds two gold sparkles. She appears once per screen, at that screen's orchestrated moment: the home band, answer feedback on a mission, the AR results, the all-mastered and profile-completion panels.
 
 ### Bronze Medal (signature)
 A 16-cell sprite: green ribbon over a bronze disc with an ink outline. Shown at 36 px on the tile wall in mastered list rows, 80 px on AR results.
+
+### Mission Stars (signature)
+A 9-cell gold star with an ink outline, three per mission. Earned stars are full gold, the missing ones sit at 20 % opacity, and the score is always repeated as text ("2 de 3 estrellas") so colour never carries it alone. Used at 20 px in the mission rows and 28 px in the exam results.
 
 ### Inputs / Fields
 - **Style:** warm white, 1 px Faded Ink stroke, 12 px radius, 44 px min height, 16 px text, a real label above in 14 px medium.

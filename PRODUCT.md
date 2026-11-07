@@ -51,6 +51,11 @@ learner's own body) and fully private — camera frames never leave the browser.
 
 ## Capabilities and Constraints
 
+- A mission is an exam, not a drill: each question is answered once (no changing it), the attempt
+  is closed by the API and only counts when every question was answered, and it is approved at
+  60 % correct. Mission XP (plus a perfect-mission bonus) is paid once, on approval; a failed or
+  abandoned attempt pays 0 and a reply of an already-sealed mission is practice with no XP. Each
+  mission keeps a 0–3 star record that a later attempt can improve.
 - Web SPA only; no native app, payments, push notifications, offline mode, multilanguage, cloth
   physics, or dark mode in v1 (see blueprint Non-Goals).
 - Clients never write to Firestore; all writes go through the API.

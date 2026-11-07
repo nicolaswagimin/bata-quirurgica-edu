@@ -113,7 +113,7 @@ export default function AdminPreguntasPage() {
                 {q.status === 'validated' ? 'Validada' : 'Borrador'}
               </span>
               <span>
-                {q.id} · {q.missionId} · {q.xp} XP
+                {q.id} · {q.missionId} · dificultad {q.difficulty}
               </span>
             </div>
             <p className="text-base text-ink">{q.prompt}</p>

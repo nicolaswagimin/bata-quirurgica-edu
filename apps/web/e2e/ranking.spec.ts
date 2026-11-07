@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import {
   callApi,
@@ -21,8 +23,31 @@ test.beforeAll(async () => {
   if (!res.ok) throw new Error(`No se pudo activar los borradores: HTTP ${res.status}`);
 });
 
-const answerQ01 = (idToken: string) =>
-  callApi(idToken, 'POST', '/quiz/answer', { questionId: 'q01', selectedOptionIds: ['b'] });
+const seed = JSON.parse(
+  readFileSync(join(import.meta.dirname, '../../../content/questions/seed.json'), 'utf8'),
+) as {
+  questions: { id: string; correctOptionIds: string[] }[];
+};
+
+/** Aprueba una misión completa y devuelve el XP total del perfil. */
+async function completeMission(idToken: string, missionId = 'm1-fundamentos'): Promise<number> {
+  const attempt = (await (
+    await callApi(idToken, 'POST', '/quiz/attempt', { missionId })
+  ).json()) as { attemptId: string; questions: { id: string }[] };
+  for (const question of attempt.questions) {
+    const key = seed.questions.find((q) => q.id === question.id);
+    if (!key) throw new Error(`Pregunta fuera del seed: ${question.id}`);
+    await callApi(idToken, 'POST', '/quiz/answer', {
+      attemptId: attempt.attemptId,
+      questionId: question.id,
+      selectedOptionIds: key.correctOptionIds,
+    });
+  }
+  const result = (await (
+    await callApi(idToken, 'POST', '/quiz/finish', { attemptId: attempt.attemptId })
+  ).json()) as { totalXp: number };
+  return result.totalXp;
+}
 
 test('@emu ranking vacío muestra el mensaje de bienvenida', async ({ page }) => {
   await clearLeaderboard();
@@ -49,11 +74,11 @@ test('@emu el ranking se actualiza en vivo y filtra por grupo', async ({ page })
   await expect(rows.filter({ hasText: `Yo ${suffix}` })).toContainText('0 XP');
 
   // Another user's XP changes on the server: the open page updates without a reload.
-  await answerQ01(mate.idToken);
+  const mateXp = await completeMission(mate.idToken);
   await expect(rows.first()).toContainText(`Compañera ${suffix}`);
-  await expect(rows.first()).toContainText('10 XP');
-  await answerQ01(outsider.idToken);
-  await expect(rows.filter({ hasText: `Externo ${suffix}` })).toContainText('10 XP');
+  await expect(rows.first()).toContainText(`${mateXp} XP`);
+  const outsiderXp = await completeMission(outsider.idToken);
+  await expect(rows.filter({ hasText: `Externo ${suffix}` })).toContainText(`${outsiderXp} XP`);
   expect(await rows.count()).toBeLessThanOrEqual(20);
 
   await page.getByRole('tab', { name: 'Mi grupo' }).click();

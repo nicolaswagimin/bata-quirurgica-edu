@@ -223,7 +223,9 @@ export class ApiStack extends Stack {
     route(me.addResource('group'), 'POST', meFn);
 
     const quizResource = api.root.addResource('quiz');
+    route(quizResource.addResource('attempt'), 'POST', quizFn);
     route(quizResource.addResource('answer'), 'POST', quizFn);
+    route(quizResource.addResource('finish'), 'POST', quizFn);
     route(quizResource.addResource('practice'), 'POST', quizFn);
 
     const assistant = api.root.addResource('assistant');
