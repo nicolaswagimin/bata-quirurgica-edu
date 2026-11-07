@@ -278,8 +278,6 @@ export const AnswerResponseSchema = z
     correctOptionIds: z.array(IdSchema).min(1),
     explanation: z.string(),
     source: SourceRefSchema,
-    /** La racha se mueve con cada acierto; el XP solo se paga al aprobar la misión. */
-    streakDays: z.number().int().min(0),
   })
   .strict();
 export type AnswerResponse = z.infer<typeof AnswerResponseSchema>;
@@ -308,6 +306,8 @@ export const FinishAttemptResponseSchema = z
     answered: z.number().int().min(0),
     /** true si cerró el intento con preguntas sin responder. */
     abandoned: z.boolean(),
+    /** true si se quedó sin vidas (cierra el examen antes de la última pregunta). */
+    outOfLives: z.boolean(),
     /** true solo si respondió todo y alcanzó el mínimo. */
     passed: z.boolean(),
     /** Estrellas de este intento (0 cuando no aprueba o abandona). */

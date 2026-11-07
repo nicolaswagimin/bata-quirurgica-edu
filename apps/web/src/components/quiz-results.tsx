@@ -1,4 +1,4 @@
-import { minCorrectToPass } from '@bata/shared/gamification';
+import { MAX_LIVES, minCorrectToPass } from '@bata/shared/gamification';
 import type { FinishAttemptResponse } from '@bata/shared/schemas';
 import { Link } from '@tanstack/react-router';
 import { SPARKLE, XP_GEM } from '../art/sprites.ts';
@@ -14,6 +14,7 @@ type QuizResultsProps = {
 };
 
 function title(result: FinishAttemptResponse): string {
+  if (result.outOfLives) return 'Te quedaste sin vidas';
   if (result.abandoned) return 'Saliste antes de terminar';
   if (result.passed && result.alreadySealed) return '¡Repaso completado!';
   if (result.passed) return '¡Misión sellada!';
@@ -23,6 +24,9 @@ function title(result: FinishAttemptResponse): string {
 
 function summary(result: FinishAttemptResponse): string {
   const minimum = minCorrectToPass(result.total);
+  if (result.outOfLives) {
+    return `${MAX_LIVES} fallos cierran el examen. Necesitabas ${minimum} de ${result.total} correctas; vuelve a intentarlo.`;
+  }
   if (result.abandoned) {
     return 'Cerrar el intento antes de responder todo no cuenta: esta vez no hay XP.';
   }

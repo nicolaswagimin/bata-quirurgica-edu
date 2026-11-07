@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { LESSON_ART } from '../../src/art/lesson-sprites.ts';
 import {
   FLAME,
+  HEART,
   MASCOT,
   MEDAL,
   MISSION_SPRITES,
@@ -26,6 +27,7 @@ const seed = JSON.parse(
 const ALL: Record<string, Sprite> = {
   MASCOT,
   FLAME,
+  HEART,
   XP_GEM,
   MEDAL,
   SPARKLE,

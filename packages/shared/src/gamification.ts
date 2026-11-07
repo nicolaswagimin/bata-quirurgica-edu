@@ -22,6 +22,16 @@ export function minCorrectToPass(total: number): number {
 /** Bono de XP por aprobar una misión con todas las respuestas correctas. */
 export const PERFECT_BONUS_XP = 20;
 
+/**
+ * Vidas por intento: al tercer fallo el examen se cierra solo y no se aprueba. Con las misiones de
+ * seis preguntas coincide con el umbral (tres fallos ya no permiten acertar el 60 %), así que solo
+ * acorta el suspenso; en misiones más largas es un límite real.
+ */
+export const MAX_LIVES = 3;
+
+/** Meta diaria de XP: una misión aprobada la cumple. */
+export const DAILY_GOAL_XP = 50;
+
 /** Proporciones mínimas de aciertos para 1, 2 y 3 estrellas (la perfección da 3). */
 export const STAR_THRESHOLDS = [PASS_THRESHOLD, 0.8, 1] as const;
 
@@ -44,6 +54,8 @@ export type MissionScore = {
   stars: 0 | 1 | 2 | 3;
   /** true si el intento se cerró con preguntas sin responder. */
   abandoned: boolean;
+  /** true si se quedó sin vidas antes de terminar. */
+  outOfLives: boolean;
 };
 
 /** Corrige un intento ya cerrado. No sabe de XP ni de reintentos: solo de aciertos. */
@@ -53,6 +65,7 @@ export function scoreMission(correct: number, total: number): MissionScore {
     perfect: total > 0 && correct === total,
     stars: starsForScore(correct, total),
     abandoned: false,
+    outOfLives: false,
   };
 }
 
@@ -87,10 +100,13 @@ export type MissionXpInput = {
  */
 export function missionXpAward(input: MissionXpInput): MissionXpResult {
   const { correct, total, answered, missionXp, isRepeat } = input;
-  const abandoned = total > 0 && answered < total;
-  const score = abandoned
-    ? { passed: false, perfect: false, stars: 0 as const, abandoned: true }
-    : scoreMission(correct, total);
+  const wrong = Math.max(0, answered - correct);
+  const outOfLives = total > 0 && answered < total && wrong >= MAX_LIVES;
+  const abandoned = total > 0 && answered < total && !outOfLives;
+  const score: MissionScore =
+    abandoned || outOfLives
+      ? { passed: false, perfect: false, stars: 0, abandoned, outOfLives }
+      : scoreMission(correct, total);
 
   if (!score.passed || isRepeat) {
     return { ...score, baseXp: 0, bonusXp: 0, totalXp: 0 };
@@ -98,6 +114,25 @@ export function missionXpAward(input: MissionXpInput): MissionXpResult {
   const baseXp = Math.max(0, missionXp);
   const bonusXp = score.perfect ? PERFECT_BONUS_XP : 0;
   return { ...score, baseXp, bonusXp, totalXp: baseXp + bonusXp };
+}
+
+/** XP de hoy: 0 si el último día acreditado no es hoy en Bogotá. */
+export function dailyXp(
+  profile: { xpToday?: number | null; dailyGoalDate?: string | null },
+  now: Date,
+): number {
+  return profile.dailyGoalDate === bogotaDate(now) ? Math.max(0, profile.xpToday ?? 0) : 0;
+}
+
+/** Acumulado diario tras sumar `amount` XP; se reinicia al cambiar de día de Bogotá. */
+export function creditDailyXp(
+  profile: { xpToday?: number | null; dailyGoalDate?: string | null },
+  now: Date,
+  amount: number,
+): { xpToday: number; dailyGoalDate: string } {
+  const today = bogotaDate(now);
+  const current = profile.dailyGoalDate === today ? Math.max(0, profile.xpToday ?? 0) : 0;
+  return { xpToday: current + Math.max(0, amount), dailyGoalDate: today };
 }
 
 /** Nivel = floor(sqrt(xp / 50)) + 1. */

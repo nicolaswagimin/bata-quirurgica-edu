@@ -55,7 +55,9 @@ learner's own body) and fully private — camera frames never leave the browser.
   is closed by the API and only counts when every question was answered, and it is approved at
   60 % correct. Mission XP (plus a perfect-mission bonus) is paid once, on approval; a failed or
   abandoned attempt pays 0 and a reply of an already-sealed mission is practice with no XP. Each
-  mission keeps a 0–3 star record that a later attempt can improve.
+  mission keeps a 0–3 star record that a later attempt can improve. Missions unlock in order (the
+  previous one must be sealed), each attempt has three lives, the day streak moves only on
+  approval, and a daily XP goal resets at midnight in Bogotá.
 - Web SPA only; no native app, payments, push notifications, offline mode, multilanguage, cloth
   physics, or dark mode in v1 (see blueprint Non-Goals).
 - Clients never write to Firestore; all writes go through the API.

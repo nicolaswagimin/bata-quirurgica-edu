@@ -1,4 +1,4 @@
-import { bogotaDate } from '@bata/shared/gamification';
+import { bogotaDate, DAILY_GOAL_XP, dailyXp } from '@bata/shared/gamification';
 import { XP_GEM } from '../art/sprites.ts';
 import type { Profile } from '../lib/api.ts';
 import { FlameIcon } from './flame-icon.tsx';
@@ -15,8 +15,42 @@ function streakHint(profile: Profile): string {
     return 'Tu racha está a salvo hoy. Sigue cuando quieras.';
   }
   return profile.streakDays === 0
-    ? 'Responde una pregunta hoy para empezar tu racha.'
-    : 'Responde una pregunta hoy para mantenerla.';
+    ? 'Aprueba una misión hoy para empezar tu racha.'
+    : 'Aprueba una misión hoy para mantenerla.';
+}
+
+/** Today's XP against the daily goal; the counter resets at midnight in Bogotá. */
+function DailyGoal({ profile }: { profile: Profile }) {
+  const earned = dailyXp(profile, new Date());
+  const done = earned >= DAILY_GOAL_XP;
+  const shown = Math.min(earned, DAILY_GOAL_XP);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+        <p className="text-xs font-bold text-on-band-muted">Meta de hoy</p>
+        <p className="font-mono text-xs text-on-band-muted tabular-nums">
+          {shown} / {DAILY_GOAL_XP} XP
+        </p>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Meta diaria de XP"
+        aria-valuemin={0}
+        aria-valuemax={DAILY_GOAL_XP}
+        aria-valuenow={shown}
+        className="h-2 overflow-hidden rounded-box bg-primary-strong"
+      >
+        <div
+          className="h-full rounded-[2px] bg-bg"
+          style={{ width: `${(shown / DAILY_GOAL_XP) * 100}%` }}
+        />
+      </div>
+      {done ? (
+        <p className="text-xs font-bold text-primary-strong">¡Meta de hoy cumplida!</p>
+      ) : null}
+    </div>
+  );
 }
 
 /** The mint band under the header: greeting, streak and XP badges, Dra. Menta, level progress. */
@@ -73,6 +107,7 @@ export function HomeBand({ profile }: { profile: Profile }) {
               style={{ width: `${ratio * 100}%` }}
             />
           </div>
+          <DailyGoal profile={profile} />
         </div>
       </div>
     </section>

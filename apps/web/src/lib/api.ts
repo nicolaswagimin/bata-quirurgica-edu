@@ -81,8 +81,11 @@ export const ProfileSchema = z.object({
   xp: z.number().int().min(0),
   level: z.number().int().min(1),
   streakDays: z.number().int().min(0),
-  /** Last day (YYYY-MM-DD, Bogotá) with a correct answer; older API responses may omit it. */
+  /** Last day (YYYY-MM-DD, Bogotá) with an approved mission; older API responses may omit it. */
   lastActiveDate: z.string().nullable().optional(),
+  /** XP earned on `dailyGoalDate` (Bogotá); older API responses may omit both. */
+  xpToday: z.number().int().min(0).optional(),
+  dailyGoalDate: z.string().nullable().optional(),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 

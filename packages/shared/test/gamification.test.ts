@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   bogotaDate,
+  creditDailyXp,
+  dailyXp,
   levelForXp,
+  MAX_LIVES,
   minCorrectToPass,
   missionXpAward,
   nextStreak,
@@ -156,5 +159,58 @@ describe('missionXpAward', () => {
     });
     expect(failed.passed).toBe(false);
     expect(failed.totalXp).toBe(0);
+  });
+});
+
+describe('MAX_LIVES', () => {
+  it('cierra el intento al tercer fallo', () => {
+    const result = missionXpAward({
+      correct: 1,
+      total: 10,
+      answered: 4,
+      missionXp: 50,
+      isRepeat: false,
+    });
+    expect(MAX_LIVES).toBe(3);
+    expect(result).toMatchObject({
+      outOfLives: true,
+      abandoned: false,
+      passed: false,
+      stars: 0,
+      totalXp: 0,
+    });
+  });
+
+  it('no confunde salir antes con quedarse sin vidas', () => {
+    const abandoned = missionXpAward({
+      correct: 3,
+      total: 10,
+      answered: 4,
+      missionXp: 50,
+      isRepeat: false,
+    });
+    expect(abandoned).toMatchObject({ outOfLives: false, abandoned: true });
+  });
+});
+
+describe('meta diaria de XP', () => {
+  // 15:00Z = 10:00 del 5 de octubre en Bogotá.
+  const now = new Date('2026-10-05T15:00:00Z');
+
+  it('dailyXp ignora el acumulado de otro día', () => {
+    expect(dailyXp({ xpToday: 20, dailyGoalDate: '2026-10-05' }, now)).toBe(20);
+    expect(dailyXp({ xpToday: 20, dailyGoalDate: '2026-10-04' }, now)).toBe(0);
+    expect(dailyXp({}, now)).toBe(0);
+  });
+
+  it('creditDailyXp suma el mismo día y reinicia al siguiente', () => {
+    expect(creditDailyXp({ xpToday: 20, dailyGoalDate: '2026-10-05' }, now, 50)).toEqual({
+      xpToday: 70,
+      dailyGoalDate: '2026-10-05',
+    });
+    expect(creditDailyXp({ xpToday: 20, dailyGoalDate: '2026-10-04' }, now, 50)).toEqual({
+      xpToday: 50,
+      dailyGoalDate: '2026-10-05',
+    });
   });
 });

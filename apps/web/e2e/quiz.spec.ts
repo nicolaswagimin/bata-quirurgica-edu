@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { MAX_LIVES } from '@bata/shared/gamification';
 import { expect, type Page, test } from '@playwright/test';
 import { createEmulatorUser, TEST_PASSWORD, uniqueEmail } from './helpers.ts';
 
@@ -43,17 +44,24 @@ async function answerCurrent(page: Page, outcome: 'correct' | 'wrong'): Promise<
   await expect(page.getByText(outcome === 'correct' ? '¡Correcto!' : 'Incorrecto')).toBeVisible();
 }
 
-/** Recorre las N preguntas del intento y cierra el examen. */
-async function answerAll(page: Page, outcome: 'correct' | 'wrong'): Promise<number> {
+/** Total de preguntas del intento, leído del encabezado. */
+async function questionCount(page: Page): Promise<number> {
   const header = await page.getByText(/^Pregunta 1 de \d+$/).textContent();
   const total = Number(header?.match(/de (\d+)/)?.[1] ?? 0);
   if (!total) throw new Error('No se pudo leer el número de preguntas');
-  for (let i = 0; i < total; i++) {
-    await answerCurrent(page, outcome);
-    if (i + 1 < total) {
+  return total;
+}
+
+/** Falla a propósito hasta quedarse sin vidas y cierra el examen. */
+async function answerUntilOutOfLives(page: Page): Promise<number> {
+  const total = await questionCount(page);
+  for (let i = 0; i < MAX_LIVES; i++) {
+    await answerCurrent(page, 'wrong');
+    if (i + 1 < MAX_LIVES) {
       await page.getByRole('button', { name: /Siguiente pregunta/ }).click();
       await expect(page.getByText(`Pregunta ${i + 2} de ${total}`)).toBeVisible();
     } else {
+      await expect(page.getByRole('img', { name: `0 de ${MAX_LIVES} vidas` })).toBeVisible();
       await page.getByRole('button', { name: 'Ver resultados' }).click();
     }
   }
@@ -78,6 +86,8 @@ test('@emu registro, onboarding y examen perfecto: sella la misión y paga el XP
 
   await expect(page.getByRole('heading', { level: 1, name: 'Hola, Ana Pérez' })).toBeVisible();
   await expect(page.getByTestId('xp-pill')).toHaveText('0 XP');
+  // Solo la primera misión está abierta.
+  await expect(page.getByText('Bloqueada').first()).toBeVisible();
 
   // Ir a la misión.
   await page.getByRole('link', { name: /Fundamentos de bioseguridad y asepsia/ }).click();
@@ -85,6 +95,7 @@ test('@emu registro, onboarding y examen perfecto: sella la misión y paga el XP
 
   // Las reglas se ven antes de empezar.
   await expect(page.getByText(/Respondes cada pregunta una sola vez/)).toBeVisible();
+  await expect(page.getByText(/Tienes 3 vidas/)).toBeVisible();
   await page.getByRole('button', { name: 'Empezar misión' }).click();
   await expect(page.getByText(/1 \/ \d+/).or(page.getByText(/^Pregunta 1 de \d+$/))).toBeVisible({
     timeout: 8000,
@@ -96,9 +107,7 @@ test('@emu registro, onboarding y examen perfecto: sella la misión y paga el XP
   await expect(page.getByRole('button', { name: 'Responder' })).not.toBeVisible();
 
   // Terminar el resto del examen.
-  const total = Number(
-    (await page.getByText(/^Pregunta 1 de \d+$/).textContent())?.match(/de (\d+)/)?.[1] ?? 0,
-  );
+  const total = await questionCount(page);
   for (let i = 1; i < total; i++) {
     await page.getByRole('button', { name: /Siguiente pregunta/ }).click();
     await expect(page.getByText(`Pregunta ${i + 1} de ${total}`)).toBeVisible();
@@ -111,9 +120,18 @@ test('@emu registro, onboarding y examen perfecto: sella la misión y paga el XP
   await expect(page.getByText('+70', { exact: true })).toBeVisible();
   await expect(page.getByText(/incluye \+20 XP de misión perfecta/)).toBeVisible();
 
-  // El perfil ya tiene el XP de la misión.
+  // El perfil ya tiene el XP de la misión y la meta diaria quedó cumplida.
   await page.getByRole('link', { name: 'Volver al inicio' }).click();
   await expect(page.getByTestId('xp-pill')).toHaveText('70 XP');
+  await expect(page.getByRole('progressbar', { name: 'Meta diaria de XP' })).toHaveAttribute(
+    'aria-valuenow',
+    '50',
+  );
+  await expect(page.getByText('¡Meta de hoy cumplida!')).toBeVisible();
+  // Al dominar la primera, la segunda misión se abre.
+  await expect(
+    page.getByRole('link', { name: /La bata quirúrgica: tipos y barreras/ }),
+  ).toBeVisible();
 });
 
 test('@emu fallar el examen no sella la misión ni da XP', async ({ page }) => {
@@ -136,9 +154,9 @@ test('@emu fallar el examen no sella la misión ni da XP', async ({ page }) => {
   await page.getByRole('button', { name: 'Empezar misión' }).click();
   await expect(page.getByText(/^Pregunta 1 de \d+$/)).toBeVisible({ timeout: 8000 });
 
-  await answerAll(page, 'wrong');
+  await answerUntilOutOfLives(page);
 
-  await expect(page.getByRole('heading', { name: 'No aprobaste' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Te quedaste sin vidas' })).toBeVisible();
   await expect(page.getByRole('img', { name: '0 de 3 estrellas' })).toBeVisible();
   await expect(page.getByTestId('xp-pill')).toHaveText('0 XP');
   await expect(page.getByRole('button', { name: 'Reintentar misión' })).toBeVisible();

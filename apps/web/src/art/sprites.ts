@@ -239,6 +239,20 @@ export const MEDAL: Sprite = {
   ],
 };
 
+/** A heart: one of the three lives of an attempt. */
+export const HEART: Sprite = {
+  rows: [
+    '.kk..kk.',
+    'krrkkrrk',
+    'krrrrrrk',
+    'krrrrrrk',
+    '.krrrrk.',
+    '..krrk..',
+    '...kk...',
+    '........',
+  ],
+};
+
 /** A gold star: the score of a mission (0 to 3 of them). */
 export const STAR: Sprite = {
   rows: [

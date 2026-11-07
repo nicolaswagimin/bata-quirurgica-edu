@@ -60,6 +60,8 @@ async function createProfile(
     level: 1,
     streakDays: 0,
     lastActiveDate: null,
+    xpToday: 0,
+    dailyGoalDate: null,
     consent: { policyVersion: input.consent.policyVersion, acceptedAt: now },
     createdAt: now,
     updatedAt: now,

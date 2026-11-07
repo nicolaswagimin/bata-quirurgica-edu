@@ -21,6 +21,12 @@ paths:
   sellada es repaso (0 XP).
 - `progress/{uid}/missions/{missionId}` guarda `sealed`, `stars` (récord 0–3) y `bestCorrect`;
   un repaso puede mejorar las estrellas aunque no pague XP.
+- Desbloqueo secuencial: `POST /quiz/attempt` exige que la misión anterior (por `order`) esté
+  sellada; si no, responde 403 `FORBIDDEN` (`mission_locked`).
+- `users/{uid}` lleva `xpToday` y `dailyGoalDate` (Bogotá): la meta diaria se reinicia sola al
+  cambiar de día. La racha (`streakDays`, `lastActiveDate`) avanza solo cuando el examen se aprueba.
+- Vidas: el tercer fallo cierra el intento. El servidor lo deduce de `answered - correct`
+  (`MAX_LIVES`), nunca de un campo que mande el cliente.
 - Índices: el compuesto `leaderboard (groupId ASC, xp DESC)` y el vectorial de `kbChunks.embedding`
   (1024, flat) viven en `firestore.indexes.json`; agregar ahí cualquier consulta compuesta nueva.
 - El contenido de `content/**` se valida con los esquemas de `@bata/shared/schemas` en

@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import {
   bogotaDate,
+  creditDailyXp,
   levelForXp,
   missionXpAward,
   nextStreak,
@@ -35,6 +36,9 @@ export type UserDoc = {
   level: number;
   streakDays: number;
   lastActiveDate: string | null;
+  /** XP ganado el día `dailyGoalDate` (Bogotá); se reinicia solo al cambiar de día. */
+  xpToday?: number;
+  dailyGoalDate?: string | null;
   consent: { policyVersion: string; acceptedAt: string };
   createdAt: string;
   updatedAt: string;
@@ -201,6 +205,7 @@ export type StartAttemptInput = {
 
 export type StartAttemptOutcome =
   | { status: 'mission_not_found' }
+  | { status: 'mission_locked' }
   | { status: 'profile_not_found' }
   | { status: 'ok'; response: StartAttemptResponse; attemptId: string };
 
@@ -217,6 +222,24 @@ export function startAttemptTx(
 
     const missionSnap = await tx.get(db.doc(`missions/${missionId}`));
     if (!missionSnap.exists) return { status: 'mission_not_found' } as const;
+
+    // Desbloqueo secuencial: la misión anterior debe estar sellada.
+    const order = missionSnap.get('order');
+    if (typeof order === 'number' && order > 1) {
+      const prevSnap = await tx.get(
+        db
+          .collection('missions')
+          .where('order', '==', order - 1)
+          .limit(1),
+      );
+      const prevMission = prevSnap.docs[0];
+      if (prevMission) {
+        const prevProgress = await tx.get(db.doc(`progress/${uid}/missions/${prevMission.id}`));
+        const prevSealed =
+          prevProgress.get('sealed') === true || prevProgress.get('completed') === true;
+        if (!prevSealed) return { status: 'mission_locked' } as const;
+      }
+    }
 
     const progressRef = db.doc(`progress/${uid}/missions/${missionId}`);
     const progressSnap = await tx.get(progressRef);
@@ -314,7 +337,6 @@ export type AnswerOutcome =
 // Todas las lecturas antes de cualquier escritura (requisito de las transacciones de Firestore).
 export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<AnswerOutcome> {
   const { uid, questionId } = input;
-  const nowIso = input.now.toISOString();
   return db.runTransaction(async (tx) => {
     const attemptRef = db.doc(`progress/${uid}/attempts/${input.attemptId}`);
     const attemptSnap = await tx.get(attemptRef);
@@ -341,7 +363,6 @@ export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<Answe
       return { status: 'question_not_found' } as const;
     }
     if (!userSnap?.exists) return { status: 'profile_not_found' } as const;
-    const user = userSnap.data() as UserDoc;
 
     const correctOptionIds = (keySnap?.get('correctOptionIds') as string[] | undefined) ?? [];
     const correct =
@@ -355,16 +376,7 @@ export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<Answe
         : attempt.correctQuestionIds,
     });
 
-    // El XP se paga al aprobar la misión; aquí solo se mueve la racha de días.
-    let streakDays = user.streakDays;
-    if (correct) {
-      const today = bogotaDate(input.now);
-      streakDays = nextStreak(user, today);
-      if (user.streakDays !== streakDays || user.lastActiveDate !== today) {
-        tx.update(userRef, { streakDays, lastActiveDate: today, updatedAt: nowIso });
-      }
-    }
-
+    // Ni XP ni racha aquí: ambas se deciden al cerrar el examen, y solo al aprobarlo.
     return {
       status: 'ok',
       response: {
@@ -372,7 +384,6 @@ export function submitAnswerTx(db: Firestore, input: AnswerInput): Promise<Answe
         correctOptionIds,
         explanation: question.explanation,
         source: question.source,
-        streakDays,
       },
     } as const;
   });
@@ -472,6 +483,11 @@ export function finishAttemptTx(
 
     const finalXp = user.xp + award.totalXp;
     const finalLevel = levelForXp(finalXp);
+    // La racha solo avanza cuando el examen se aprueba (un repaso aprobado también cuenta).
+    const today = bogotaDate(input.now);
+    const streakDays = award.passed ? nextStreak(user, today) : user.streakDays;
+    const lastActiveDate = award.passed ? today : user.lastActiveDate;
+    const daily = award.totalXp > 0 ? creditDailyXp(user, input.now, award.totalXp) : null;
 
     tx.set(
       progressRef,
@@ -488,8 +504,23 @@ export function finishAttemptTx(
       { merge: true },
     );
 
+    const profileUpdate: Record<string, unknown> = {};
     if (award.totalXp > 0) {
-      tx.update(userRef, { xp: finalXp, level: finalLevel, updatedAt: nowIso });
+      profileUpdate.xp = finalXp;
+      profileUpdate.level = finalLevel;
+    }
+    if (award.passed && (user.streakDays !== streakDays || user.lastActiveDate !== today)) {
+      profileUpdate.streakDays = streakDays;
+      profileUpdate.lastActiveDate = lastActiveDate;
+    }
+    if (daily) {
+      profileUpdate.xpToday = daily.xpToday;
+      profileUpdate.dailyGoalDate = daily.dailyGoalDate;
+    }
+    if (Object.keys(profileUpdate).length > 0) {
+      tx.update(userRef, { ...profileUpdate, updatedAt: nowIso });
+    }
+    if (award.totalXp > 0) {
       tx.set(
         db.doc(`leaderboard/${uid}`),
         leaderboardEntry({ ...user, xp: finalXp, level: finalLevel, updatedAt: nowIso }),
@@ -508,6 +539,7 @@ export function finishAttemptTx(
         total: totalCount,
         answered: answeredCount,
         abandoned: award.abandoned,
+        outOfLives: award.outOfLives,
         passed: award.passed,
         stars: award.stars,
         bestCorrect,
@@ -518,7 +550,7 @@ export function finishAttemptTx(
         failedQuestions,
         totalXp: finalXp,
         level: finalLevel,
-        streakDays: user.streakDays,
+        streakDays,
       },
     } as const;
   });
@@ -560,12 +592,14 @@ export function completePracticeTx(db: Firestore, input: PracticeInput): Promise
     }
     const nowIso = input.now.toISOString();
     const xp = user.xp + PRACTICE_XP;
+    const daily = creditDailyXp(user, input.now, PRACTICE_XP);
     const next: UserDoc = {
       ...user,
       xp,
       level: levelForXp(xp),
       streakDays: nextStreak(user, today),
       lastActiveDate: today,
+      ...daily,
       updatedAt: nowIso,
     };
     tx.create(practiceRef, {
@@ -579,6 +613,8 @@ export function completePracticeTx(db: Firestore, input: PracticeInput): Promise
       level: next.level,
       streakDays: next.streakDays,
       lastActiveDate: next.lastActiveDate,
+      xpToday: daily.xpToday,
+      dailyGoalDate: daily.dailyGoalDate,
       updatedAt: nowIso,
     });
     tx.set(db.doc(`leaderboard/${uid}`), leaderboardEntry(next));

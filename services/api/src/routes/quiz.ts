@@ -33,6 +33,9 @@ async function startAttempt(
   if (outcome.status === 'profile_not_found') {
     throw httpError('NOT_FOUND', 'Aún no tienes un perfil.');
   }
+  if (outcome.status === 'mission_locked') {
+    throw httpError('FORBIDDEN', 'Primero domina la misión anterior para abrir esta.');
+  }
   if (outcome.status === 'mission_not_found') {
     throw httpError('NOT_FOUND', 'No encontramos esa misión o no tiene preguntas publicadas.');
   }

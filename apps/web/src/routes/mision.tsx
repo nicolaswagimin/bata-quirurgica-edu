@@ -1,3 +1,4 @@
+import { MAX_LIVES } from '@bata/shared/gamification';
 import type {
   AnswerResponse,
   FinishAttemptResponse,
@@ -8,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { doc, getDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { missionSprite } from '../art/sprites.ts';
+import { HEART, missionSprite } from '../art/sprites.ts';
 import { LoadingState } from '../components/loading-state.tsx';
 import { MascotNote } from '../components/mascot.tsx';
 import { missionCode } from '../components/mission-sheet.tsx';
@@ -27,7 +28,7 @@ import {
 } from '../components/ui-classes.ts';
 import { ApiError, apiFetch, useMe } from '../lib/api.ts';
 import { db } from '../lib/firebase.tsx';
-import { MissionSchema } from './home.tsx';
+import { MissionSchema } from '../lib/missions.ts';
 
 type QuizPhase =
   | { kind: 'start' }
@@ -44,15 +45,36 @@ async function loadMissionMeta(missionId: string) {
 
 // ---------- progreso del intento ----------
 
+function Lives({ left }: { left: number }) {
+  return (
+    <span
+      role="img"
+      aria-label={`${left} de ${MAX_LIVES} vidas`}
+      className="inline-flex items-center gap-0.5"
+    >
+      {Array.from({ length: MAX_LIVES }, (_, i) => (
+        <PixelSprite
+          // biome-ignore lint/suspicious/noArrayIndexKey: three fixed, order-stable hearts
+          key={i}
+          sprite={HEART}
+          className={`size-4 ${i < left ? '' : 'opacity-25'}`}
+        />
+      ))}
+    </span>
+  );
+}
+
 function AttemptHeader({
   index,
   total,
   combo,
+  livesLeft,
   alreadySealed,
 }: {
   index: number;
   total: number;
   combo: number;
+  livesLeft: number;
   alreadySealed: boolean;
 }) {
   return (
@@ -61,11 +83,14 @@ function AttemptHeader({
         <span className="text-sm font-bold text-muted tabular-nums">
           Pregunta {index + 1} de {total}
         </span>
-        {combo >= 2 ? (
-          <span className="rounded-pill bg-primary-soft px-2 py-1 text-xs font-bold leading-none text-primary">
-            {combo} seguidas
-          </span>
-        ) : null}
+        <span className="flex items-center gap-2">
+          {combo >= 2 ? (
+            <span className="rounded-pill bg-primary-soft px-2 py-1 text-xs font-bold leading-none text-primary">
+              {combo} seguidas
+            </span>
+          ) : null}
+          <Lives left={livesLeft} />
+        </span>
       </div>
       <div
         role="progressbar"
@@ -105,7 +130,9 @@ export default function MisionPage() {
 
   const [phase, setPhase] = useState<QuizPhase>({ kind: 'start' });
   const [combo, setCombo] = useState(0);
+  const [wrong, setWrong] = useState(0);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const livesLeft = Math.max(0, MAX_LIVES - wrong);
 
   const startMutation = useMutation({
     mutationFn: async () =>
@@ -114,6 +141,7 @@ export default function MisionPage() {
       ),
     onSuccess: (attempt) => {
       setCombo(0);
+      setWrong(0);
       setPhase({ kind: 'question', attempt, index: 0 });
     },
   });
@@ -134,15 +162,17 @@ export default function MisionPage() {
 
   const handleAnswered = (response: AnswerResponse) => {
     setCombo((current) => (response.correct ? current + 1 : 0));
+    if (!response.correct) setWrong((current) => current + 1);
   };
 
   const handleNext = () => {
     if (phase.kind !== 'question') return;
     const nextIndex = phase.index + 1;
-    if (nextIndex < phase.attempt.questions.length) {
-      setPhase({ ...phase, index: nextIndex });
-    } else {
+    // Sin vidas o sin preguntas: el intento se cierra y se corrige.
+    if (livesLeft === 0 || nextIndex >= phase.attempt.questions.length) {
       finishMutation.mutate(phase.attempt.attemptId);
+    } else {
+      setPhase({ ...phase, index: nextIndex });
     }
   };
 
@@ -236,6 +266,7 @@ export default function MisionPage() {
                     Ganas <strong className="text-ink">{mission.xpReward} XP</strong> al aprobar, y{' '}
                     <strong className="text-ink">+20 XP</strong> si aciertas todas.
                   </li>
+                  <li>Tienes {MAX_LIVES} vidas: si las pierdes, el examen se cierra.</li>
                   <li>Si no apruebas, no ganas XP y puedes intentarlo de nuevo.</li>
                 </ul>
               </div>
@@ -277,13 +308,14 @@ export default function MisionPage() {
                 index={phase.index}
                 total={total}
                 combo={combo}
+                livesLeft={livesLeft}
                 alreadySealed={phase.attempt.alreadySealed}
               />
               <QuestionCard
                 key={`${phase.attempt.attemptId}-${phase.index}`}
                 question={question}
                 attemptId={phase.attempt.attemptId}
-                isLast={phase.index + 1 === total}
+                isLast={phase.index + 1 === total || livesLeft === 0}
                 onAnswered={handleAnswered}
                 onNext={handleNext}
               />
@@ -304,6 +336,7 @@ export default function MisionPage() {
               missionId={mission.id}
               onRetry={() => {
                 setCombo(0);
+                setWrong(0);
                 setPhase({ kind: 'start' });
               }}
             />

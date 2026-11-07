@@ -72,6 +72,12 @@ const PATHS = {
       <path d="M12 18v3M9 21h6M9.5 9.5l2-2M10 13l4-4" />
     </>
   ),
+  lock: (
+    <>
+      <rect x="5" y="10" width="14" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </>
+  ),
   user: (
     <>
       <circle cx="12" cy="8" r="4" />

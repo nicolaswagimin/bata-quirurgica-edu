@@ -1,8 +1,9 @@
 import { type JoinGroup, JoinGroupSchema } from '@bata/shared/schemas';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Achievements } from '../components/achievements.tsx';
 import { FormField } from '../components/form-field.tsx';
 import { LoadingState } from '../components/loading-state.tsx';
 import { StatsBar } from '../components/stats-bar.tsx';
@@ -11,8 +12,10 @@ import {
   buttonPrimary as primaryButtonClass,
   buttonSecondary as secondaryButtonClass,
 } from '../components/ui-classes.ts';
+import { achievementsFor } from '../lib/achievements.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
+import { loadMissionProgress, loadMissions } from '../lib/missions.ts';
 
 function unexpected(error: unknown): string {
   return error instanceof ApiError ? error.message : 'Ocurrió un error inesperado.';
@@ -162,6 +165,20 @@ function SignOutButton() {
 }
 
 function ProfileDetails({ profile }: { profile: Profile }) {
+  const missions = useQuery({ queryKey: ['missions'], queryFn: loadMissions });
+  const progress = useQuery({
+    queryKey: ['progress', profile.uid],
+    queryFn: () => loadMissionProgress(profile.uid),
+  });
+  const sealed = Object.values(progress.data ?? {}).filter((p) => p.sealed || p.completed);
+  const achievements = achievementsFor({
+    level: profile.level,
+    streakDays: profile.streakDays,
+    missionsSealed: sealed.length,
+    perfectMissions: sealed.filter((p) => p.stars === 3).length,
+    totalMissions: missions.data?.length ?? 0,
+  });
+
   return (
     <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
@@ -171,6 +188,7 @@ function ProfileDetails({ profile }: { profile: Profile }) {
         <p className="text-lg text-ink">{profile.displayName}</p>
         <StatsBar profile={profile} />
       </header>
+      <Achievements achievements={achievements} />
       <section className="flex flex-col gap-3 rounded-card bg-surface p-6">
         <h2 className="text-lg font-extrabold">Grupo</h2>
         <p className="text-sm text-muted">

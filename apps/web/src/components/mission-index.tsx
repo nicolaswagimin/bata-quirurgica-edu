@@ -13,6 +13,8 @@ export type IndexEntry = SheetMission & {
   /** Estrellas del récord (0 a 3). */
   stars: number;
   completed: boolean;
+  /** true si la misión anterior todavía no está dominada. */
+  locked: boolean;
 };
 
 const SEEN_KEY = 'bata.sealsSeen';
@@ -55,12 +57,16 @@ function Medal({ fresh }: { fresh: boolean }) {
 
 function status(entry: IndexEntry, current: boolean): string {
   if (entry.completed) return `dominada · ${entry.stars} de 3 estrellas`;
+  if (entry.locked) return 'bloqueada · domina la misión anterior';
   if (entry.bestCorrect === null) return 'progreso no disponible';
   const record = `récord ${entry.bestCorrect} de ${entry.questionCount}`;
   return current ? `abierta hoy · ${record}` : record;
 }
 
-/** Every mission in order; mastered ones carry the bronze pixel medal and their stars. */
+const ROW_CLASS =
+  'pressable -ml-2 grid min-w-0 flex-1 grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-card px-2 py-3';
+
+/** Every mission in order; mastered ones carry the bronze pixel medal, locked ones a lock. */
 export function MissionIndex({
   entries,
   currentId,
@@ -95,49 +101,67 @@ export function MissionIndex({
       <ol className="mt-1">
         {entries.map((entry) => {
           const current = entry.id === currentId;
+          const body = (
+            <>
+              {entry.completed ? (
+                <Medal fresh={fresh.has(entry.id)} />
+              ) : entry.locked ? (
+                <span className="grid size-11 place-items-center rounded-card bg-surface">
+                  <Pictogram name="lock" className="size-5 text-muted" />
+                </span>
+              ) : (
+                <span
+                  className={`grid size-11 place-items-center rounded-card ${
+                    current ? 'bg-band ring-2 ring-primary' : 'bg-primary-soft'
+                  }`}
+                >
+                  <PixelSprite sprite={missionSprite(entry.iconKey)} className="size-8" />
+                </span>
+              )}
+              <span className="min-w-0">
+                <span className="block text-sm leading-snug font-bold text-ink">{entry.title}</span>
+                <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                  <span aria-hidden="true" className="font-mono font-bold text-primary">
+                    {missionCode(entry.order)}
+                  </span>
+                  <span>· {status(entry, current)}</span>
+                  {entry.completed ? <StarRating stars={entry.stars} size="size-4" /> : null}
+                </span>
+              </span>
+              <span
+                className={`rounded-pill px-2 py-1.5 font-pixel text-xs leading-none font-semibold whitespace-nowrap ${
+                  entry.locked
+                    ? 'bg-surface text-muted'
+                    : entry.completed
+                      ? 'text-seal'
+                      : 'bg-xp-soft text-ink'
+                }`}
+              >
+                {entry.locked ? 'Bloqueada' : `+${entry.xpReward} XP`}
+              </span>
+            </>
+          );
+
           return (
             <li
               key={entry.id}
               className="flex items-center gap-1 border-b border-border last:border-b-0"
             >
               <span className="sr-only">Misión {entry.order}: </span>
-              <Link
-                to="/mision/$missionId"
-                params={{ missionId: entry.id }}
-                aria-current={current ? 'step' : undefined}
-                className="pressable -ml-2 grid min-w-0 flex-1 grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-card px-2 py-3 hover:bg-surface"
-              >
-                {entry.completed ? (
-                  <Medal fresh={fresh.has(entry.id)} />
-                ) : (
-                  <span
-                    className={`grid size-11 place-items-center rounded-card ${
-                      current ? 'bg-band ring-2 ring-primary' : 'bg-primary-soft'
-                    }`}
-                  >
-                    <PixelSprite sprite={missionSprite(entry.iconKey)} className="size-8" />
-                  </span>
-                )}
-                <span className="min-w-0">
-                  <span className="block text-sm leading-snug font-bold text-ink">
-                    {entry.title}
-                  </span>
-                  <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                    <span aria-hidden="true" className="font-mono font-bold text-primary">
-                      {missionCode(entry.order)}
-                    </span>
-                    <span>· {status(entry, current)}</span>
-                    {entry.completed ? <StarRating stars={entry.stars} size="size-4" /> : null}
-                  </span>
-                </span>
-                <span
-                  className={`rounded-pill px-2 py-1.5 font-pixel text-xs leading-none font-semibold whitespace-nowrap ${
-                    entry.completed ? 'text-seal' : 'bg-xp-soft text-ink'
-                  }`}
+              {entry.locked ? (
+                <div aria-disabled="true" className={`${ROW_CLASS} opacity-70`}>
+                  {body}
+                </div>
+              ) : (
+                <Link
+                  to="/mision/$missionId"
+                  params={{ missionId: entry.id }}
+                  aria-current={current ? 'step' : undefined}
+                  className={`${ROW_CLASS} hover:bg-surface`}
                 >
-                  +{entry.xpReward} XP
-                </span>
-              </Link>
+                  {body}
+                </Link>
+              )}
               <Link
                 to="/aprende/$missionId"
                 params={{ missionId: entry.id }}

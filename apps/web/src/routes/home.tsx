@@ -4,14 +4,11 @@ import {
   CreateProfileSchema,
   PendingConsentSchema,
   POLICY_VERSION,
-  SeedMissionSchema,
 } from '@bata/shared/schemas';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { FormField } from '../components/form-field.tsx';
 import { HomeBand } from '../components/home-band.tsx';
 import { LoadingState } from '../components/loading-state.tsx';
@@ -21,27 +18,10 @@ import { MissionSheet } from '../components/mission-sheet.tsx';
 import { formPanel, panel, buttonPrimary as primaryButtonClass } from '../components/ui-classes.ts';
 import { VideoClip } from '../components/video-clip.tsx';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
-import { db, useAuth } from '../lib/firebase.tsx';
+import { useAuth } from '../lib/firebase.tsx';
+import { loadMissionProgress, loadMissions } from '../lib/missions.ts';
 
 const PENDING_CONSENT_KEY = 'bata.pendingConsent';
-
-export const MissionSchema = SeedMissionSchema.omit({ id: true }).extend({
-  id: z.string(),
-  questionIds: z.array(z.string()),
-});
-export type Mission = z.infer<typeof MissionSchema>;
-
-// Documento `progress/{uid}/missions/{missionId}`. Los campos nuevos llevan default para que un
-// progreso antiguo (solo `completed`) siga leyéndose.
-const MissionProgressSchema = z.object({
-  answeredCorrectIds: z.array(z.string()).default([]),
-  completed: z.boolean().default(false),
-  sealed: z.boolean().default(false),
-  stars: z.number().int().min(0).max(3).default(0),
-  bestCorrect: z.number().int().min(0).default(0),
-  questionCount: z.number().int().min(0).optional(),
-});
-type MissionProgress = z.infer<typeof MissionProgressSchema>;
 
 function hasPendingConsent(): boolean {
   try {
@@ -174,25 +154,14 @@ function ConsentForm() {
 }
 
 function MissionMap({ profile }: { profile: Profile }) {
-  const missions = useQuery({
-    queryKey: ['missions'],
-    queryFn: async () => {
-      const snap = await getDocs(query(collection(db, 'missions'), orderBy('order')));
-      return snap.docs.map((d) => MissionSchema.parse({ ...d.data(), id: d.id }));
-    },
-  });
+  const missions = useQuery({ queryKey: ['missions'], queryFn: loadMissions });
   const progress = useQuery({
     queryKey: ['progress', profile.uid],
-    queryFn: async () => {
-      const snap = await getDocs(collection(db, 'progress', profile.uid, 'missions'));
-      const byMission: Record<string, MissionProgress> = {};
-      for (const d of snap.docs) byMission[d.id] = MissionProgressSchema.parse(d.data());
-      return byMission;
-    },
+    queryFn: () => loadMissionProgress(profile.uid),
   });
 
   const progressKnown = progress.isSuccess;
-  const entries: IndexEntry[] = (missions.data ?? []).map((m) => {
+  const base: IndexEntry[] = (missions.data ?? []).map((m) => {
     const p = progress.data?.[m.id];
     return {
       id: m.id,
@@ -207,9 +176,15 @@ function MissionMap({ profile }: { profile: Profile }) {
       bestCorrect: progressKnown ? (p?.bestCorrect ?? 0) : null,
       stars: p?.stars ?? 0,
       completed: p ? p.sealed || p.completed : false,
+      locked: false,
     };
   });
-  const current = entries.find((e) => !e.completed) ?? null;
+  // Desbloqueo secuencial: sin la misión anterior dominada, la siguiente no se abre.
+  const entries = base.map((entry, i) => ({
+    ...entry,
+    locked: progressKnown && i > 0 ? !(base[i - 1]?.completed ?? true) && !entry.completed : false,
+  }));
+  const current = entries.find((e) => !e.completed && !e.locked) ?? null;
 
   return (
     <div className="flex flex-col">

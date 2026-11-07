@@ -367,7 +367,7 @@ Tactile, rounded, one primary per view.
 - **Skip link:** ink pill revealed on focus at the top-left.
 
 ### Home Band
-The mint wall: greeting h1, streak and XP chips, Dra. Menta with her signed streak hint, then the pixel headline "Nivel n" with "xp / next" in mono and a 12 px level bar (Deep Scrub track, 2 px inset, XP Gold fill).
+The mint wall: greeting h1, streak and XP chips, Dra. Menta with her signed streak hint, then the pixel headline "Nivel n" with "xp / next" in mono and a 12 px level bar (Deep Scrub track, 2 px inset, XP Gold fill). Under the level bar sits the daily goal meter: "Meta de hoy x / 50 XP" in mono over a 8 px Deep Scrub track with a warm-white fill, plus "¡Meta de hoy cumplida!" once it fills.
 
 ### Mission Panel
 Today's mission on warm white: the pixel mission icon (48 px, 64 px from md) on an 80 px (96 px md) tile-wall frame with its code badge, the extrabold title (no eyebrow), the muted description, a row of 32 px progress tiles (one per question; Mint Wash with a Faded Ink stroke when empty, 6.2:1, Surgical Green with a white check when answered correctly), a meta line that names the pass bar ("Necesitas 4 de 6 correctas para aprobar · +50 XP") or, once mastered, the stars and the record ("Misión dominada · récord 6 de 6"), the CTA. If progress cannot be read it says so instead of showing a false zero.
@@ -380,6 +380,12 @@ The pixel scrub nurse (16 × 22 cells) in mint cap, mask, gown and gloves held i
 
 ### Bronze Medal (signature)
 A 16-cell sprite: green ribbon over a bronze disc with an ink outline. Shown at 36 px on the tile wall in mastered list rows, 80 px on AR results.
+
+### Lives (signature)
+Three 8-cell hearts in Danger red with an ink outline on the exam header, earned ones solid and lost ones at 25 % opacity. The label is always text ("2 de 3 vidas"): the third mistake closes the attempt.
+
+### Achievements
+Profile badges in a two-column grid of warm-white rows on sand: the 1 px primary ring marks an earned badge and the sprite loses all colour when pending. Six of them, always with title and description in text.
 
 ### Mission Stars (signature)
 A 9-cell gold star with an ink outline, three per mission. Earned stars are full gold, the missing ones sit at 20 % opacity, and the score is always repeated as text ("2 de 3 estrellas") so colour never carries it alone. Used at 20 px in the mission rows and 28 px in the exam results.

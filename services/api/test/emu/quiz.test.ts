@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import {
   levelForXp,
+  MAX_LIVES,
   minCorrectToPass,
   PERFECT_BONUS_XP,
   PRACTICE_XP,
@@ -89,13 +90,13 @@ async function answerQuestion(
   questionId: string,
   selectedOptionIds: string[],
   deps = at('2026-10-05T12:00:00Z'),
-): Promise<{ correct: boolean; streakDays: number }> {
+): Promise<{ correct: boolean }> {
   const res = await handleQuiz(
     event('POST', '/quiz/answer', { attemptId, questionId, selectedOptionIds }),
     deps,
   );
   expect(res.statusCode).toBe(200);
-  return JSON.parse(res.body) as { correct: boolean; streakDays: number };
+  return JSON.parse(res.body) as { correct: boolean };
 }
 
 /** Responde las primeras `correctCount` preguntas bien y el resto mal. */
@@ -180,6 +181,20 @@ describe('POST /quiz/attempt', () => {
     }
   });
 
+  it('bloquea la misión siguiente hasta dominar la anterior', async () => {
+    await createProfile();
+    const locked = await quiz(event('POST', '/quiz/attempt', { missionId: 'm2-tipos-bata' }));
+    expect(locked.statusCode).toBe(403);
+    expect(JSON.parse(locked.body)).toMatchObject({ error: { code: 'FORBIDDEN' } });
+
+    const first = await startAttempt();
+    await answerAll(first.attemptId, first.response.questions, first.response.questions.length);
+    await finishAttempt(first.attemptId);
+
+    const open = await quiz(event('POST', '/quiz/attempt', { missionId: 'm2-tipos-bata' }));
+    expect(open.statusCode).toBe(201);
+  });
+
   it('abandona el intento abierto anterior al empezar otro', async () => {
     await createProfile();
     const first = await startAttempt();
@@ -233,8 +248,8 @@ describe('POST /quiz/answer', () => {
     const body = JSON.parse(res.body) as Record<string, unknown>;
     expect(body.correct).toBe(true);
     expect(Array.isArray(body.correctOptionIds)).toBe(true);
-    expect(body.streakDays).toBe(1);
     expect(body.xpAwarded).toBeUndefined();
+    expect(body.streakDays).toBeUndefined();
     expect(await userXp()).toBe(0);
   });
 
@@ -294,50 +309,15 @@ describe('POST /quiz/answer', () => {
     expect(response.questions.some((q) => 'correctOptionIds' in q)).toBe(false);
   });
 
-  it('rastrea la racha en días de Bogotá', async () => {
+  it('no mueve la racha al responder: solo al aprobar', async () => {
     await createProfile();
-
-    // Día 1 (04:30Z = 23:30 Bogotá del día anterior).
-    const a1 = await startAttempt();
-    const q1 = a1.response.questions[0];
-    if (!q1) throw new Error('Sin preguntas');
-    const r1 = await handleQuiz(
-      event('POST', '/quiz/answer', {
-        attemptId: a1.attemptId,
-        questionId: q1.id,
-        selectedOptionIds: correctIds(q1.id),
-      }),
-      at('2026-10-05T04:30:00Z'),
-    );
-    expect(JSON.parse(r1.body)).toMatchObject({ streakDays: 1 });
-
-    // Mismo día Bogotá.
-    const a2 = await startAttempt();
-    const q2 = a2.response.questions.find((q) => q.id !== q1.id);
-    if (!q2) throw new Error('Sin preguntas distintas');
-    const r2 = await handleQuiz(
-      event('POST', '/quiz/answer', {
-        attemptId: a2.attemptId,
-        questionId: q2.id,
-        selectedOptionIds: correctIds(q2.id),
-      }),
-      at('2026-10-04T12:00:00Z'),
-    );
-    expect(JSON.parse(r2.body)).toMatchObject({ streakDays: 1 });
-
-    // Día 2.
-    const a3 = await startAttempt();
-    const remaining = a3.response.questions.find((q) => q.id !== q1.id && q.id !== q2.id);
-    if (!remaining) throw new Error('Sin preguntas distintas');
-    const r3 = await handleQuiz(
-      event('POST', '/quiz/answer', {
-        attemptId: a3.attemptId,
-        questionId: remaining.id,
-        selectedOptionIds: correctIds(remaining.id),
-      }),
-      at('2026-10-05T15:00:00Z'),
-    );
-    expect(JSON.parse(r3.body)).toMatchObject({ streakDays: 2 });
+    const a = await startAttempt();
+    const q = a.response.questions[0];
+    if (!q) throw new Error('Sin preguntas');
+    await answerQuestion(a.attemptId, q.id, correctIds(q.id));
+    const user = await db.doc(`users/${UID}`).get();
+    expect(user.get('streakDays')).toBe(0);
+    expect(user.get('lastActiveDate')).toBeNull();
   });
 });
 
@@ -500,6 +480,76 @@ describe('POST /quiz/finish', () => {
 
     const result = await finishAttempt(attemptId);
     expect(result).toMatchObject({ passed: true, missionSealed: true, xpAwarded: 0, bonusXp: 0 });
+    expect(await userXp()).toBe(0);
+  });
+
+  it('mueve la racha solo cuando el examen se aprueba', async () => {
+    await createProfile();
+
+    const a1 = await startAttempt();
+    await answerAll(a1.attemptId, a1.response.questions, a1.response.questions.length);
+    // 04:30Z = 23:30 del día anterior en Bogotá.
+    const r1 = await finishAttempt(a1.attemptId, at('2026-10-05T04:30:00Z'));
+    expect(r1.streakDays).toBe(1);
+
+    // Mismo día de Bogotá: la racha no se duplica.
+    const a2 = await startAttempt();
+    await answerAll(a2.attemptId, a2.response.questions, a2.response.questions.length);
+    const r2 = await finishAttempt(a2.attemptId, at('2026-10-04T20:00:00Z'));
+    expect(r2.streakDays).toBe(1);
+
+    // Día siguiente.
+    const a3 = await startAttempt();
+    await answerAll(a3.attemptId, a3.response.questions, a3.response.questions.length);
+    const r3 = await finishAttempt(a3.attemptId, at('2026-10-05T15:00:00Z'));
+    expect(r3.streakDays).toBe(2);
+  });
+
+  it('un examen fallido no mueve la racha', async () => {
+    await createProfile();
+    const { attemptId, response } = await startAttempt();
+    await answerAll(attemptId, response.questions, 0);
+    const result = await finishAttempt(attemptId, at('2026-10-05T15:00:00Z'));
+    expect(result.passed).toBe(false);
+    expect(result.streakDays).toBe(0);
+    const user = await db.doc(`users/${UID}`).get();
+    expect(user.get('lastActiveDate')).toBeNull();
+  });
+
+  it('acredita el XP del día para la meta diaria', async () => {
+    await createProfile();
+    const a1 = await startAttempt();
+    await answerAll(a1.attemptId, a1.response.questions, a1.response.questions.length);
+    await finishAttempt(a1.attemptId, at('2026-10-05T15:00:00Z'));
+
+    const user = await db.doc(`users/${UID}`).get();
+    expect(user.get('xpToday')).toBe(missionXp() + PERFECT_BONUS_XP);
+    expect(user.get('dailyGoalDate')).toBe('2026-10-05');
+
+    // Un intento fallido no suma a la meta.
+    const a2 = await startAttempt();
+    await answerAll(a2.attemptId, a2.response.questions, 0);
+    await finishAttempt(a2.attemptId, at('2026-10-05T16:00:00Z'));
+    expect((await db.doc(`users/${UID}`).get()).get('xpToday')).toBe(
+      missionXp() + PERFECT_BONUS_XP,
+    );
+  });
+
+  it('cierra el intento al quedarse sin vidas', async () => {
+    await createProfile();
+    const { attemptId, response } = await startAttempt();
+    for (const q of response.questions.slice(0, MAX_LIVES)) {
+      await answerQuestion(attemptId, q.id, wrongIds(q.id));
+    }
+    const result = await finishAttempt(attemptId);
+    expect(result).toMatchObject({
+      answered: MAX_LIVES,
+      outOfLives: true,
+      abandoned: false,
+      passed: false,
+      stars: 0,
+      xpAwarded: 0,
+    });
     expect(await userXp()).toBe(0);
   });
 
