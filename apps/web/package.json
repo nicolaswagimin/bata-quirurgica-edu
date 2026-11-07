@@ -12,7 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test --grep-invert @emu",
     "test:e2e:emu": "pnpm --filter @bata/api run seed && E2E_WITH_API=1 playwright test --grep @emu",
-    "mediapipe:prepare": "node --import tsx scripts/prepare-mediapipe.ts"
+    "mediapipe:prepare": "node --import tsx scripts/prepare-mediapipe.ts",
+    "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
     "@bata/shared": "workspace:*",
@@ -39,6 +40,7 @@
     "@types/react-dom": "19.3.0",
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "6.1.1",
+    "@vitest/coverage-v8": "5.0.3",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
     "typescript": "6.0.3",

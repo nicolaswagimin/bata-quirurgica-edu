@@ -17,6 +17,7 @@ Todo se corre desde la raíz del proyecto. Node 24 (`.nvmrc`), pnpm 11 (`package
 | Typecheck | `pnpm typecheck` |
 | Lint / formato | `pnpm lint` · `pnpm format` |
 | Unit tests | `pnpm test` · un archivo: `pnpm --filter @bata/api exec vitest run test/unit/base.test.ts` |
+| Cobertura (lcov para SonarQube Cloud) | `pnpm test:coverage` (en CI: `COVERAGE=1 pnpm test`) |
 | Tests con emulador (Java 21) | `pnpm test:emu` |
 | E2E sin emulador | `pnpm test:e2e` · un spec: `pnpm --filter @bata/web exec playwright test e2e/smoke.spec.ts` |
 | E2E con emuladores + API | `pnpm test:e2e:emu` |

@@ -13,7 +13,8 @@
     "publish-questions": "node --env-file-if-exists=.env --import tsx scripts/publish-questions.ts",
     "set-admin": "node --env-file-if-exists=.env --import tsx scripts/set-admin.ts",
     "ingest-kb": "node --env-file-if-exists=.env --import tsx scripts/ingest-kb.ts",
-    "kb-probe": "node --env-file-if-exists=.env --import tsx scripts/kb-probe.ts"
+    "kb-probe": "node --env-file-if-exists=.env --import tsx scripts/kb-probe.ts",
+    "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1146.0",
@@ -29,6 +30,7 @@
     "@firebase/rules-unit-testing": "5.0.2",
     "@types/aws-lambda": "8.10.164",
     "@types/node": "24.19.1",
+    "@vitest/coverage-v8": "5.0.3",
     "firebase": "12.19.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
