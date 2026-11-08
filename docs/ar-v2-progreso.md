@@ -7,7 +7,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 
 | Fase | Estado | Inicio | Cierre | Commits |
 |---|---|---|---|---|
-| 0 · Spec + captura | implementación completa · pendiente el gate de capturas | 2026-11-07 | — | 4f8cbc7 … 5801034 |
+| 0 · Spec + captura | 10 tomas válidas · pendiente la segunda persona | 2026-11-07 | — | 4f8cbc7 … fb28d35 |
 | 1 · Protocolo y pasos | pendiente | — | — | — |
 | 2 · Bata skinned | pendiente | — | — | — |
 | 3 · Dataset | pendiente | — | — | — |
@@ -35,8 +35,27 @@ Compuerta al cerrar la implementación:
 - e2e de AR ✅ (los specs existentes no cambian con las banderas apagadas).
 - `python3 -m unittest discover -s tools/vision` ✅ 11.
 
-**Gate de la fase 0 pendiente**: grabar 10 tomas válidas de 2 personas y validarlas con
-`tools/vision/validate.py`. Hasta entonces la fase no se marca cerrada.
+### 2026-11-07 — Primeras capturas
+
+10 tomas descargadas por el autor y validadas con `tools/vision/validate.py`: **10 válidas, 0 con
+errores**, en `tools/vision/data/` (gitignored). Cubren los seis pasos:
+
+| Paso | Tomas |
+|---|---|
+| `g1-mascarilla` | 2 |
+| `g2-manos` | 2 |
+| `g3-bata` | 1 |
+| `g4-lazos` | 1 |
+| `g5-guantes` | 2 |
+| `g6-solapa` | 2 |
+
+Calidad interna: muñecas visibles en el 100 % de los frames, confianza media 0,69–0,87 y ancho de
+hombros de 54–66 px. Las tomas son de una sola sesión (03:17–03:22 UTC), así que la diversidad de
+personas del gate sigue pendiente; además conviene acercarse un poco para que los hombros ocupen
+más píxeles en la próxima tanda.
+
+**Gate de la fase 0 pendiente**: falta la segunda persona (2–3 tomas bastan) además de estas 10.
+Hasta entonces la fase no se marca cerrada.
 
 ## Cómo se actualiza
 
