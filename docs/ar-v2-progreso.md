@@ -8,7 +8,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 | Fase | Estado | Inicio | Cierre | Commits |
 |---|---|---|---|---|
 | 0 · Spec + captura | cerrada con excepción de diversidad | 2026-11-07 | 2026-11-07 | 4f8cbc7 … c9fe54a |
-| 1 · Protocolo y pasos | pendiente | — | — | — |
+| 1 · Protocolo y pasos | en curso: borrador para el director | 2026-11-07 | — | — |
 | 2 · Bata skinned | pendiente | — | — | — |
 | 3 · Dataset | pendiente | — | — | — |
 | 4 · Modelo | pendiente | — | — | — |
@@ -87,3 +87,19 @@ acciones con el director de tesis es la puerta de esa fase.
 Al cerrar una fase: cambiar su estado en la tabla, anotar la fecha, los commits y la evidencia de la
 puerta de salida (por ejemplo, el número de tomas válidas o los FPS medidos). No se marca una fase
 como cerrada sin su puerta cumplida.
+
+
+### 2026-11-07 — Fase 1 iniciada: borrador de la práctica
+
+- Esquema `ArPracticeFileSchema` en `packages/shared/src/schemas.ts`: pasos con objetivo, acción,
+  qué mirar, sostén, error frecuente, corrección, debrief, voz, nota de simulación y fuente.
+- Contenido borrador en `content/protocolos/ar-practica-v2.json`: **7 pasos** (mascarilla,
+  preparación de manos, tomar la bata, brazos, lazos, guantes, solapa) y **4 decisiones abiertas**
+  para el director.
+- Pruebas: el contenido cumple el esquema, cubre los seis pasos del protocolo (`d1`–`d6`) y el
+  esquema rechaza ids repetidos, órdenes fuera de secuencia y decisiones duplicadas.
+- Documento para revisión: [ar-v2-practica.md](ar-v2-practica.md).
+
+**Gate de la fase 1 pendiente**: el director de tesis debe validar la secuencia y las cuatro
+decisiones. `juegoAr` no cambia hasta entonces; el motor v2 se implementará detrás de
+`?practica=v2` después de la aprobación.
