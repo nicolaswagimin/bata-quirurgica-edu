@@ -22,6 +22,7 @@ import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
 import { type GameInput, GameSession, type GameView, type Scene } from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
+import { GownSprings } from './gown-motion.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
@@ -45,6 +46,8 @@ export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
   onFrame?: ArFrameHook;
   /** Replaces the default v1 GameSession; `?practica=v2` passes PracticeSessionV2. */
   createSession?: (steps: readonly S[], reducedMotion: boolean) => PracticeSessionLike;
+  /** `?bata=vivo`: springs the hem and sleeves with the torso's acceleration. */
+  gownMotion?: boolean;
 };
 
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
@@ -68,6 +71,8 @@ export function useArGame<S extends PracticeStepLike>(
   onFrameRef.current = options.onFrame;
   const createSessionRef = useRef(options.createSession);
   createSessionRef.current = options.createSession;
+  const gownMotionRef = useRef(options.gownMotion);
+  gownMotionRef.current = options.gownMotion;
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
@@ -167,6 +172,8 @@ export function useArGame<S extends PracticeStepLike>(
       const tracker = new ViolationTracker();
       const dwell = new DwellTracker();
       const bodyHold = new BodyHold();
+      const gownSprings = gownMotionRef.current ? new GownSprings() : null;
+      let lastSpringAt = 0;
       const trackQuality = new TrackQuality();
       const canvas = canvasRef.current;
       const renderer = canvas ? new ArRenderer(canvas, readArColors()) : null;
@@ -265,6 +272,13 @@ export function useArGame<S extends PracticeStepLike>(
           // Touch-free buttons: hands over a registered target fill its ring.
           pressTargets(stageRef.current, landmarks, size, targets.current, dwell, now);
 
+          let gownMotion: ReturnType<GownSprings['update']> | null = null;
+          if (gownSprings) {
+            if (liveBody) gownMotion = gownSprings.update(liveBody, now - lastSpringAt, still);
+            else gownSprings.reset();
+            lastSpringAt = now;
+          }
+
           if (renderer) {
             const ms = renderer.draw(video, renderBody, active, {
               scene: flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null,
@@ -272,6 +286,7 @@ export function useArGame<S extends PracticeStepLike>(
               hotspot: hotspotRef.current,
               cursors: !renderBody, // with a body the posture rings already mark the hands
               landmarks,
+              gownMotion,
             });
             renderMs = renderMs * 0.9 + ms * 0.1;
           }

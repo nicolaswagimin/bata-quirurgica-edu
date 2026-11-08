@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import practicaV2Json from '../../../../content/protocolos/ar-practica-v2.json';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
+import { isGownMotionEnabled } from '../ar/gown-motion.ts';
 import {
   type CapturedFrame,
   CaptureRecorder,
@@ -90,6 +91,8 @@ export default function BataArPage() {
 
   // Fase 1: secuencia validada detrás de ?practica=v2. Sin la bandera se juega la v1.
   const [practiceV2Enabled] = useState(() => isPracticeV2Enabled(window.location.search));
+  // Fase 2a: movimiento secundario del ruedo y las mangas con ?bata=vivo.
+  const [gownMotionEnabled] = useState(() => isGownMotionEnabled(window.location.search));
   const practiceSteps = practiceV2Enabled ? practiceV2.steps : steps;
   const createV2Session = useCallback(
     (sessionSteps: readonly PracticeStepLike[], reducedMotion: boolean) =>
@@ -99,6 +102,7 @@ export default function BataArPage() {
   const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, practiceSteps, {
     ...(captureEnabled ? { onFrame } : {}),
     ...(practiceV2Enabled ? { createSession: createV2Session } : {}),
+    ...(gownMotionEnabled ? { gownMotion: true } : {}),
   });
   const { flow, practice, status, quality } = game;
   const phase = flow.phase;

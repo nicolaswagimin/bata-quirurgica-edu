@@ -2,6 +2,7 @@
 // the posture guides and the hand cursors.
 import type { Scene } from './game-steps.ts';
 import { type GownMesh, gownMesh } from './gown-mesh.ts';
+import type { GownMotion } from './gown-motion.ts';
 import { createGownTextures, drawGownMesh, type GownTextures } from './gown-render.ts';
 import { hangingFrame, lerpMesh, sleeveOpenings } from './hanging-gown.ts';
 import { HAND_LANDMARKS } from './hover-targets.ts';
@@ -52,6 +53,8 @@ export interface DrawOptions {
   cursors: boolean;
   landmarks: readonly Landmark[];
   reducedMotion: boolean;
+  /** Movimiento secundario del ruedo y las mangas; null/undefined deja la malla quieta. */
+  gownMotion?: GownMotion | null;
 }
 
 type Ctx = CanvasRenderingContext2D;
@@ -83,7 +86,14 @@ export class ArRenderer {
       if (scene.gown === 'worn' && scene.ties === 'tying') {
         drawCirculante(ctx, body, scene.tieT, this.colors, 'behind'); // the gown hides it
       }
-      const worn = this.drawGown(ctx, body, scene, options.hotspot, options.reducedMotion);
+      const worn = this.drawGown(
+        ctx,
+        body,
+        scene,
+        options.hotspot,
+        options.reducedMotion,
+        options.gownMotion,
+      );
       if (worn) this.drawLateScene(ctx, body, worn, options);
       if (scene.gown === 'worn' && scene.ties === 'tying') {
         drawCirculante(ctx, body, scene.tieT, this.colors, 'ghost'); // where the hands are
@@ -101,17 +111,19 @@ export class ArRenderer {
     scene: Scene,
     hotspot: string | null,
     still: boolean,
+    motion?: GownMotion | null,
   ): GownMesh | null {
     const textures = this.textures;
     if (!textures || scene.gown === 'hidden') return null;
     const bob = still ? 0 : Math.sin(performance.now() / 700) * body.torsoHeight * 0.015;
     const hanging = hangingFrame(body, bob);
+    const worn = gownMesh(body, motion ?? undefined);
     const mesh =
       scene.gown === 'hanging'
         ? gownMesh(hanging)
         : scene.gown === 'donning'
-          ? lerpMesh(gownMesh(hanging), gownMesh(body), scene.gownT)
-          : gownMesh(body);
+          ? lerpMesh(gownMesh(hanging), worn, scene.gownT)
+          : worn;
     const spot = scene.gown === 'worn' ? hotspot : null;
     drawGownMesh(ctx, mesh, textures, this.colors, body.shoulderWidth, spot);
     if (scene.gown === 'worn') return mesh;
