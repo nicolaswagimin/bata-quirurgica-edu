@@ -23,7 +23,7 @@ import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
 import { GameSession, type GameView, type Scene } from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
 import { DwellTracker } from './hover-targets.ts';
-import { FpsMonitor } from './overlay-math.ts';
+import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
 import {
   bodyFrame,
@@ -34,6 +34,15 @@ import {
 } from './posture.ts';
 import { pressTargets, type TargetMap } from './press-targets.ts';
 import { syntheticPose } from './synthetic-pose.ts';
+
+/** Called with the raw pose of every processed frame; used by the dev-only capture mode. */
+export type ArFrameHook = (
+  landmarks: readonly Landmark[],
+  size: FrameSize,
+  now: number,
+) => void;
+
+export type ArGameOptions = { onFrame?: ArFrameHook };
 
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
 
@@ -48,7 +57,12 @@ export function useArGame(
   stageRef: RefObject<HTMLElement | null>,
   hotspotRef: RefObject<string | null>,
   steps: readonly ArGameStep[],
+  options: ArGameOptions = {},
 ) {
+  // A ref keeps the hook out of the effect dependencies: passing a new callback never restarts the
+  // camera and the pose model.
+  const onFrameRef = useRef(options.onFrame);
+  onFrameRef.current = options.onFrame;
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
@@ -184,6 +198,7 @@ export function useArGame(
           const raw = simulate ? syntheticPose(now, simulate) : (result.landmarks[0] ?? []);
           const landmarks = smoother.smooth(raw);
           const size = { width: video.videoWidth, height: video.videoHeight };
+          onFrameRef.current?.(raw, size, now);
           const liveBody = bodyFrame(landmarks, size);
           // Brief dropouts keep the last body on screen; the rules still use the live one.
           const renderBody = bodyHold.update(liveBody, now);
