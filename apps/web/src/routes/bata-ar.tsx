@@ -1,12 +1,16 @@
-import type { CaptureTake, FeatureFrame } from '@bata/shared/perception';
+import type { CaptureTake } from '@bata/shared/perception';
 import { BataPasosSchema } from '@bata/shared/schemas';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
-import { CaptureRecorder, isCaptureEnabled } from '../ar/perception/capture.ts';
+import {
+  type CapturedFrame,
+  CaptureRecorder,
+  captureFrame,
+  isCaptureEnabled,
+} from '../ar/perception/capture.ts';
 import { CapturePanel } from '../ar/perception/capture-panel.tsx';
-import { extractFeatures } from '../ar/perception/features.ts';
 import { type ArFrameHook, type ArStatus, useArGame } from '../ar/use-ar-game.ts';
 import { ArBodyGuide } from '../components/ar-body-guide.tsx';
 import { ArHoverButton, ArTargetsContext } from '../components/ar-hover-button.tsx';
@@ -51,25 +55,18 @@ export default function BataArPage() {
   if (captureEnabled && !recorderRef.current) recorderRef.current = new CaptureRecorder();
   const recorder = recorderRef.current;
   const [takes, setTakes] = useState<CaptureTake[]>([]);
-  const lastFrame = useRef<{ frame: FeatureFrame; at: number } | null>(null);
+  const lastFrame = useRef<CapturedFrame | null>(null);
 
   const onFrame = useCallback<ArFrameHook>(
     (landmarks, size, now) => {
-      if (!recorder?.isRecording()) {
-        lastFrame.current = null;
-        return;
-      }
-      const previous = lastFrame.current;
-      const frame = extractFeatures({
+      if (!recorder) return;
+      lastFrame.current = captureFrame({
+        recorder,
         landmarks,
         size,
-        t: recorder.elapsed(now),
-        dtMs: previous ? now - previous.at : undefined,
-        previous: previous?.frame ?? null,
+        now,
+        previous: lastFrame.current,
       });
-      if (!frame) return;
-      recorder.push(frame, now);
-      lastFrame.current = { frame, at: now };
     },
     [recorder],
   );

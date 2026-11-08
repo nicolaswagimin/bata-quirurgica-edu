@@ -2,6 +2,8 @@
 // que el panel la descargue como JSON. Nunca toca video, imágenes ni la red. La bandera solo puede
 // activarse en desarrollo: `isCaptureEnabled` exige `dev` y `?captura=1`.
 import { type CaptureTake, type FeatureFrame, PERCEPTION_VERSION } from '@bata/shared/perception';
+import type { FrameSize, Landmark } from '../overlay-math.ts';
+import { extractFeatures } from './features.ts';
 
 /** ~15 Hz: suficiente para features temporales y ligero para descargar a mano. */
 export const CAPTURE_SAMPLE_MS = 66;
@@ -79,4 +81,34 @@ export class CaptureRecorder {
   get frameCount(): number {
     return this.frames.length;
   }
+}
+
+export type CapturedFrame = { frame: FeatureFrame; at: number };
+
+export type CaptureFrameInput = {
+  recorder: CaptureRecorder;
+  landmarks: readonly Landmark[];
+  size: FrameSize;
+  now: number;
+  /** Último frame guardado, para calcular la velocidad contra él y no contra cada detección. */
+  previous: CapturedFrame | null;
+};
+
+/**
+ * Converts one pose detection into a stored feature frame when it is due. Returns the previous
+ * reference while the sample is skipped, so the next velocity is measured between stored frames.
+ */
+export function captureFrame(input: CaptureFrameInput): CapturedFrame | null {
+  const { recorder, landmarks, size, now, previous } = input;
+  if (!recorder.isRecording()) return null;
+  const frame = extractFeatures({
+    landmarks,
+    size,
+    t: recorder.elapsed(now),
+    dtMs: previous ? now - previous.at : undefined,
+    previous: previous?.frame ?? null,
+  });
+  if (!frame) return null;
+  if (!recorder.push(frame, now)) return previous;
+  return { frame, at: now };
 }

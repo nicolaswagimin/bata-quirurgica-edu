@@ -1,8 +1,10 @@
 import { BODY_POINT_COUNT, CaptureTakeSchema } from '@bata/shared/perception';
 import { describe, expect, it } from 'vitest';
+import type { Landmark } from '../../src/ar/overlay-math.ts';
 import {
   CAPTURE_SAMPLE_MS,
   CaptureRecorder,
+  captureFrame,
   isCaptureEnabled,
   MIN_TAKE_FRAMES,
 } from '../../src/ar/perception/capture.ts';
@@ -95,5 +97,92 @@ describe('CaptureRecorder', () => {
     expect(recorder.frameCount).toBe(0);
     expect(recorder.isRecording()).toBe(false);
     expect(recorder.elapsed(100)).toBe(0);
+  });
+});
+
+const SIZE = { width: 1000, height: 1000 };
+
+function pose(wristX = 0.6): Landmark[] {
+  const out: Landmark[] = Array.from({ length: 33 }, () => ({
+    x: 0,
+    y: 0,
+    z: 0,
+    visibility: 0,
+  }));
+  const set = (i: number, x: number, y: number) => {
+    out[i] = { x, y, z: -0.1, visibility: 0.95 };
+  };
+  set(0, 0.5, 0.17);
+  set(11, 0.6, 0.3);
+  set(12, 0.4, 0.3);
+  set(13, 0.64, 0.45);
+  set(14, 0.36, 0.45);
+  set(15, wristX, 0.42);
+  set(16, 0.4, 0.42);
+  set(23, 0.58, 0.6);
+  set(24, 0.42, 0.6);
+  return out;
+}
+
+function hide(landmarks: Landmark[], indices: number[]): Landmark[] {
+  return landmarks.map((landmark, i) =>
+    indices.includes(i) ? { ...landmark, visibility: 0 } : landmark,
+  );
+}
+
+describe('captureFrame', () => {
+  it('guarda el primer frame y mide la velocidad contra el último guardado', () => {
+    const recorder = new CaptureRecorder();
+    recorder.start('g3-bata', 0);
+    const first = captureFrame({
+      recorder,
+      landmarks: pose(0.6),
+      size: SIZE,
+      now: 0,
+      previous: null,
+    });
+    expect(first?.frame.t).toBe(0);
+    expect(recorder.frameCount).toBe(1);
+
+    // 33 ms después no toca muestrear: la referencia no cambia.
+    const skipped = captureFrame({
+      recorder,
+      landmarks: pose(0.62),
+      size: SIZE,
+      now: 33,
+      previous: first,
+    });
+    expect(skipped).toBe(first);
+    expect(recorder.frameCount).toBe(1);
+
+    const second = captureFrame({
+      recorder,
+      landmarks: pose(0.65),
+      size: SIZE,
+      now: 70,
+      previous: skipped,
+    });
+    expect(second).not.toBe(first);
+    expect(recorder.frameCount).toBe(2);
+    expect(second?.frame.t).toBe(70);
+    expect(second?.frame.velocities[5]?.x).not.toBe(0);
+  });
+
+  it('devuelve null cuando no se graba o no hay torso', () => {
+    const recorder = new CaptureRecorder();
+    expect(
+      captureFrame({ recorder, landmarks: pose(), size: SIZE, now: 0, previous: null }),
+    ).toBeNull();
+
+    recorder.start('g3-bata', 0);
+    expect(
+      captureFrame({
+        recorder,
+        landmarks: hide(pose(), [23]),
+        size: SIZE,
+        now: 0,
+        previous: null,
+      }),
+    ).toBeNull();
   });
 });
