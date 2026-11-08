@@ -71,6 +71,14 @@ export interface GameInput {
 }
 
 const ruleFor = (id: string) => STEP_RULES.find((r) => r.id === id);
+const NO_BODY_HINT = 'Colócate de frente a la cámara, con hombros y caderas visibles';
+const FIX_WARNING_HINT = 'Corrige el aviso para seguir';
+
+/**
+ * A single noisy frame must not wipe the hold the player has been building. The hold freezes for
+ * this long before it resets, so tracking flicker pauses the step instead of restarting it.
+ */
+export const HOLD_GRACE_MS = 350;
 
 export class GameSession {
   private index = 0;
@@ -82,6 +90,8 @@ export class GameSession {
   private lastWrists: [Vec | null, Vec | null] = [null, null];
   private lastT = 0;
   private still = false;
+  private missStart: number | null = null;
+  private lastHold = 0;
 
   constructor(
     private readonly steps: readonly ArGameStep[],
@@ -94,8 +104,9 @@ export class GameSession {
     this.trackStillness(input);
     if (!step) return this.view(1, '');
     if (!input.body) {
+      if (this.paused(input.now)) return this.view(this.lastHold, NO_BODY_HINT);
       this.holdStart = null;
-      return this.view(0, 'Colócate de frente a la cámara, con hombros y caderas visibles');
+      return this.view(0, NO_BODY_HINT);
     }
     // The gown hangs as soon as its step starts, even while a warning is still being corrected.
     if (step.id === 'g3-bata' && this.scene.gown === 'hidden') {
@@ -103,15 +114,18 @@ export class GameSession {
     }
     const warningsOn = this.index > 0;
     if (warningsOn && input.violations.size > 0) {
+      if (this.paused(input.now)) return this.view(this.lastHold, FIX_WARNING_HINT);
       this.holdStart = null;
-      return this.view(0, 'Corrige el aviso para seguir');
+      return this.view(0, FIX_WARNING_HINT);
     }
     const result = this.check(step, input);
     if (!result.ok) {
+      if (this.paused(input.now)) return this.view(this.lastHold, result.hint);
       this.holdStart = null;
       result.onProgress?.(0);
       return this.view(0, result.hint);
     }
+    this.missStart = null;
     this.holdStart ??= input.now;
     const hold = Math.min(1, (input.now - this.holdStart) / result.holdMs);
     result.onProgress?.(hold);
@@ -272,6 +286,12 @@ export class GameSession {
     this.lastT = now;
   }
 
+  /** True while a miss is recent enough to freeze the hold instead of resetting it. */
+  private paused(now: number): boolean {
+    this.missStart ??= now;
+    return now - this.missStart < HOLD_GRACE_MS;
+  }
+
   private advance(id: string) {
     this.completed.push(id);
     this.index += 1;
@@ -282,6 +302,7 @@ export class GameSession {
   }
 
   private view(hold: number, hint: string): GameView {
+    this.lastHold = hold;
     return {
       stepIndex: this.index,
       hold,

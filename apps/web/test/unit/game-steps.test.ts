@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BataPasosSchema } from '@bata/shared/schemas';
 import { describe, expect, it } from 'vitest';
-import { DON_MS, GameSession, GLOVE_MS, TIE_MS } from '../../src/ar/game-steps.ts';
+import { DON_MS, GameSession, GLOVE_MS, HOLD_GRACE_MS, TIE_MS } from '../../src/ar/game-steps.ts';
 import { scoreFor } from '../../src/ar/game-view.ts';
 import { gownMesh } from '../../src/ar/gown-mesh.ts';
 import { hangingFrame, lerpMesh, sleeveOpenings } from '../../src/ar/hanging-gown.ts';
@@ -160,13 +160,28 @@ describe('GameSession', () => {
     expect(view.exempt).toEqual(['axilas']);
   });
 
-  it('a warning from step 2 on resets the hold', () => {
+  it('a warning from step 2 on pauses the hold, then resets it', () => {
     const s = new GameSession(steps, true);
     feed(s, pose(HANDS_AT_FACE), 0, 700);
     feed(s, pose(), 800, 1000);
-    const view = feed(s, pose(), 1900, 100, new Set<Violation>(['bajo-cintura']));
-    expect(view.hold).toBe(0);
-    expect(view.hint).toBe('Corrige el aviso para seguir');
+    const warning = new Set<Violation>(['bajo-cintura']);
+    // One noisy frame freezes the hold instead of wiping it.
+    const paused = feed(s, pose(), 1900, 100, warning);
+    expect(paused.hint).toBe('Corrige el aviso para seguir');
+    expect(paused.hold).toBeGreaterThan(0);
+    // Once the miss outlasts the grace window, the hold restarts.
+    const reset = feed(s, pose(), 2000, HOLD_GRACE_MS + 100, warning);
+    expect(reset.hold).toBe(0);
+  });
+
+  it('a single noisy frame does not wipe the hold', () => {
+    const s = new GameSession(steps, true);
+    feed(s, pose(HANDS_AT_FACE), 0, 700);
+    feed(s, pose(), 800, 1000);
+    const noise = feed(s, pose({ 15: [0.1, 0.9], 16: [0.1, 0.9] }), 1900, 50);
+    expect(noise.hold).toBeGreaterThan(0);
+    const back = feed(s, pose(), 2000, 200);
+    expect(back.hold).toBeGreaterThan(noise.hold);
   });
 });
 
@@ -201,17 +216,33 @@ describe('GameSession, late steps', () => {
     let view = feed(s, pose(), t, 1000);
     expect(view.scene.ties).toBe('tying');
     expect(view.scene.tieT).toBeGreaterThan(0.2);
-    // A big wrist movement means "not still": the tying restarts.
+    // A big wrist movement means "not still": it pauses the tying, then restarts it.
     t += 1050;
+    const moving = pose({ 15: [0.62, 0.42, -0.1] });
     view = s.update({
-      body: bodyFrame(pose({ 15: [0.62, 0.42, -0.1] }), SIZE),
-      landmarks: pose({ 15: [0.62, 0.42, -0.1] }),
+      body: bodyFrame(moving, SIZE),
+      landmarks: moving,
       size: SIZE,
       violations: new Set(),
       now: t,
     });
+    expect(view.scene.tieT).toBeGreaterThan(0);
+    // Keep the wrist moving through and past the grace window: the tying resets.
+    let moved = t;
+    for (let i = 0; i < 10; i++) {
+      moved += 50;
+      const p = pose({ 15: [i % 2 === 0 ? 0.61 : 0.57, 0.42, -0.1] });
+      view = s.update({
+        body: bodyFrame(p, SIZE),
+        landmarks: p,
+        size: SIZE,
+        violations: new Set(),
+        now: moved,
+      });
+    }
     expect(view.scene.tieT).toBe(0);
-    view = feed(s, pose(), t + 100, TIE_MS + 200);
+
+    view = feed(s, pose(), moved + 50, TIE_MS + 200);
     expect(view.scene.ties).toBe('tied');
     expect(view.completedIds).toContain('g4-lazos');
   });
