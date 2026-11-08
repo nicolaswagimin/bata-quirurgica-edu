@@ -2,6 +2,7 @@ import { BataPasosSchema } from '@bata/shared/schemas';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
+import { QUALITY_HINTS } from '../ar/camera-quality.ts';
 import { type ArStatus, useArGame } from '../ar/use-ar-game.ts';
 import { ArBodyGuide } from '../components/ar-body-guide.tsx';
 import { ArHoverButton, ArTargetsContext } from '../components/ar-hover-button.tsx';
@@ -23,6 +24,12 @@ const STATUS_TEXT: Record<ArStatus, string> = {
 const GUIDE = 'Colócate de frente a la cámara, con hombros y caderas visibles';
 const chip = 'rounded-pill bg-ink/60 px-3 py-1.5 text-xs font-bold text-bg backdrop-blur-sm';
 
+/** Short label for the quality chip; the score is only shown in the tooltip of the hint. */
+function qualityLabel(score: number): string {
+  if (score >= 80) return 'buena';
+  return score >= 55 ? 'regular' : 'baja';
+}
+
 export default function BataArPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,8 +39,13 @@ export default function BataArPage() {
   hotspotRef.current = hotspotId;
   const navigate = useNavigate();
   const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, steps);
-  const { flow, practice, status } = game;
+  const { flow, practice, status, quality } = game;
   const phase = flow.phase;
+  // Pose and speed already have their own guidance; the hint is for camera problems only.
+  const cameraHint =
+    quality?.primary && quality.primary !== 'pose' && quality.primary !== 'lento'
+      ? QUALITY_HINTS[quality.primary]
+      : null;
   const current = practice && !practice.done ? steps[practice.stepIndex] : null;
 
   const instruction =
@@ -123,6 +135,11 @@ export default function BataArPage() {
                   </span>
                 </p>
               ) : null}
+              {quality ? (
+                <p data-testid="ar-quality" className={chip}>
+                  Cámara {qualityLabel(quality.score)}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col items-end gap-3">
               <div className="pointer-events-auto flex gap-2">
@@ -166,6 +183,14 @@ export default function BataArPage() {
         {/* Landscape: a left column, so the centred body stays clear. */}
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] landscape:right-auto landscape:w-[38%] landscape:items-start landscape:md:w-[34%]">
           {phase === 'playing' ? <ArWarnings violations={game.violations} /> : null}
+          {cameraHint && !game.lowPerformance && phase !== 'done' ? (
+            <p
+              role="status"
+              className="max-w-md rounded-card bg-ink/70 px-4 py-2 text-center text-sm font-bold text-bg backdrop-blur-sm"
+            >
+              {cameraHint}
+            </p>
+          ) : null}
           {/* Instruction low, over the legs: the head stays visible for the mask. */}
           {phase !== 'done' ? (
             <ArInstruction
