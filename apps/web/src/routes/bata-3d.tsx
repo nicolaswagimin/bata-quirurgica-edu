@@ -1,14 +1,13 @@
 import { BataPasosSchema } from '@bata/shared/schemas';
 import { Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { pageTitle } from '../components/ui-classes.ts';
-import { VideoClip } from '../components/video-clip.tsx';
-import { VIDEOS } from '../lib/videos.ts';
 import { Mannequin } from '../three/mannequin.tsx';
 import { ModelBoundary } from '../three/model-boundary.tsx';
-import { StepModels } from '../three/step-models.tsx';
-import { buildTimeline, stepModelUrl, type TimelineMode } from '../three/steps.ts';
+import { CHAPTER_SECONDS } from '../three/procedure.ts';
+import { ProcedureViewer } from '../three/procedure-viewer.tsx';
+import { buildTimeline, type TimelineMode } from '../three/steps.ts';
 
 const pasos = BataPasosSchema.parse(pasosJson);
 const timelines = {
@@ -19,6 +18,26 @@ const TABS: { mode: TimelineMode; label: string }[] = [
   { mode: 'donning', label: 'Colocación' },
   { mode: 'doffing', label: 'Retiro' },
 ];
+
+// The film gives closed gloving 24 seconds; the interactive model uses six per step.
+const filmBoundaries = [0, 6, 12, 18, 24, 48, 54, 60, 66, 72, 78];
+const total = filmBoundaries[filmBoundaries.length - 1]!;
+function chapterAt(seconds: number) {
+  const next = filmBoundaries.findIndex((boundary) => boundary > seconds);
+  return next < 0 ? filmBoundaries.length - 2 : Math.max(0, next - 1);
+}
+function toModelTime(seconds: number) {
+  const i = chapterAt(seconds);
+  const start = filmBoundaries[i]!;
+  return (i + (seconds - start) / (filmBoundaries[i + 1]! - start)) * CHAPTER_SECONDS;
+}
+function toFilmTime(seconds: number) {
+  const i = Math.min(Math.floor(seconds / CHAPTER_SECONDS), filmBoundaries.length - 2);
+  return (
+    filmBoundaries[i]! +
+    (seconds / CHAPTER_SECONDS - i) * (filmBoundaries[i + 1]! - filmBoundaries[i]!)
+  );
+}
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -38,8 +57,32 @@ const buttonClass =
 
 export default function Bata3dPage() {
   const reducedMotion = usePrefersReducedMotion();
-  const [mode, setMode] = useState<TimelineMode>('donning');
-  const [index, setIndex] = useState(0);
+  const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(!reducedMotion);
+  const [interactive, setInteractive] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
+  function seek(seconds: number) {
+    if (video.current) video.current.currentTime = seconds;
+    setTime(seconds);
+  }
+  useEffect(() => {
+    const player = video.current;
+    if (interactive || !player) return;
+    if (playing)
+      void player.play().catch(() => {
+        if (player.paused) setPlaying(false);
+      });
+    else player.pause();
+  }, [playing, interactive]);
+  const chapter = chapterAt(time);
+  const mode: TimelineMode = chapter < timelines.donning.length ? 'donning' : 'doffing';
+  const index = mode === 'donning' ? chapter : chapter - timelines.donning.length;
+  useEffect(() => {
+    if (reducedMotion) setPlaying(false);
+  }, [reducedMotion]);
+  function selectStep(phase: TimelineMode, i: number) {
+    seek(filmBoundaries[(phase === 'doffing' ? timelines.donning.length : 0) + i]!);
+  }
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   const [shownModel, setShownModel] = useState('');
 
@@ -51,7 +94,6 @@ export default function Bata3dPage() {
 
   if (!step) return null;
 
-  const modelUrl = stepModelUrl(mode, step.order);
   const mannequin = (
     <Mannequin
       label={`Maniquí 3D con la bata quirúrgica. ${tabLabel}, paso ${index + 1}: ${step.title}`}
@@ -63,8 +105,7 @@ export default function Bata3dPage() {
   );
 
   const selectMode = (next: TimelineMode) => {
-    setMode(next);
-    setIndex(0);
+    selectStep(next, 0);
   };
 
   return (
@@ -95,23 +136,87 @@ export default function Bata3dPage() {
         <div
           data-testid="bata-3d"
           data-animate={reducedMotion ? 'false' : 'true'}
-          data-model={modelUrl ? shownModel : ''}
+          data-model={shownModel}
           className="overflow-hidden rounded-card bg-surface shadow-sheet"
         >
-          {modelUrl ? (
+          {interactive ? (
             <ModelBoundary fallback={mannequin}>
-              <StepModels
-                label={`Persona en 3D con la bata quirúrgica. ${tabLabel}, paso ${index + 1}: ${step.title}`}
-                order={step.order}
-                animate={!reducedMotion}
+              <ProcedureViewer
+                label={`Procedimiento 3D. ${tabLabel}, paso ${index + 1}: ${step.title}`}
+                time={toModelTime(time)}
+                playing={playing && time < total}
+                onTime={(seconds) => setTime(toFilmTime(seconds))}
                 hotspotIds={step.hotspotIds}
                 activeHotspotId={hotspotId}
                 onShown={setShownModel}
               />
             </ModelBoundary>
           ) : (
-            mannequin
+            <video
+              ref={video}
+              muted
+              playsInline
+              preload="auto"
+              className="h-96 w-full bg-surface object-contain sm:h-[32rem]"
+              aria-label="Demostración de colocación y retiro"
+              src="/videos/procedimiento-ppe.mp4"
+              onLoadedMetadata={(e) => {
+                e.currentTarget.currentTime = time;
+              }}
+              onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+              onEnded={() => {
+                setTime(total);
+                setPlaying(false);
+              }}
+            >
+              <track
+                kind="captions"
+                src="/videos/procedimiento-ppe.vtt"
+                srcLang="es"
+                label="Español"
+                default
+              />
+            </video>
           )}
+          <div className="flex flex-wrap items-center gap-3 px-4 pb-3">
+            <button
+              type="button"
+              className={buttonClass}
+              onClick={() => {
+                if (time >= total) {
+                  seek(0);
+                  setPlaying(true);
+                } else setPlaying(!playing);
+              }}
+            >
+              {time >= total ? 'Repetir procedimiento' : playing ? 'Pausar' : 'Reproducir'}
+            </button>
+            <button
+              type="button"
+              className={buttonClass}
+              onClick={() => setInteractive(!interactive)}
+            >
+              {interactive ? 'Ver demostración' : 'Explorar en 3D'}
+            </button>
+            <label className="flex min-w-40 flex-1 flex-col gap-1 text-sm text-muted">
+              Recorrer el procedimiento
+              <input
+                type="range"
+                min={0}
+                max={total}
+                step={0.1}
+                value={time}
+                aria-valuetext={`${Math.floor(time)} segundos, ${tabLabel}, paso ${index + 1}`}
+                onChange={(e) => {
+                  setPlaying(false);
+                  seek(Number(e.target.value));
+                }}
+              />
+            </label>
+            <span className="font-mono text-sm tabular-nums">
+              {Math.floor(time)} / {total} s
+            </span>
+          </div>
         </div>
 
         <section aria-labelledby="pasos-titulo" className="flex flex-col gap-3">
@@ -124,7 +229,7 @@ export default function Bata3dPage() {
                 <button
                   type="button"
                   aria-current={i === index ? 'step' : undefined}
-                  onClick={() => setIndex(i)}
+                  onClick={() => selectStep(mode, i)}
                   className={`min-h-11 w-full rounded-card px-3 py-2 text-left text-sm ${
                     i === index ? 'bg-primary-soft font-bold' : 'hover:bg-surface'
                   }`}
@@ -137,7 +242,7 @@ export default function Bata3dPage() {
         </section>
       </div>
 
-      <div className="grid gap-4 rounded-card bg-surface p-4 lg:grid-cols-[1fr_minmax(0,28rem)] lg:items-start">
+      <div className="grid gap-4 rounded-card bg-surface p-4">
         <div className="flex flex-col gap-2">
           <p aria-live="polite" data-testid="paso-actual" className="text-lg font-extrabold">
             Paso {index + 1} de {steps.length}: {step.title}
@@ -152,7 +257,7 @@ export default function Bata3dPage() {
               type="button"
               className={buttonClass}
               disabled={index === 0}
-              onClick={() => setIndex(index - 1)}
+              onClick={() => selectStep(mode, index - 1)}
             >
               Anterior
             </button>
@@ -160,15 +265,12 @@ export default function Bata3dPage() {
               type="button"
               className={buttonClass}
               disabled={index === steps.length - 1}
-              onClick={() => setIndex(index + 1)}
+              onClick={() => selectStep(mode, index + 1)}
             >
               Siguiente
             </button>
           </div>
         </div>
-        {mode === 'donning' && VIDEOS[`paso-${step.order}`] ? (
-          <VideoClip key={step.id} id={`paso-${step.order}`} />
-        ) : null}
       </div>
 
       <section aria-labelledby="zonas-titulo" className="flex flex-col gap-2">
@@ -199,9 +301,6 @@ export default function Bata3dPage() {
       </section>
 
       <p className="text-sm text-muted">
-        {mode === 'doffing'
-          ? 'Las poses de retiro están en desarrollo: por ahora se muestra el maniquí provisional. '
-          : ''}
         Ver{' '}
         <Link to="/creditos" className="text-primary underline hover:text-primary-strong">
           créditos

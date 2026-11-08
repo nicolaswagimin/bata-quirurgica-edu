@@ -103,11 +103,23 @@ def setup_render(samples=96, res=(720, 1080)):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     prefs = bpy.context.preferences.addons["cycles"].preferences
-    prefs.compute_device_type = "METAL"
+    # `compute_device_type` only accepts the backends this build supports for the current OS
+    # (METAL is macOS only, HIP and ONEAPI on Windows/Linux), and its enum is populated at
+    # runtime, so it cannot be introspected up front. Scan once with a neutral backend, then
+    # pick the fastest backend that actually reported a device and fall back to CPU otherwise.
+    prefs.compute_device_type = "NONE"
+    prefs.get_devices()
+    available = {device.type for device in prefs.devices}
+    backend = next(
+        (name for name in ("METAL", "OPTIX", "CUDA", "HIP", "ONEAPI") if name in available),
+        "NONE",
+    )
+    prefs.compute_device_type = backend
     prefs.get_devices()
     for device in prefs.devices:
         device.use = True
-    scene.cycles.device = "GPU"
+    scene.cycles.device = "GPU" if backend != "NONE" and prefs.devices else "CPU"
+    print("RENDER backend", backend, "device", scene.cycles.device)
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.render.resolution_x, scene.render.resolution_y = res
