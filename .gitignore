@@ -32,6 +32,13 @@ content/kb/pdfs/
 .DS_Store
 *.log
 
+# Python bytecode from the asset and vision tooling
+__pycache__/
+
+# AR v2 landmark captures (privacy: they stay on the machine that recorded them)
+tools/vision/data/*
+!tools/vision/data/.gitkeep
+
 # Blender profile and intermediate renders of the 3D asset pipeline
 tools/bata-3d/.work/
 
