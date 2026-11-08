@@ -20,7 +20,7 @@ async function openBata3d(page: Page): Promise<void> {
 test('@emu modo 3D: pasos, navegación, retiro y zonas', async ({ page }) => {
   await openBata3d(page);
   const container = page.getByTestId('bata-3d');
-  await expect(container.locator('canvas')).toBeVisible();
+  await expect(container.locator('video')).toBeVisible();
   await expect(container).toHaveAttribute('data-animate', 'true');
 
   const donning = byOrder(pasos.donning);
@@ -44,7 +44,7 @@ test('@emu modo 3D: pasos, navegación, retiro y zonas', async ({ page }) => {
   await expect(page.getByText(zone?.description ?? '-')).toBeVisible();
 });
 
-test('@emu colocación carga un modelo por paso desde el propio origen; retiro avisa', async ({
+test('@emu carga el procedimiento desde el propio origen y permite recorrer colocación y retiro', async ({
   page,
   baseURL,
 }) => {
@@ -52,17 +52,24 @@ test('@emu colocación carga un modelo por paso desde el propio origen; retiro a
   page.on('request', (r) => requests.push(r.url()));
   await openBata3d(page);
   const container = page.getByTestId('bata-3d');
-  await expect(container).toHaveAttribute('data-model', '/models/paso-1.glb', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Explorar en 3D' }).click();
+  await expect(container).toHaveAttribute('data-model', '/models/paso-1-anim.glb', {
+    timeout: 30_000,
+  });
   await page.getByRole('button', { name: 'Siguiente' }).click();
-  await expect(container).toHaveAttribute('data-model', '/models/paso-2.glb', { timeout: 30_000 });
+  await expect(container).toHaveAttribute('data-model', '/models/paso-1-anim.glb', {
+    timeout: 30_000,
+  });
 
   const assets = requests.filter((u) => /\/(models|draco)\//.test(u));
   expect(assets.length).toBeGreaterThan(0);
   for (const url of assets) expect(url.startsWith(baseURL ?? '')).toBe(true);
 
   await page.getByRole('tab', { name: 'Retiro' }).click();
-  await expect(page.getByText('Las poses de retiro están en desarrollo')).toBeVisible();
-  await expect(container).toHaveAttribute('data-model', '');
+  await expect(page.getByTestId('paso-actual')).toContainText(pasos.doffing[0]?.title ?? '');
+  await expect(container).toHaveAttribute('data-model', '/models/paso-1-anim.glb');
+  await page.getByRole('button', { name: 'Pausar' }).click();
+  await expect(page.getByRole('button', { name: 'Reproducir' })).toBeVisible();
 });
 
 test('@emu modo 3D sin animación con prefers-reduced-motion', async ({ page }) => {

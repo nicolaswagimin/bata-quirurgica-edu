@@ -18,7 +18,7 @@ const STEP_HOTSPOTS: Record<number, Record<string, Vec3>> = {
 };
 
 // Step 2's gown would hide the figure holding it, and step 4 happens behind her: both turn to show it.
-const STEP_YAW: Record<number, number> = { 2: Math.PI * 0.3, 4: Math.PI * 0.85 };
+const STEP_YAW: Record<number, number> = { 2: Math.PI * 0.3, 4: Math.PI * 0.68 };
 
 // Bounce light colour of the scene, not a UI colour, so it does not belong in the design tokens.
 const GROUND_LIGHT = 0x8a8f90;
@@ -83,7 +83,6 @@ function Scene({
   }, []);
 
   const positions = STEP_HOTSPOTS[order] ?? {};
-  const yaw = STEP_YAW[order] ?? 0;
   return (
     <>
       <StudioEnvironment />
@@ -102,31 +101,31 @@ function Scene({
             onReady={handleReady}
             onShown={onShown}
             onHidden={handleHidden}
-          />
+          >
+            {layer.url === shown &&
+              layer.url === url &&
+              hotspotIds.map((id) => {
+                const position = positions[id];
+                if (!position) return null;
+                return (
+                  <Html key={id} position={position} center zIndexRange={[10, 0]}>
+                    <span
+                      aria-hidden="true"
+                      className={`block size-4 rounded-pill border-2 border-bg ${id === activeHotspotId ? 'bg-seal' : 'bg-primary'}`}
+                    />
+                  </Html>
+                );
+              })}
+          </ModelLayer>
         </Suspense>
       ))}
-
-      <group rotation={[0, yaw, 0]}>
-        {hotspotIds.map((id) => {
-          const position = positions[id];
-          if (!position) return null;
-          return (
-            <Html key={id} position={position} center zIndexRange={[10, 0]}>
-              <span
-                aria-hidden="true"
-                className={`block size-4 rounded-pill border-2 border-bg ${id === activeHotspotId ? 'bg-seal' : 'bg-primary'}`}
-              />
-            </Html>
-          );
-        })}
-      </group>
 
       <OrbitControls enablePan={false} enableZoom={false} target={[0, 0.92, 0]} />
     </>
   );
 }
 
-// Donning steps: a static, realistic model per step with a crossfade between them.
+// Donning steps: an animated model per step with a crossfade between them.
 export function StepModels({ label, ...scene }: StepModelsProps) {
   return (
     <div role="img" aria-label={label} className="h-80 w-full sm:h-[28rem]">

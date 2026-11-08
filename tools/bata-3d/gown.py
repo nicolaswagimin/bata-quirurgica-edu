@@ -7,8 +7,8 @@ import bmesh
 import bpy
 from mathutils import Vector
 
-FABRIC = (0.032, 0.165, 0.27, 1)  # surgical blue, linear RGB
-TRIM = (0.012, 0.07, 0.125, 1)
+FABRIC = (0.047, 0.245, 0.315, 1)  # surgical blue, linear RGB
+TRIM = (0.018, 0.11, 0.15, 1)
 SECTORS = 96
 # Vertices the torso silhouette ignores: arms get their own sleeves, the face stays uncovered.
 NOT_TORSO_BONES = (
@@ -664,20 +664,21 @@ def add_trims(gown, rig, marks, points, trim, closure, covered):
             angle = (s + 0.5) / SECTORS * 2 * math.pi - math.pi
             radius = radii[s] + 0.007
             belt.append((center.x + radius * math.cos(angle), center.y + radius * math.sin(angle), marks["waist"]))
-        objects.append(ribbon("tie-waist-belt", belt, trim, cyclic=True))
+        tape = fabric_material("woven-tie-tape", (0.24, 0.54, 0.54, 1), 0.94, 3200)
+        objects.append(ribbon("tie-waist-belt", belt, tape, cyclic=True))
         # On the wrapped gown the flap lies over the back, so the bow must clear one more layer.
         stand_off = 0.024 if closure == "wrapped" else 0.006
         neck_origin = (0.0, neck_back[1] + stand_off, neck_back[2] - 0.014)
-        objects += bow("tie-neck", neck_origin, trim, 0.5)
+        objects += bow("tie-neck", neck_origin, tape, 0.5)
         bows["neck"] = Vector(neck_origin)
         if closure == "tied":
             back = center.y + radii[int(0.75 * SECTORS)] + 0.012
             origin = (0.02, back, marks["waist"])
-            objects += bow("tie-waist", origin, trim)
+            objects += bow("tie-waist", origin, tape)
             bows["waist"] = Vector(origin)
         else:
             front = center.y - radii[int(0.25 * SECTORS)] - 0.012
-            objects += bow("tie-front", (0.0, front, marks["waist"]), trim, facing=-1)
+            objects += bow("tie-front", (0.0, front, marks["waist"]), tape, facing=-1)
             objects += wrap_edge(gown, center, marks, trim)
     return objects, bows
 

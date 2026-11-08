@@ -257,7 +257,7 @@ def main():
         delete_by_weight(human, body, HAND_BONES)
 
     cap_trim = fabric_material("cap-trim", TRIM, 0.9, 3200)
-    cap_fabric = fabric_material("cap-fabric", FABRIC)
+    cap_fabric = fabric_material("cap-fabric", (0.105, 0.32, 0.35, 1))
     points = evaluated_body(human)
     surgical_cap(points, marks, cap_fabric, cap_trim)
 

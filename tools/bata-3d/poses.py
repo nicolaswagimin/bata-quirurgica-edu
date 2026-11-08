@@ -97,8 +97,10 @@ def pose_step(rig, step):
         symmetric(rig, (0.2, -0.24, 1.2), (0.7, 0.3, -1), (0.02, -0.12, 1), (1, -0.3, 0), 0.06)
     elif step == 2:  # Holding the gown by the inside of the neck, away from the body.
         symmetric(rig, (0.15, -0.33, 1.36), (0.8, 0.1, -1), (-0.1, -1, 0.1), (-0.1, 0, 1), 0.5)
-    elif step in (3, 4):  # Arms forward inside the sleeves, hands covered.
+    elif step == 3:  # Arms forward inside the sleeves, hands covered.
         symmetric(rig, (0.2, -0.45, 1.24), (0.7, 0, -1), (0, -1, 0.1), (-0.6, 0, 1), 0.3)
+    elif step == 4:  # Wait while the circulator fastens the back. Elbows low, covered hands at chest.
+        symmetric(rig, (0.14, -0.27, 1.28), (0.6, 0.1, -1), (-0.35, -0.45, 0.82), (-0.6, 0, 1), 0.3)
     elif step == 5:  # Hands together in front of the chest, seating the gloves over the cuffs.
         symmetric(rig, (0.1, -0.33, 1.15), (0.8, 0.1, -1), (-0.65, -0.7, 0.3), (0, -0.2, 1), 0.2)
     elif step == 6:  # Tying the front bow, hands kept above the waist.
