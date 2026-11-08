@@ -7,7 +7,7 @@ export const DONNING_MODEL_COUNT = 6;
 
 export function stepModelUrl(mode: TimelineMode, order: number): string | null {
   if (mode !== 'donning' || order < 1 || order > DONNING_MODEL_COUNT) return null;
-  return `/models/paso-${order}.glb`;
+  return `/models/paso-${order}-anim.glb`;
 }
 
 export type TimelineStep = ProtocolStep & {
