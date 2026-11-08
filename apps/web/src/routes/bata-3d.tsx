@@ -3,9 +3,11 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { pageTitle } from '../components/ui-classes.ts';
+import { chapterAt, parseChapters, toFilmTime, toModelTime } from '../three/chapters.ts';
 import { Mannequin } from '../three/mannequin.tsx';
 import { ModelBoundary } from '../three/model-boundary.tsx';
-import { CHAPTER_SECONDS } from '../three/procedure.ts';
+import chaptersVtt from '../three/procedimiento-ppe-capitulos.vtt?raw';
+import chaptersUrl from '../three/procedimiento-ppe-capitulos.vtt?url';
 import { ProcedureViewer } from '../three/procedure-viewer.tsx';
 import { buildTimeline, type TimelineMode } from '../three/steps.ts';
 
@@ -19,25 +21,9 @@ const TABS: { mode: TimelineMode; label: string }[] = [
   { mode: 'doffing', label: 'Retiro' },
 ];
 
-// The film gives closed gloving 24 seconds; the interactive model uses six per step.
-const filmBoundaries = [0, 6, 12, 18, 24, 48, 54, 60, 66, 72, 78];
-const total = filmBoundaries[filmBoundaries.length - 1]!;
-function chapterAt(seconds: number) {
-  const next = filmBoundaries.findIndex((boundary) => boundary > seconds);
-  return next < 0 ? filmBoundaries.length - 2 : Math.max(0, next - 1);
-}
-function toModelTime(seconds: number) {
-  const i = chapterAt(seconds);
-  const start = filmBoundaries[i]!;
-  return (i + (seconds - start) / (filmBoundaries[i + 1]! - start)) * CHAPTER_SECONDS;
-}
-function toFilmTime(seconds: number) {
-  const i = Math.min(Math.floor(seconds / CHAPTER_SECONDS), filmBoundaries.length - 2);
-  return (
-    filmBoundaries[i]! +
-    (seconds / CHAPTER_SECONDS - i) * (filmBoundaries[i + 1]! - filmBoundaries[i]!)
-  );
-}
+// One chapter per step (donning, then doffing): the VTT is the single source of the film timings.
+const chapters = parseChapters(chaptersVtt);
+const total = chapters[chapters.length - 1]!.end;
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -74,14 +60,15 @@ export default function Bata3dPage() {
       });
     else player.pause();
   }, [playing, interactive]);
-  const chapter = chapterAt(time);
+  const chapter = chapterAt(chapters, time);
   const mode: TimelineMode = chapter < timelines.donning.length ? 'donning' : 'doffing';
   const index = mode === 'donning' ? chapter : chapter - timelines.donning.length;
   useEffect(() => {
     if (reducedMotion) setPlaying(false);
   }, [reducedMotion]);
   function selectStep(phase: TimelineMode, i: number) {
-    seek(filmBoundaries[(phase === 'doffing' ? timelines.donning.length : 0) + i]!);
+    const target = chapters[(phase === 'doffing' ? timelines.donning.length : 0) + i];
+    if (target) seek(target.start);
   }
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   const [shownModel, setShownModel] = useState('');
@@ -143,9 +130,9 @@ export default function Bata3dPage() {
             <ModelBoundary fallback={mannequin}>
               <ProcedureViewer
                 label={`Procedimiento 3D. ${tabLabel}, paso ${index + 1}: ${step.title}`}
-                time={toModelTime(time)}
+                time={toModelTime(chapters, time)}
                 playing={playing && time < total}
-                onTime={(seconds) => setTime(toFilmTime(seconds))}
+                onTime={(seconds) => setTime(toFilmTime(chapters, seconds))}
                 hotspotIds={step.hotspotIds}
                 activeHotspotId={hotspotId}
                 onShown={setShownModel}
@@ -176,6 +163,7 @@ export default function Bata3dPage() {
                 label="Español"
                 default
               />
+              <track kind="chapters" src={chaptersUrl} srcLang="es" label="Pasos" />
             </video>
           )}
           <div className="flex flex-wrap items-center gap-3 px-4 pb-3">

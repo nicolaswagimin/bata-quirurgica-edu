@@ -72,6 +72,52 @@ test('@emu carga el procedimiento desde el propio origen y permite recorrer colo
   await expect(page.getByRole('button', { name: 'Reproducir' })).toBeVisible();
 });
 
+test('@emu al cambiar de paso el video salta al inicio del capítulo de ese paso', async ({
+  page,
+}) => {
+  // Reduced motion keeps the film paused, so the position only moves when a step is chosen.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openBata3d(page);
+  const video = page.getByTestId('bata-3d').locator('video');
+  const slider = page.getByRole('slider', { name: 'Recorrer el procedimiento' });
+
+  // The chapters come from the served WebVTT file, read by the browser itself.
+  const cues = await video.evaluate(async (el: HTMLVideoElement) => {
+    const element = el.querySelector<HTMLTrackElement>('track[kind="chapters"]');
+    if (!element) throw new Error('missing chapters track');
+    element.track.mode = 'hidden';
+    if (element.readyState !== HTMLTrackElement.LOADED)
+      await new Promise((resolve, reject) => {
+        element.addEventListener('load', resolve, { once: true });
+        element.addEventListener('error', reject, { once: true });
+      });
+    return Array.from(element.track.cues ?? [], (cue) => ({
+      start: cue.startTime,
+      title: (cue as VTTCue).text,
+    }));
+  });
+  const donning = byOrder(pasos.donning);
+  const doffing = byOrder(pasos.doffing);
+  expect(cues.map((c) => c.title)).toEqual([...donning, ...doffing].map((s) => s.title));
+
+  const expectAt = async (seconds: number, title: string) => {
+    await expect(page.getByTestId('paso-actual')).toContainText(title);
+    await expect(slider).toHaveValue(String(seconds));
+    await expect.poll(() => video.evaluate((el: HTMLVideoElement) => el.currentTime)).toBe(seconds);
+  };
+
+  await page.getByRole('button', { name: `3. ${donning[2]?.title}` }).click();
+  await expectAt(cues[2]!.start, donning[2]!.title);
+  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await expectAt(cues[3]!.start, donning[3]!.title);
+  await page.getByRole('tab', { name: 'Retiro' }).click();
+  await expectAt(cues[donning.length]!.start, doffing[0]!.title);
+  await page.getByRole('button', { name: `2. ${doffing[1]?.title}` }).click();
+  await expectAt(cues[donning.length + 1]!.start, doffing[1]!.title);
+  await page.getByRole('button', { name: 'Anterior' }).click();
+  await expectAt(cues[donning.length]!.start, doffing[0]!.title);
+});
+
 test('@emu modo 3D sin animación con prefers-reduced-motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openBata3d(page);
