@@ -527,6 +527,91 @@ export const BataPasosSchema = z
   });
 export type BataPasos = z.infer<typeof BataPasosSchema>;
 
+// ---------- Práctica guiada AR v2 (content/protocolos/ar-practica-v2.json) ----------
+// Borrador de la secuencia didáctica: cada paso define objetivo, acción, qué mirar, tiempo de
+// sostén, error frecuente, corrección y debrief. `donningIds` enlaza con el protocolo y `decisions`
+// recoge lo que el director de tesis debe validar antes de implementar el motor v2.
+
+export const ArPracticeStepSchema = z
+  .object({
+    id: IdSchema,
+    order: z.number().int().min(1),
+    /** Pasos de `bata-pasos.json#donning` que practica; vacío si el paso no está en el protocolo. */
+    donningIds: z.array(IdSchema),
+    title: z.string().min(1).max(80),
+    /** Para qué sirve el paso, en una frase. */
+    goal: z.string().min(1).max(240),
+    /** Qué hace el estudiante, en imperativo. */
+    action: z.string().min(1).max(240),
+    /** Dónde mirar o qué parte del cuerpo importa. */
+    look: z.string().min(1).max(200),
+    /** Cuánto debe sostener la posición. */
+    holdMs: z.number().int().min(300).max(10_000),
+    commonError: z.string().min(1).max(240),
+    correction: z.string().min(1).max(240),
+    /** Frase de cierre del paso, para el debrief final. */
+    debrief: z.string().min(1).max(240),
+    /** Lo que dice la voz: corto, sin leer todo el texto. */
+    voice: z.string().min(1).max(160),
+    /** Nota cuando el AR no puede reproducir la acción real (lavado de manos, mascarilla). */
+    simulation: z.string().min(1).max(240).optional(),
+    source: SourceRefSchema,
+  })
+  .strict();
+export type ArPracticeStep = z.infer<typeof ArPracticeStepSchema>;
+
+/** Pregunta clínica que el director de tesis debe resolver antes de implementar el paso. */
+export const PracticeDecisionSchema = z
+  .object({
+    id: IdSchema,
+    question: z.string().min(1).max(300),
+    proposed: z.string().min(1).max(300),
+    alternatives: z.array(z.string().min(1).max(300)).min(1).max(4),
+  })
+  .strict();
+export type PracticeDecision = z.infer<typeof PracticeDecisionSchema>;
+
+export const ArPracticeFileSchema = z
+  .object({
+    reviewNote: z.string().min(1),
+    version: z.literal(2),
+    steps: z.array(ArPracticeStepSchema).min(1),
+    decisions: z.array(PracticeDecisionSchema),
+  })
+  .strict()
+  .superRefine((file, ctx) => {
+    const ids = new Set<string>();
+    file.steps.forEach((step, i) => {
+      if (ids.has(step.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Id repetido: ${step.id}`,
+          path: ['steps', i, 'id'],
+        });
+      }
+      ids.add(step.id);
+      if (step.order !== i + 1) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `order debe ser ${i + 1}`,
+          path: ['steps', i, 'order'],
+        });
+      }
+    });
+    const decisionIds = new Set<string>();
+    file.decisions.forEach((decision, i) => {
+      if (decisionIds.has(decision.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Decisión repetida: ${decision.id}`,
+          path: ['decisions', i, 'id'],
+        });
+      }
+      decisionIds.add(decision.id);
+    });
+  });
+export type ArPracticeFile = z.infer<typeof ArPracticeFileSchema>;
+
 export const CreditAssetSchema = z
   .object({
     id: IdSchema,
