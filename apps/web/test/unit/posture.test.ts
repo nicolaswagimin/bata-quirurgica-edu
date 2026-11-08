@@ -4,6 +4,8 @@ import {
   bodyFrame,
   detectViolations,
   LandmarkSmoother,
+  MAX_SMOOTHING,
+  MIN_SMOOTHING,
   LM,
   type Violation,
   ViolationTracker,
@@ -116,5 +118,29 @@ describe('LandmarkSmoother', () => {
     s.smooth([{ x: 0, y: 0, visibility: 1 }]);
     const [p] = s.smooth([{ x: 1, y: 1, visibility: 1 }]);
     expect(p?.x).toBeCloseTo(0.5);
+  });
+
+  it('setAlpha changes how far it follows a noisy jump', () => {
+    const steady = new LandmarkSmoother(0.5);
+    steady.setAlpha(0.15);
+    steady.smooth([{ x: 0, y: 0, visibility: 1 }]);
+    expect(steady.smooth([{ x: 1, y: 0, visibility: 1 }])[0]?.x).toBeCloseTo(0.15);
+
+    const quick = new LandmarkSmoother(0.5);
+    quick.setAlpha(0.6);
+    quick.smooth([{ x: 0, y: 0, visibility: 1 }]);
+    expect(quick.smooth([{ x: 1, y: 0, visibility: 1 }])[0]?.x).toBeCloseTo(0.6);
+  });
+
+  it('clamps the alpha to the playable range', () => {
+    const slow = new LandmarkSmoother(0.5);
+    slow.setAlpha(0);
+    slow.smooth([{ x: 0, y: 0, visibility: 1 }]);
+    expect(slow.smooth([{ x: 1, y: 0, visibility: 1 }])[0]?.x).toBeCloseTo(MIN_SMOOTHING);
+
+    const fast = new LandmarkSmoother(0.5);
+    fast.setAlpha(5);
+    fast.smooth([{ x: 0, y: 0, visibility: 1 }]);
+    expect(fast.smooth([{ x: 1, y: 0, visibility: 1 }])[0]?.x).toBeCloseTo(MAX_SMOOTHING);
   });
 });

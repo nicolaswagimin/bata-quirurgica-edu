@@ -21,6 +21,14 @@ export const LM = {
 
 const MIN_VISIBILITY = 0.5;
 
+/** Smoothing stays within these bounds: below 0.15 the pose lags too much to play. */
+export const MIN_SMOOTHING = 0.15;
+export const MAX_SMOOTHING = 0.65;
+
+function clampAlpha(alpha: number): number {
+  return Math.min(MAX_SMOOTHING, Math.max(MIN_SMOOTHING, alpha));
+}
+
 export interface Vec {
   x: number;
   y: number;
@@ -31,7 +39,15 @@ export interface Vec {
 /** Exponential moving average per landmark; a landmark that drops out restarts from its next value. */
 export class LandmarkSmoother {
   private prev: Landmark[] = [];
-  constructor(private readonly alpha = 0.45) {}
+  private alpha: number;
+  constructor(alpha = 0.45) {
+    this.alpha = clampAlpha(alpha);
+  }
+
+  /** Lower alpha = steadier but laggier. The AR loop adapts it to the tracking noise. */
+  setAlpha(alpha: number): void {
+    this.alpha = clampAlpha(alpha);
+  }
 
   smooth(landmarks: readonly Landmark[]): Landmark[] {
     if (landmarks.length === 0) {
