@@ -6,14 +6,24 @@ import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArTargetRegistry } from '../components/ar-hover-button.tsx';
 import { ArRenderer, readArColors } from './ar-render.ts';
+import { BodyHold } from './body-hold.ts';
 import { bootCameraAndPose, stopTracks } from './camera-pose.ts';
+import {
+  assessQuality,
+  type FrameSample,
+  type QualityReport,
+  SAMPLE_HEIGHT,
+  SAMPLE_WIDTH,
+  sampleFrame,
+  TrackQuality,
+} from './camera-quality.ts';
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
 import { GameSession, type GameView, type Scene } from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
 import { DwellTracker } from './hover-targets.ts';
-import { computeGownAnchor, FpsMonitor } from './overlay-math.ts';
+import { FpsMonitor } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
 import {
   bodyFrame,
@@ -28,6 +38,7 @@ import { syntheticPose } from './synthetic-pose.ts';
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
 
 const FPS_REFRESH_MS = 500;
+const FRAME_SAMPLE_MS = 700;
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -49,6 +60,7 @@ export function useArGame(
   const [practice, setPractice] = useState<GameView | null>(null);
   const [flow, setFlow] = useState<FlowView>({ phase: 'ready', secondsLeft: 0 });
   const [errors, setErrors] = useState<Partial<Record<Violation, number>>>({});
+  const [quality, setQuality] = useState<QualityReport | null>(null);
   const [run, setRun] = useState(0);
 
   const feedback = useMemo(() => new ArFeedback(), []);
@@ -135,8 +147,17 @@ export function useArGame(
       const smoother = new LandmarkSmoother();
       const tracker = new ViolationTracker();
       const dwell = new DwellTracker();
+      const bodyHold = new BodyHold();
+      const trackQuality = new TrackQuality();
       const canvas = canvasRef.current;
       const renderer = canvas ? new ArRenderer(canvas, readArColors()) : null;
+      const sampleCanvas = document.createElement('canvas');
+      sampleCanvas.width = SAMPLE_WIDTH;
+      sampleCanvas.height = SAMPLE_HEIGHT;
+      const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+      let frameSample: FrameSample | null = null;
+      let lastSampleAt = 0;
+      let lastQualityKey = '';
       const forceLow = e2eFlag('simularFpsBajo');
       const simulate = simulatedPoseVariant();
       let lastVideoTime = -1;
@@ -163,12 +184,14 @@ export function useArGame(
           const raw = simulate ? syntheticPose(now, simulate) : (result.landmarks[0] ?? []);
           const landmarks = smoother.smooth(raw);
           const size = { width: video.videoWidth, height: video.videoHeight };
-          const body = bodyFrame(landmarks, size);
-          if (!body) tracker.reset();
+          const liveBody = bodyFrame(landmarks, size);
+          // Brief dropouts keep the last body on screen; the rules still use the live one.
+          const renderBody = bodyHold.update(liveBody, now);
+          if (!liveBody) tracker.reset();
           const flowState = flowRef.current;
           // Warnings count from game step 2 on (the hands are only "scrubbed" from then).
           const warnings = flowState.phase === 'playing' && (lastView?.warningsOn ?? false);
-          const detected = body && warnings ? detectViolations(body) : new Set<Violation>();
+          const detected = liveBody && warnings ? detectViolations(liveBody) : new Set<Violation>();
           for (const v of lastView?.exempt ?? []) detected.delete(v);
           const active = tracker.update(detected, now);
 
@@ -186,7 +209,7 @@ export function useArGame(
           }
           const session = sessionRef.current;
           if (session && view.phase === 'playing') {
-            const pv = session.update({ body, landmarks, size, violations: active, now });
+            const pv = session.update({ body: liveBody, landmarks, size, violations: active, now });
             scene = pv.scene;
             if (lastView && pv.completedIds.length > lastView.completedIds.length)
               feedback.success();
@@ -220,16 +243,16 @@ export function useArGame(
           pressTargets(stageRef.current, landmarks, size, targets.current, dwell, now);
 
           if (renderer) {
-            const ms = renderer.draw(video, body, active, {
+            const ms = renderer.draw(video, renderBody, active, {
               scene: flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null,
               reducedMotion: still,
               hotspot: hotspotRef.current,
-              cursors: !body, // with a body the posture rings already mark the hands
+              cursors: !renderBody, // with a body the posture rings already mark the hands
               landmarks,
             });
             renderMs = renderMs * 0.9 + ms * 0.1;
           }
-          const hasGown = computeGownAnchor(landmarks, size) !== null;
+          const hasGown = renderBody !== null;
           if (hasGown !== anchored) {
             anchored = hasGown;
             setHasAnchor(hasGown);
@@ -239,6 +262,16 @@ export function useArGame(
             framed = full;
             setInFrame(full);
           }
+          if (sampleCtx && now - lastSampleAt >= FRAME_SAMPLE_MS) {
+            lastSampleAt = now;
+            sampleCtx.drawImage(video, 0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT);
+            frameSample = sampleFrame(
+              sampleCtx.getImageData(0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT).data,
+              SAMPLE_WIDTH,
+              SAMPLE_HEIGHT,
+            );
+          }
+          const track = trackQuality.update(raw, size, liveBody !== null);
           const stats = monitor.record(now);
           if (raw.length > 0 !== found) {
             found = raw.length > 0;
@@ -249,6 +282,18 @@ export function useArGame(
             setFps(Math.round(stats.fps));
             setDrawMs(Math.round(renderMs * 10) / 10);
             setLowPerformance(forceLow || stats.lowPerformance);
+            const report = assessQuality({
+              frame: frameSample,
+              track,
+              fps: stats.fps,
+              drawMs: renderMs,
+            });
+            smoother.setAlpha(report.smoothing);
+            const qualityKey = `${report.score}:${report.hint ?? ''}:${report.issues.join(',')}`;
+            if (qualityKey !== lastQualityKey) {
+              lastQualityKey = qualityKey;
+              setQuality(report);
+            }
           }
         }
         frameId = requestAnimationFrame(tick);
@@ -278,6 +323,7 @@ export function useArGame(
     practice,
     flow,
     errors,
+    quality,
     run,
     voice,
     sound,
