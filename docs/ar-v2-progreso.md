@@ -162,5 +162,9 @@ decidir la amplitud. La malla 3D con glTF, colisión y materiales queda para 2b.
 - `?bata=3d`: canvas WebGL debajo del canvas 2D; el 2D deja de pintar la bata puesta pero conserva
   máscara, guantes, lazos, avisos y cursor.
 - Pruebas: 5 nuevas del activo/esqueleto y e2e de la bandera. 406 unitarias en total.
-- Pendiente: sustituir la malla procedural por el glTF, colisión con cápsulas, textura de tela y
-  medir los 30 fps en un teléfono real.
+- La tela usa el mismo tile SMS del 2D como `CanvasTexture`, con luz de estudio y tono ACES; el
+  ruedo se ensancha y la cintura se entalla. Para revisarla sin recorrer la práctica: 
+  `?bata=3d&simularPose=1&simularBataPuesta=1` (QA).
+- Pendiente: sustituir la malla procedural por el glTF, colisión con cápsulas, cuello/puños/cintas
+  en 3D, iluminación de las mangas y medir los 30 fps en un teléfono real. La primera captura de
+  QA muestra la malla con textura, pero todavía no es el acabado final.
