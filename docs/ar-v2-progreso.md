@@ -11,6 +11,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 | 1 · Protocolo y pasos | cerrada: secuencia validada + motor v2 tras `?practica=v2` | 2026-11-07 | 2026-11-07 | 28f77de … |
 | 2a · Movimiento secundario | implementada · pendiente verla en dispositivo | 2026-11-08 | — | — |
 | 2b · Bata 3D skinned | en curso: activo, esqueleto y renderer; glTF y colisión pendientes | 2026-11-08 | — | — |
+| 1b · Secuencia v3 (video de referencia) | implementada · pendiente de validación del director y de tu aprobación | 2026-11-08 | — | — |
 | 3 · Dataset | pendiente | — | — | — |
 | 4 · Modelo | pendiente | — | — | — |
 | 5 · Física (opcional) | pendiente | — | — | — |
@@ -168,3 +169,39 @@ decidir la amplitud. La malla 3D con glTF, colisión y materiales queda para 2b.
 - Pendiente: sustituir la malla procedural por el glTF, colisión con cápsulas, cuello/puños/cintas
   en 3D, iluminación de las mangas y medir los 30 fps en un teléfono real. La primera captura de
   QA muestra la malla con textura, pero todavía no es el acabado final.
+
+
+### 2026-11-08 — Fase 1b: secuencia v3 según el video de referencia
+
+Nuevo encargo: rehacer los pasos siguiendo la guía de movimiento del video de un fabricante (bata
+genérica, sin marcas). La guía vive en `tools/bata-3d/referencia/guia-video.md`, **ignorada por
+git** (material derivado del video), y está **NO verificada contra el video**: todavía no hay
+capturas. La técnica cerrada de guantes no sale en el video y se agregó desde el protocolo.
+
+- `content/protocolos/ar-practica-v3.json` (`status: pendiente-validacion`): secado de manos,
+  tomar la bata por la cara interna, despliegue sin sacudir, brazos en las mangas (manos en los
+  puños), amarre del circulante (solo sus manos), guantes en técnica cerrada, y tarjeta de
+  transferencia y giro. Cada paso trae instrucción, qué mirar, error frecuente y corrección.
+- La v2 validada el 2026-11-07 se conserva intacta en `ar-practica-v2.json` como historial.
+- Puntos abiertos configurables (`config` del contenido, y por URL para QA):
+  `?giro=cuarto|360`, `?mascarilla=1|0`, `?secado=1|0`. Por defecto: cuarto de vuelta, sin
+  mascarilla y con secado → 7 pasos. Cierre del cuello (Velcro o lazo) y secuencia de guantes
+  quedan como decisiones de texto en `decisions`.
+- Motor: nuevo `kind` `unfold` (manos separadas a la altura de los hombros y quietas; sacudir no
+  cuenta) y detector de giro `practice-turn.ts`, que cuenta perfiles: un cuarto de vuelta = 1 perfil
+  y 360° = 2 perfiles (la espalda se ve tan ancha como el frente).
+- `?practica=v2` carga la v3 resuelta y muestra la ficha «Secuencia en revisión». Sin la bandera el
+  juego v1 no cambia.
+- Esquema: `status`, `reference`, `config`, `turnText` y `toggle` por paso; una secuencia pendiente
+  no puede llevar `validatedBy` y una validada lo exige.
+
+Pendiente detectado para la fase 2: `ar-results.tsx` siempre envía los 6 pasos `d1`–`d6` al
+backend. «Saltar paso» (sin puntos) va a necesitar que el API acepte prácticas incompletas.
+
+Redacción del contenido v3: los textos de los pasos los escribió Codex (`codex:codex-rescue`)
+desde la guía y los validó contra `ArPracticeFileSchema`. Claude los revisó y ajustó tres puntos
+para que coincidan con lo que mide el motor: la mascarilla pide acercar las manos sin tocar (el
+motor detecta las manos cerca de la cara), «qué mirar» de tomar la bata indica las manos juntas al
+centro, y se corrigió la redacción del cuarto de vuelta. La revisión de Codex del motor encontró 4
+problemas (perfil con un solo frame, dos cuartos que pasaban por 360°, final sin volver de frente y
+despliegue con manos apiladas o a los lados); los cuatro se corrigieron con pruebas negativas.

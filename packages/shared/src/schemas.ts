@@ -542,6 +542,8 @@ export const PracticeKindSchema = z.enum([
   'still',
   'gloves',
   'turn',
+  /** Bata desplegada a la altura de los hombros, lejos del cuerpo y sin sacudirla (v3). */
+  'unfold',
 ]);
 export type PracticeKind = z.infer<typeof PracticeKindSchema>;
 
@@ -569,6 +571,8 @@ export const ArPracticeStepSchema = z
     voice: z.string().min(1).max(160),
     /** Nota cuando el AR no puede reproducir la acción real (lavado de manos, mascarilla). */
     simulation: z.string().min(1).max(240).optional(),
+    /** Paso opcional: solo entra en la práctica si la opción de `config` con este nombre está activa. */
+    toggle: z.enum(['mascarilla', 'secado']).optional(),
     source: SourceRefSchema,
   })
   .strict();
@@ -587,10 +591,38 @@ export const PracticeDecisionSchema = z
   .strict();
 export type PracticeDecision = z.infer<typeof PracticeDecisionSchema>;
 
+/** Textos del paso de giro, según la opción de giro elegida. */
+const TurnTextSchema = z
+  .object({
+    action: z.string().min(1).max(240),
+    voice: z.string().min(1).max(160),
+    correction: z.string().min(1).max(240),
+  })
+  .strict();
+
+/**
+ * Puntos abiertos que la práctica deja configurables mientras el director decide (v3). La URL puede
+ * sobrescribirlos para QA (`?giro=360|cuarto`, `?mascarilla=1|0`, `?secado=1|0`).
+ */
+export const ArPracticeConfigSchema = z
+  .object({
+    giro: z.enum(['cuarto', '360']),
+    mascarilla: z.boolean(),
+    secado: z.boolean(),
+  })
+  .strict();
+export type ArPracticeConfig = z.infer<typeof ArPracticeConfigSchema>;
+
 export const ArPracticeFileSchema = z
   .object({
     reviewNote: z.string().min(1),
-    version: z.literal(2),
+    version: z.union([z.literal(2), z.literal(3)]),
+    /** Estado clínico de la secuencia; si falta, lo indica `validatedBy`. */
+    status: z.enum(['pendiente-validacion', 'validada']).optional(),
+    /** De dónde sale el movimiento (p. ej. la guía del video) y si ya se contrastó. */
+    reference: z.string().min(1).max(400).optional(),
+    config: ArPracticeConfigSchema.optional(),
+    turnText: z.object({ cuarto: TurnTextSchema, '360': TurnTextSchema }).strict().optional(),
     /** Quién validó la secuencia y el día (YYYY-MM-DD); van juntos o no van. */
     validatedBy: z.string().min(1).max(120).optional(),
     validatedAt: z
@@ -625,6 +657,27 @@ export const ArPracticeFileSchema = z
         code: 'custom',
         message: 'validatedBy y validatedAt deben ir juntos',
         path: ['validatedBy'],
+      });
+    }
+    if (file.status === 'pendiente-validacion' && file.validatedBy) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Una secuencia pendiente de validación no puede tener validatedBy',
+        path: ['status'],
+      });
+    }
+    if (file.status === 'validada' && !file.validatedBy) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Una secuencia validada necesita validatedBy y validatedAt',
+        path: ['status'],
+      });
+    }
+    if (file.steps.some((step) => step.toggle) && !file.config) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Los pasos con toggle necesitan config',
+        path: ['config'],
       });
     }
     const decisionIds = new Set<string>();

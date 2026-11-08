@@ -7,6 +7,7 @@ import type { Landmark } from '../../src/ar/overlay-math.ts';
 import { bodyFrame, type Violation } from '../../src/ar/posture.ts';
 import {
   handsAtNeck,
+  handsUnfolding,
   isPracticeV2Enabled,
   PracticeSessionV2,
 } from '../../src/ar/practice-session-v2.ts';
@@ -205,8 +206,9 @@ describe('PracticeSessionV2', () => {
       15: [0.51, 0.43, -0.2],
       16: [0.49, 0.43, -0.2],
     });
-    feed(session, turned, 200, 200);
-    expect(feed(session, pose(), 500, 900).done).toBe(true);
+    // El perfil debe sostenerse un poco (DWELL_MS) para que un frame con ruido no cuente.
+    feed(session, turned, 200, 400);
+    expect(feed(session, pose(), 700, 1500).done).toBe(true);
   });
 
   it('la fricción exige movimiento', () => {
@@ -233,5 +235,70 @@ describe('PracticeSessionV2', () => {
 
     const still = sessionFor('friction');
     expect(feed(still, pose(), 0, 700).done).toBe(false);
+  });
+});
+
+describe('práctica v3: despliegue y giro configurable', () => {
+  const UNFOLD: Record<number, Pt> = { 15: [0.62, 0.3, -0.3], 16: [0.38, 0.3, -0.3] };
+  const TURNED: Record<number, Pt> = {
+    11: [0.52, 0.29],
+    12: [0.48, 0.29],
+    23: [0.517, 0.55],
+    24: [0.483, 0.55],
+    13: [0.53, 0.41],
+    14: [0.47, 0.41],
+    15: [0.51, 0.43, -0.2],
+    16: [0.49, 0.43, -0.2],
+  };
+
+  it('handsUnfolding: manos separadas a la altura de los hombros', () => {
+    expect(
+      handsUnfolding(bodyFrame(pose(UNFOLD), SIZE) as NonNullable<ReturnType<typeof bodyFrame>>),
+    ).toBe(true);
+    expect(
+      handsUnfolding(bodyFrame(pose(), SIZE) as NonNullable<ReturnType<typeof bodyFrame>>),
+    ).toBe(false);
+  });
+
+  it('el despliegue se completa con las manos arriba y quietas', () => {
+    expect(feed(sessionFor('unfold'), pose(UNFOLD), 0, 700).done).toBe(true);
+  });
+
+  it('el despliegue no avanza si la bata se sacude', () => {
+    const session = sessionFor('unfold');
+    const shake: Record<number, Pt> = { 15: [0.7, 0.3, -0.3], 16: [0.3, 0.3, -0.3] };
+    let view = feed(session, pose(UNFOLD), 0, 0);
+    for (let t = 50; t <= 1500; t += 50) {
+      const lm = pose((t / 50) % 2 ? shake : UNFOLD);
+      view = session.update({
+        body: bodyFrame(lm, SIZE),
+        landmarks: lm,
+        size: SIZE,
+        violations: new Set(),
+        now: t,
+      });
+    }
+    expect(view.done).toBe(false);
+  });
+
+  it('handsUnfolding rechaza manos apiladas o abiertas a los lados del cuerpo', () => {
+    const frame = (over: Record<number, Pt>) =>
+      bodyFrame(pose(over), SIZE) as NonNullable<ReturnType<typeof bodyFrame>>;
+    expect(handsUnfolding(frame({ 15: [0.52, 0.25, -0.3], 16: [0.5, 0.36, -0.3] }))).toBe(false);
+    expect(handsUnfolding(frame({ 15: [0.7, 0.3, 0], 16: [0.3, 0.3, 0] }))).toBe(false);
+  });
+
+  it('con giro de 360° hace falta pasar por la espalda', () => {
+    const back = pose();
+    for (const i of [0, 2, 5, 7, 8, 9, 10]) back[i] = { ...back[i], visibility: 0.1 } as Landmark;
+    const session = new PracticeSessionV2([stepOf('turn')], true, { turn: '360' });
+    feed(session, pose(), 0, 100);
+    feed(session, pose(TURNED), 200, 400);
+    // De vuelta al frente sin pasar por la espalda: no cuenta.
+    expect(feed(session, pose(), 700, 1500).done).toBe(false);
+    feed(session, pose(TURNED), 2300, 400);
+    feed(session, back, 2800, 400);
+    feed(session, pose(TURNED), 3300, 400);
+    expect(feed(session, pose(), 3800, 1500).done).toBe(true);
   });
 });

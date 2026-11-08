@@ -27,6 +27,7 @@ describe('archivos de content/', () => {
     ['questions/seed.json', SeedFileSchema],
     ['protocolos/bata-pasos.json', BataPasosSchema],
     ['protocolos/ar-practica-v2.json', ArPracticeFileSchema],
+    ['protocolos/ar-practica-v3.json', ArPracticeFileSchema],
     ['credits.json', CreditsSchema],
     ['kb/sources.json', KbSourcesSchema],
     ['legal/privacidad.json', PrivacyPolicySchema],
@@ -180,19 +181,50 @@ describe('ArPracticeFileSchema', () => {
     ).toBe(false);
   });
 
-  it('la práctica AR v2 cubre todos los pasos del protocolo', () => {
-    const pasos = BataPasosSchema.parse(readJson('protocolos/bata-pasos.json'));
-    const practice = ArPracticeFileSchema.parse(readJson('protocolos/ar-practica-v2.json'));
-    const donning = new Set(pasos.donning.map((donningStep) => donningStep.id));
-    const covered = new Set<string>();
-    for (const practiceStep of practice.steps) {
-      for (const id of practiceStep.donningIds) {
-        expect(donning.has(id), `${practiceStep.id} referencia ${id}`).toBe(true);
-        covered.add(id);
-      }
-    }
-    for (const id of donning) expect(covered.has(id), `falta cubrir ${id}`).toBe(true);
+  it('la v3 queda pendiente de validación y no se puede marcar validada sin firma', () => {
+    const v3 = ArPracticeFileSchema.parse(readJson('protocolos/ar-practica-v3.json'));
+    expect(v3.status).toBe('pendiente-validacion');
+    expect(v3.validatedBy).toBeUndefined();
+    expect(v3.decisions.every((decision) => !decision.chosen)).toBe(true);
+    expect(ArPracticeFileSchema.safeParse({ ...valid, status: 'validada' }).success).toBe(false);
+    expect(
+      ArPracticeFileSchema.safeParse({
+        ...valid,
+        status: 'pendiente-validacion',
+        validatedBy: 'Director',
+        validatedAt: '2026-11-07',
+      }).success,
+    ).toBe(false);
   });
+
+  it('un paso con toggle exige config', () => {
+    const optional = { ...step('a', 1), toggle: 'mascarilla' };
+    expect(ArPracticeFileSchema.safeParse({ ...valid, steps: [optional] }).success).toBe(false);
+    expect(
+      ArPracticeFileSchema.safeParse({
+        ...valid,
+        steps: [optional],
+        config: { giro: 'cuarto', mascarilla: false, secado: true },
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each(['protocolos/ar-practica-v2.json', 'protocolos/ar-practica-v3.json'])(
+    '%s cubre todos los pasos del protocolo',
+    (path) => {
+      const pasos = BataPasosSchema.parse(readJson('protocolos/bata-pasos.json'));
+      const practice = ArPracticeFileSchema.parse(readJson(path));
+      const donning = new Set(pasos.donning.map((donningStep) => donningStep.id));
+      const covered = new Set<string>();
+      for (const practiceStep of practice.steps) {
+        for (const id of practiceStep.donningIds) {
+          expect(donning.has(id), `${practiceStep.id} referencia ${id}`).toBe(true);
+          covered.add(id);
+        }
+      }
+      for (const id of donning) expect(covered.has(id), `falta cubrir ${id}`).toBe(true);
+    },
+  );
 });
 
 describe('esquemas de API', () => {

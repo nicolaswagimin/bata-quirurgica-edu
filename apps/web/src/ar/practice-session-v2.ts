@@ -15,11 +15,23 @@ import {
 } from './game-steps.ts';
 import { hangingFrame, sleeveOpenings } from './hanging-gown.ts';
 import { handsAtFace } from './mask.ts';
-import { type BodyFrame, dist, torsoDepth, type Vec, type Violation } from './posture.ts';
-import { inSterileBand, STEP_RULES, type TurnState } from './practice.ts';
+import {
+  type BodyFrame,
+  dist,
+  sideOffset,
+  torsoDepth,
+  type Vec,
+  type Violation,
+} from './posture.ts';
+import { inSterileBand } from './practice.ts';
+import { newTurnTracker, stepTurn, type TurnMode, type TurnTracker } from './practice-turn.ts';
 
 /** Wrist speed (shoulder widths per second) under which the player counts as standing still. */
 const STILL_SPEED = 0.6;
+/** Wrist depth relative to the shoulders (MediaPipe z) that counts as held out in front. */
+const UNFOLD_MAX_DEPTH = -0.25;
+/** Nose visibility under which the face counts as hidden (player's back to the camera). */
+const FACE_VISIBLE = 0.5;
 const NO_BODY = 'Colócate de frente a la cámara, con hombros y caderas visibles';
 const FIX_WARNING = 'Corrige el aviso para seguir';
 
@@ -49,13 +61,40 @@ export function handsAtNeck(body: BodyFrame): boolean {
   });
 }
 
+/**
+ * Gown held up and unfolded (step `unfold`): both wrists around shoulder height, in front of the
+ * body and apart, as if holding the gown by its shoulders away from the chest.
+ */
+export function handsUnfolding(body: BodyFrame): boolean {
+  const left = body.left.wrist;
+  const right = body.right.wrist;
+  if (!left || !right) return false;
+  // Horizontal spread along the shoulder line, not euclidean: hands stacked vertically don't count.
+  const apart = Math.abs(sideOffset(body, left) - sideOffset(body, right)) >= 0.5;
+  const atShoulders = [left, right].every((wrist) => {
+    const depth = torsoDepth(body, wrist);
+    return depth >= -0.3 && depth <= 0.25 && Math.abs(sideOffset(body, wrist)) <= 1.1;
+  });
+  // Held out in front of the chest (MediaPipe z), not spread to the sides at body depth.
+  const inFront = [body.left.wristDepth, body.right.wristDepth].every(
+    (depth) => depth !== null && depth <= UNFOLD_MAX_DEPTH,
+  );
+  return apart && atShoulders && inFront;
+}
+
 type CheckResult = { ok: boolean; hint: string };
+
+export interface PracticeV2Options {
+  /** Giro del paso `turn`: cuarto de vuelta (v2) o vuelta completa (opción abierta de la v3). */
+  turn?: TurnMode;
+}
 
 export class PracticeSessionV2 {
   private index = 0;
   private holdStart: number | null = null;
   private completed: string[] = [];
-  private turn: TurnState = { baselineRatio: null, turned: false };
+  private turn: TurnTracker = newTurnTracker();
+  private readonly turnMode: TurnMode;
   private scene: Scene = INITIAL_SCENE;
   private animStart = 0;
   private lastWrists: [Vec | null, Vec | null] = [null, null];
@@ -67,7 +106,10 @@ export class PracticeSessionV2 {
   constructor(
     private readonly steps: readonly ArPracticeStep[],
     private readonly reducedMotion = false,
-  ) {}
+    options: PracticeV2Options = {},
+  ) {
+    this.turnMode = options.turn ?? 'cuarto';
+  }
 
   update(input: GameInput): GameView {
     const step = this.steps[this.index];
@@ -101,7 +143,7 @@ export class PracticeSessionV2 {
     if (step.kind === 'still') {
       this.scene = { ...this.scene, ties: 'tying', tieT: hold };
     }
-    if (step.kind === 'turn' && this.turn.turned && this.scene.flap === 'open') {
+    if (step.kind === 'turn' && this.scene.flap === 'open') {
       this.scene = { ...this.scene, flap: 'closing', flapT: 0 };
       this.animStart = input.now;
     }
@@ -170,10 +212,31 @@ export class PracticeSessionV2 {
         const ok = together && inSterileBand(body);
         return { ok, hint: ok ? step.voice : step.correction };
       }
+      case 'unfold': {
+        const up = handsUnfolding(body);
+        const ok = up && this.still;
+        return { ok, hint: ok ? step.voice : up ? step.correction : step.action };
+      }
       case 'turn': {
-        const rule = STEP_RULES.find((candidate) => candidate.id === 'd6');
-        const result = rule?.check(body, this.turn);
-        return { ok: !!result?.ok, hint: result?.ok ? step.voice : (result?.hint ?? step.action) };
+        const frontal = inSterileBand(body);
+        const ratio = body.shoulderWidth / body.torsoHeight;
+        const faceVisible = (input.landmarks[0]?.visibility ?? 0) >= FACE_VISIBLE;
+        const back = stepTurn(
+          this.turn,
+          { ratio, faceVisible, frontal, now: input.now },
+          this.turnMode,
+        );
+        if (this.turn.baseline === null) {
+          return { ok: false, hint: 'De frente a la cámara, con las manos frente al pecho.' };
+        }
+        if (!back) {
+          return {
+            ok: false,
+            hint: this.turn.path.length > 1 ? 'Sigue girando y vuelve de frente.' : step.action,
+          };
+        }
+        const ok = frontal;
+        return { ok, hint: ok ? step.voice : 'Vuelve de frente con las manos frente al pecho.' };
       }
       default:
         return { ok: false, hint: step.action };
@@ -189,7 +252,7 @@ export class PracticeSessionV2 {
   private advance(step: ArPracticeStep, now: number): void {
     this.completed.push(step.id);
     this.index += 1;
-    this.turn = { baselineRatio: null, turned: false };
+    this.turn = newTurnTracker();
     if (step.kind === 'mask') this.scene = { ...this.scene, mask: 'snapping', maskT: 0 };
     if (step.kind === 'sleeves') this.scene = { ...this.scene, gown: 'donning', gownT: 0 };
     if (step.kind === 'still') this.scene = { ...this.scene, ties: 'tied', tieT: 1 };

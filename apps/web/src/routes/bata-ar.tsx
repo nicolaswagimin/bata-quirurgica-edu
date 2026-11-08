@@ -2,7 +2,7 @@ import type { CaptureTake } from '@bata/shared/perception';
 import { ArPracticeFileSchema, type ArPracticeStep, BataPasosSchema } from '@bata/shared/schemas';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import practicaV2Json from '../../../../content/protocolos/ar-practica-v2.json';
+import practicaV3Json from '../../../../content/protocolos/ar-practica-v3.json';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
 import { isGown3dEnabled } from '../ar/gown-3d-mesh.ts';
@@ -14,6 +14,7 @@ import {
   isCaptureEnabled,
 } from '../ar/perception/capture.ts';
 import { CapturePanel } from '../ar/perception/capture-panel.tsx';
+import { practiceConfig, resolvePractice } from '../ar/practice-config.ts';
 import { isPracticeV2Enabled, PracticeSessionV2 } from '../ar/practice-session-v2.ts';
 import {
   type ArFrameHook,
@@ -29,7 +30,8 @@ import { Pictogram } from '../components/pictogram.tsx';
 
 const { hotspots, juegoAr } = BataPasosSchema.parse(pasosJson);
 const steps = [...juegoAr].sort((a, b) => a.order - b.order);
-const practiceV2 = ArPracticeFileSchema.parse(practicaV2Json);
+// `?practica=v2` usa la secuencia v3 (pendiente de validación); la v2 validada queda como historial.
+const practiceSpec = ArPracticeFileSchema.parse(practicaV3Json);
 
 const STATUS_TEXT: Record<ArStatus, string> = {
   loading: 'Cargando modelo',
@@ -90,8 +92,11 @@ export default function BataArPage() {
     lastFrame.current = null;
   }, [recorder]);
 
-  // Fase 1: secuencia validada detrás de ?practica=v2. Sin la bandera se juega la v1.
+  // Fase 1: secuencia v3 detrás de ?practica=v2. Sin la bandera se juega la v1.
   const [practiceV2Enabled] = useState(() => isPracticeV2Enabled(window.location.search));
+  const [practiceV2] = useState(() =>
+    resolvePractice(practiceSpec, practiceConfig(practiceSpec, window.location.search)),
+  );
   // Fase 2a: movimiento secundario del ruedo y las mangas con ?bata=vivo.
   const [gownMotionEnabled] = useState(() => isGownMotionEnabled(window.location.search));
   // Fase 2b: bata 3D skinned sobre el video con ?bata=3d.
@@ -100,8 +105,10 @@ export default function BataArPage() {
   const practiceSteps = practiceV2Enabled ? practiceV2.steps : steps;
   const createV2Session = useCallback(
     (sessionSteps: readonly PracticeStepLike[], reducedMotion: boolean) =>
-      new PracticeSessionV2(sessionSteps as readonly ArPracticeStep[], reducedMotion),
-    [],
+      new PracticeSessionV2(sessionSteps as readonly ArPracticeStep[], reducedMotion, {
+        turn: practiceV2.turn,
+      }),
+    [practiceV2.turn],
   );
   const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, practiceSteps, {
     ...(captureEnabled ? { onFrame } : {}),
@@ -217,6 +224,11 @@ export default function BataArPage() {
               {quality ? (
                 <p data-testid="ar-quality" className={chip}>
                   Cámara {qualityLabel(quality.score)}
+                </p>
+              ) : null}
+              {practiceV2Enabled && practiceV2.pending ? (
+                <p data-testid="ar-practice-pending" className={chip}>
+                  Secuencia en revisión
                 </p>
               ) : null}
             </div>
