@@ -55,6 +55,8 @@ export interface DrawOptions {
   reducedMotion: boolean;
   /** Movimiento secundario del ruedo y las mangas; null/undefined deja la malla quieta. */
   gownMotion?: GownMotion | null;
+  /** Con la bata 3D activa el 2D no pinta la bata puesta (sí los extras). */
+  gown3d?: boolean;
 }
 
 type Ctx = CanvasRenderingContext2D;
@@ -93,6 +95,7 @@ export class ArRenderer {
         options.hotspot,
         options.reducedMotion,
         options.gownMotion,
+        options.gown3d ?? false,
       );
       if (worn) this.drawLateScene(ctx, body, worn, options);
       if (scene.gown === 'worn' && scene.ties === 'tying') {
@@ -112,6 +115,7 @@ export class ArRenderer {
     hotspot: string | null,
     still: boolean,
     motion?: GownMotion | null,
+    hideWorn = false,
   ): GownMesh | null {
     const textures = this.textures;
     if (!textures || scene.gown === 'hidden') return null;
@@ -125,7 +129,9 @@ export class ArRenderer {
           ? lerpMesh(gownMesh(hanging), worn, scene.gownT)
           : worn;
     const spot = scene.gown === 'worn' ? hotspot : null;
-    drawGownMesh(ctx, mesh, textures, this.colors, body.shoulderWidth, spot);
+    if (!(hideWorn && scene.gown === 'worn')) {
+      drawGownMesh(ctx, mesh, textures, this.colors, body.shoulderWidth, spot);
+    }
     if (scene.gown === 'worn') return mesh;
     if (scene.gown !== 'hanging') return null;
     // Sleeve openings: pulsing rings until a wrist goes in, then filled.

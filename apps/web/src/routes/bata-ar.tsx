@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import practicaV2Json from '../../../../content/protocolos/ar-practica-v2.json';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
+import { isGown3dEnabled } from '../ar/gown-3d-mesh.ts';
 import { isGownMotionEnabled } from '../ar/gown-motion.ts';
 import {
   type CapturedFrame,
@@ -93,6 +94,9 @@ export default function BataArPage() {
   const [practiceV2Enabled] = useState(() => isPracticeV2Enabled(window.location.search));
   // Fase 2a: movimiento secundario del ruedo y las mangas con ?bata=vivo.
   const [gownMotionEnabled] = useState(() => isGownMotionEnabled(window.location.search));
+  // Fase 2b: bata 3D skinned sobre el video con ?bata=3d.
+  const [gown3dEnabled] = useState(() => isGown3dEnabled(window.location.search));
+  const gown3dCanvasRef = useRef<HTMLCanvasElement>(null);
   const practiceSteps = practiceV2Enabled ? practiceV2.steps : steps;
   const createV2Session = useCallback(
     (sessionSteps: readonly PracticeStepLike[], reducedMotion: boolean) =>
@@ -103,6 +107,7 @@ export default function BataArPage() {
     ...(captureEnabled ? { onFrame } : {}),
     ...(practiceV2Enabled ? { createSession: createV2Session } : {}),
     ...(gownMotionEnabled ? { gownMotion: true } : {}),
+    ...(gown3dEnabled ? { gown3d: { canvas: gown3dCanvasRef } } : {}),
   });
   const { flow, practice, status, quality } = game;
   const phase = flow.phase;
@@ -175,6 +180,13 @@ export default function BataArPage() {
               className="absolute inset-0 size-full -scale-x-100 object-cover"
               aria-label="Vista de tu cámara en modo espejo"
             />
+            {gown3dEnabled ? (
+              <canvas
+                ref={gown3dCanvasRef}
+                data-testid="ar-gown-3d"
+                className="pointer-events-none absolute inset-0 size-full -scale-x-100 object-cover"
+              />
+            ) : null}
             <canvas
               ref={canvasRef}
               className="pointer-events-none absolute inset-0 size-full -scale-x-100 object-cover"

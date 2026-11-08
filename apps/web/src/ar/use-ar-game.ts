@@ -22,6 +22,7 @@ import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
 import { type GameInput, GameSession, type GameView, type Scene } from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
+import { Gown3DRenderer } from './gown-3d.ts';
 import { GownSprings } from './gown-motion.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
@@ -48,6 +49,8 @@ export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
   createSession?: (steps: readonly S[], reducedMotion: boolean) => PracticeSessionLike;
   /** `?bata=vivo`: springs the hem and sleeves with the torso's acceleration. */
   gownMotion?: boolean;
+  /** `?bata=3d`: canvas WebGL for the skinned gown. */
+  gown3d?: { canvas: RefObject<HTMLCanvasElement | null> };
 };
 
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
@@ -73,6 +76,8 @@ export function useArGame<S extends PracticeStepLike>(
   createSessionRef.current = options.createSession;
   const gownMotionRef = useRef(options.gownMotion);
   gownMotionRef.current = options.gownMotion;
+  const gown3dRef = useRef(options.gown3d);
+  gown3dRef.current = options.gown3d;
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
@@ -150,6 +155,7 @@ export function useArGame<S extends PracticeStepLike>(
     let cancelled = false;
     let stream: MediaStream | null = null;
     let landmarker: PoseLandmarker | null = null;
+    let gown3d: Gown3DRenderer | null = null;
     let frameId = 0;
 
     async function boot() {
@@ -176,7 +182,10 @@ export function useArGame<S extends PracticeStepLike>(
       let lastSpringAt = 0;
       const trackQuality = new TrackQuality();
       const canvas = canvasRef.current;
-      const renderer = canvas ? new ArRenderer(canvas, readArColors()) : null;
+      const colors = readArColors();
+      const renderer = canvas ? new ArRenderer(canvas, colors) : null;
+      const gown3dCanvas = gown3dRef.current?.canvas.current ?? null;
+      gown3d = gown3dCanvas ? new Gown3DRenderer(gown3dCanvas, colors) : null;
       const sampleCanvas = document.createElement('canvas');
       sampleCanvas.width = SAMPLE_WIDTH;
       sampleCanvas.height = SAMPLE_HEIGHT;
@@ -279,17 +288,21 @@ export function useArGame<S extends PracticeStepLike>(
             lastSpringAt = now;
           }
 
+          const activeScene =
+            flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null;
           if (renderer) {
             const ms = renderer.draw(video, renderBody, active, {
-              scene: flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null,
+              scene: activeScene,
               reducedMotion: still,
               hotspot: hotspotRef.current,
               cursors: !renderBody, // with a body the posture rings already mark the hands
               landmarks,
               gownMotion,
+              gown3d: gown3d?.ok ?? false,
             });
             renderMs = renderMs * 0.9 + ms * 0.1;
           }
+          gown3d?.render(liveBody, activeScene, gownMotion, video.videoWidth, video.videoHeight);
           const hasGown = renderBody !== null;
           if (hasGown !== anchored) {
             anchored = hasGown;
@@ -343,6 +356,7 @@ export function useArGame<S extends PracticeStepLike>(
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
+      gown3d?.dispose();
       stopTracks(stream);
       landmarker?.close();
       feedback.dispose();
