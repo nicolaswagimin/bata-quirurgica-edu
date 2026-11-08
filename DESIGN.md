@@ -390,6 +390,9 @@ Profile badges in a two-column grid of warm-white rows on sand: the 1 px primary
 ### Mission Stars (signature)
 A 9-cell gold star with an ink outline, three per mission. Earned stars are full gold, the missing ones sit at 20 % opacity, and the score is always repeated as text ("2 de 3 estrellas") so colour never carries it alone. Used at 20 px in the mission rows and 28 px in the exam results.
 
+### AR Mirror (camera)
+Over the mirrored video: a status chip, the FPS chip and a camera-quality chip ("Cámara buena / regular / baja") top-left; the touch-free buttons top-right; the step stamps and the instruction low, over the legs. When the camera itself is the problem, one hint pill sits above the instruction (light, backlight, blur, framing). Never two hints at once, and never repeating the pose or the slow-device message, which have their own lines.
+
 ### Inputs / Fields
 - **Style:** warm white, 1 px Faded Ink stroke, 12 px radius, 44 px min height, 16 px text, a real label above in 14 px medium.
 - **Focus:** global ink 3 px ring, 2 px offset.
