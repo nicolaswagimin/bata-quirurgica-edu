@@ -2,7 +2,7 @@ import type { BataPasos, Hotspot, ProtocolStep } from '@bata/shared/schemas';
 
 export type TimelineMode = 'donning' | 'doffing';
 
-// Donning has one static model per step (tools/bata-3d). Doffing keeps the mannequin for now.
+// Donning has one animated model per step (tools/bata-3d). Doffing keeps the mannequin for now.
 export const DONNING_MODEL_COUNT = 6;
 
 export function stepModelUrl(mode: TimelineMode, order: number): string | null {
