@@ -1,7 +1,8 @@
 import type { CaptureTake } from '@bata/shared/perception';
-import { BataPasosSchema } from '@bata/shared/schemas';
+import { ArPracticeFileSchema, type ArPracticeStep, BataPasosSchema } from '@bata/shared/schemas';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import practicaV2Json from '../../../../content/protocolos/ar-practica-v2.json';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
 import {
@@ -11,7 +12,13 @@ import {
   isCaptureEnabled,
 } from '../ar/perception/capture.ts';
 import { CapturePanel } from '../ar/perception/capture-panel.tsx';
-import { type ArFrameHook, type ArStatus, useArGame } from '../ar/use-ar-game.ts';
+import { isPracticeV2Enabled, PracticeSessionV2 } from '../ar/practice-session-v2.ts';
+import {
+  type ArFrameHook,
+  type ArStatus,
+  type PracticeStepLike,
+  useArGame,
+} from '../ar/use-ar-game.ts';
 import { ArBodyGuide } from '../components/ar-body-guide.tsx';
 import { ArHoverButton, ArTargetsContext } from '../components/ar-hover-button.tsx';
 import { ArCountdown, ArInstruction, ArStepProgress, ArWarnings } from '../components/ar-hud.tsx';
@@ -20,6 +27,7 @@ import { Pictogram } from '../components/pictogram.tsx';
 
 const { hotspots, juegoAr } = BataPasosSchema.parse(pasosJson);
 const steps = [...juegoAr].sort((a, b) => a.order - b.order);
+const practiceV2 = ArPracticeFileSchema.parse(practicaV2Json);
 
 const STATUS_TEXT: Record<ArStatus, string> = {
   loading: 'Cargando modelo',
@@ -80,14 +88,18 @@ export default function BataArPage() {
     lastFrame.current = null;
   }, [recorder]);
 
-  const game = useArGame(
-    videoRef,
-    canvasRef,
-    stageRef,
-    hotspotRef,
-    steps,
-    captureEnabled ? { onFrame } : undefined,
+  // Fase 1: secuencia validada detrás de ?practica=v2. Sin la bandera se juega la v1.
+  const [practiceV2Enabled] = useState(() => isPracticeV2Enabled(window.location.search));
+  const practiceSteps = practiceV2Enabled ? practiceV2.steps : steps;
+  const createV2Session = useCallback(
+    (sessionSteps: readonly PracticeStepLike[], reducedMotion: boolean) =>
+      new PracticeSessionV2(sessionSteps as readonly ArPracticeStep[], reducedMotion),
+    [],
   );
+  const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, practiceSteps, {
+    ...(captureEnabled ? { onFrame } : {}),
+    ...(practiceV2Enabled ? { createSession: createV2Session } : {}),
+  });
   const { flow, practice, status, quality } = game;
   const phase = flow.phase;
   // Pose and speed already have their own guidance; the hint is for camera problems only.
@@ -95,7 +107,7 @@ export default function BataArPage() {
     quality?.primary && quality.primary !== 'pose' && quality.primary !== 'lento'
       ? QUALITY_HINTS[quality.primary]
       : null;
-  const current = practice && !practice.done ? steps[practice.stepIndex] : null;
+  const current = practice && !practice.done ? practiceSteps[practice.stepIndex] : null;
 
   const instruction =
     phase === 'ready'
@@ -112,7 +124,9 @@ export default function BataArPage() {
   const spoken =
     phase === 'playing'
       ? current
-        ? `Paso ${current.order}. ${current.instruction}`
+        ? 'voice' in current
+          ? current.voice
+          : `Paso ${current.order}. ${current.instruction}`
         : ''
       : instruction;
   useEffect(() => {
@@ -210,14 +224,14 @@ export default function BataArPage() {
               </div>
               {practice && phase === 'playing' ? (
                 <div className="hidden landscape:block">
-                  <ArStepProgress steps={steps} view={practice} vertical />
+                  <ArStepProgress steps={practiceSteps} view={practice} vertical />
                 </div>
               ) : null}
             </div>
           </div>
           {practice && phase === 'playing' ? (
             <div className="landscape:hidden">
-              <ArStepProgress steps={steps} view={practice} />
+              <ArStepProgress steps={practiceSteps} view={practice} />
             </div>
           ) : null}
         </div>
@@ -306,9 +320,9 @@ export default function BataArPage() {
 
         {captureEnabled && recorder ? (
           <CapturePanel
-            steps={steps}
+            steps={practiceSteps}
             currentStepId={
-              practice && !practice.done ? (steps[practice.stepIndex]?.id ?? null) : null
+              practice && !practice.done ? (practiceSteps[practice.stepIndex]?.id ?? null) : null
             }
             recorder={recorder}
             takes={takes}

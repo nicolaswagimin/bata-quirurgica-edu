@@ -1,5 +1,4 @@
 // Helpers around the game view: re-render checks, the e2e finished view and the score.
-import type { ArGameStep } from '@bata/shared/schemas';
 import type { GameView } from './game-steps.ts';
 
 /** Whether the HUD needs a re-render (hold rounded to 5 %). */
@@ -14,7 +13,7 @@ export function sameView(a: GameView | null, b: GameView): boolean {
   );
 }
 
-export function doneView(steps: readonly ArGameStep[]): GameView {
+export function doneView(steps: readonly { id: string }[]): GameView {
   return {
     stepIndex: steps.length,
     hold: 0,

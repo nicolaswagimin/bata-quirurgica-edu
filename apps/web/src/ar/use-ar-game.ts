@@ -20,7 +20,7 @@ import {
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
-import { GameSession, type GameView, type Scene } from './game-steps.ts';
+import { type GameInput, GameSession, type GameView, type Scene } from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
@@ -38,7 +38,14 @@ import { syntheticPose } from './synthetic-pose.ts';
 /** Called with the raw pose of every processed frame; used by the dev-only capture mode. */
 export type ArFrameHook = (landmarks: readonly Landmark[], size: FrameSize, now: number) => void;
 
-export type ArGameOptions = { onFrame?: ArFrameHook };
+export type PracticeStepLike = { id: string };
+export type PracticeSessionLike = { update(input: GameInput): GameView };
+
+export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
+  onFrame?: ArFrameHook;
+  /** Replaces the default v1 GameSession; `?practica=v2` passes PracticeSessionV2. */
+  createSession?: (steps: readonly S[], reducedMotion: boolean) => PracticeSessionLike;
+};
 
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
 
@@ -47,18 +54,20 @@ const FRAME_SAMPLE_MS = 700;
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function useArGame(
+export function useArGame<S extends PracticeStepLike>(
   videoRef: RefObject<HTMLVideoElement | null>,
   canvasRef: RefObject<HTMLCanvasElement | null>,
   stageRef: RefObject<HTMLElement | null>,
   hotspotRef: RefObject<string | null>,
-  steps: readonly ArGameStep[],
-  options: ArGameOptions = {},
+  steps: readonly S[],
+  options: ArGameOptions<S> = {},
 ) {
-  // A ref keeps the hook out of the effect dependencies: passing a new callback never restarts the
+  // Refs keep the hook out of the effect dependencies: passing new callbacks never restarts the
   // camera and the pose model.
   const onFrameRef = useRef(options.onFrame);
   onFrameRef.current = options.onFrame;
+  const createSessionRef = useRef(options.createSession);
+  createSessionRef.current = options.createSession;
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
@@ -77,7 +86,7 @@ export function useArGame(
   const [voice, setVoiceState] = useState(feedback.voice);
   const [sound, setSoundState] = useState(feedback.sound);
   const flowRef = useRef(new GameFlow());
-  const sessionRef = useRef<GameSession | null>(null);
+  const sessionRef = useRef<PracticeSessionLike | null>(null);
   const targets = useRef<TargetMap>(new Map());
 
   const registry = useMemo<ArTargetRegistry>(
@@ -215,7 +224,10 @@ export function useArGame(
             setFlow(view);
           }
           if (view.phase === 'playing' && !sessionRef.current) {
-            sessionRef.current = new GameSession(steps, still);
+            sessionRef.current = createSessionRef.current
+              ? createSessionRef.current(steps, still)
+              : // El default solo se usa cuando la página pasa los pasos v1 de `juegoAr`.
+                new GameSession(steps as unknown as readonly ArGameStep[], still);
             feedback.success();
           }
           const session = sessionRef.current;
