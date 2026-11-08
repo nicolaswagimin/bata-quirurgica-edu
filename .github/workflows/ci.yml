@@ -14,6 +14,9 @@ jobs:
         with:
           # SonarQube Cloud needs full history for blame and new-code detection.
           fetch-depth: 0
+          # The build never reads the Blender source in LFS (tools/bata-3d/*.blend): keep the
+          # pointer file and skip the 100+ MB download and the LFS bandwidth quota.
+          lfs: false
 
       - uses: actions/setup-java@v4
         with:
