@@ -70,3 +70,23 @@ test('@emu bata viva: ?bata=vivo no rompe el espejo', async ({ page }) => {
     .getByRole('listitem');
   await expect(stamps).toHaveCount(6, { timeout: 25_000 });
 });
+
+test('@emu bata 3D: ?bata=3d monta el canvas y el espejo sigue', async ({ page }) => {
+  test.setTimeout(90_000);
+  await loginOnly(page);
+
+  await page.goto('/bata-ar?bata=3d&simularPose=1');
+  await expect(page.getByTestId('ar-status')).toHaveText(/Detectando|Pose encontrada/, {
+    timeout: 60_000,
+  });
+  await expect(page.getByTestId('ar-gown-3d')).toBeVisible();
+  const start = page.getByRole('button', { name: 'Comenzar' });
+  await expect(start).toBeVisible({ timeout: 30_000 });
+  await start.click();
+
+  const stamps = page
+    .getByRole('list', { name: 'Pasos de la colocación' })
+    .first()
+    .getByRole('listitem');
+  await expect(stamps).toHaveCount(6, { timeout: 25_000 });
+});
