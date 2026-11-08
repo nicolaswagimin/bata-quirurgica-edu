@@ -21,7 +21,7 @@ async function expectTeachingVideo(video: Locator, seconds: number) {
   expect(Math.round(duration)).toBe(seconds);
 }
 
-test('@emu videos educativos: lección, 3D y repaso en el inicio, sin reproducción automática', async ({
+test('@emu videos educativos: lección y repaso sin reproducción automática, 3D con un solo video del procedimiento', async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -40,9 +40,17 @@ test('@emu videos educativos: lección, 3D y repaso en el inicio, sin reproducci
   await zone.scrollIntoViewIfNeeded();
   await expectTeachingVideo(zone, 18);
 
+  // 3D mode: one procedure film for every step (no per-step clips), captioned and chaptered.
   await page.goto('/bata-3d');
-  await page.getByRole('button', { name: /^3\. / }).click();
-  const step = page.locator('video[aria-label^="Paso 3:"]');
-  await step.scrollIntoViewIfNeeded();
-  await expectTeachingVideo(step, 20);
+  const procedure = page.getByTestId('bata-3d').locator('video');
+  await expect(procedure).toHaveCount(1);
+  await expect(procedure).toHaveAttribute('aria-label', 'Demostración de colocación y retiro');
+  await expect(procedure).toHaveAttribute('src', '/videos/procedimiento-ppe.mp4');
+  expect(await procedure.evaluate((el: HTMLVideoElement) => el.muted)).toBe(true);
+  await expect(procedure).not.toHaveAttribute('autoplay');
+  await expect(
+    procedure.locator('track[kind="captions"][srclang="es"][default][src$=".vtt"]'),
+  ).toHaveCount(1);
+  await expect(procedure.locator('track[kind="chapters"][srclang="es"]')).toHaveCount(1);
+  await expect(page.locator('video[aria-label^="Paso "]')).toHaveCount(0);
 });
