@@ -4,9 +4,9 @@ import {
   bodyFrame,
   detectViolations,
   LandmarkSmoother,
+  LM,
   MAX_SMOOTHING,
   MIN_SMOOTHING,
-  LM,
   type Violation,
   ViolationTracker,
 } from '../../src/ar/posture.ts';
