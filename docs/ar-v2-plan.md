@@ -1,6 +1,6 @@
 # AR v2 — plan de reconocimiento, bata realista y práctica guiada
 
-Estado: **fase 2a en curso**: movimiento secundario del ruedo y las mangas tras `?bata=vivo`; la malla 3D (2b) sigue pendiente. Fases 0 y 1 cerradas. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
+Estado: **fase 2b en curso**: primera rebanada de la bata 3D (activo, esqueleto, skinning y renderer) tras `?bata=3d`; el glTF, la colisión y el ajuste en dispositivo siguen pendientes. Fases 0, 1 y 2a cerradas. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
 tocan y nada de esta rama se despliega. Avance por fase: [ar-v2-progreso.md](ar-v2-progreso.md).
 
 Este documento fija el diagnóstico, las correcciones al orden propuesto, la arquitectura, las fases
@@ -89,7 +89,7 @@ puro y el render se valida con capturas y FPS.
 | **0 · Spec + captura** | 1–2 | Contrato de features, modo captura con consentimiento, validador en `tools/vision/` | JSON válido de 2 personas y 10 tomas; captura desactivada en producción |
 | **1 · Protocolo y pasos** | 1–2 | Protocolo validado, pasos rediseñados, debrief | El director de tesis aprueba la secuencia y las acciones |
 | **2a · Movimiento secundario** | 1 | Resortes amortiguados en ruedo y mangas, `?bata=vivo` | Sin tirones, reduced motion respetado, pruebas del resorte y de la malla |
-| **2b · Bata 3D skinned** | 2–3 | glTF + huesos de resorte + colisión + materiales, `?bata=3d` | 30 fps en gama media, sin interpenetración visible |
+| **2b · Bata 3D skinned** | 2–3 | Primera rebanada: malla procedural + esqueleto + skinning + resortes, `?bata=3d`. Pendiente: glTF, colisión con cápsulas y materiales finos | 30 fps en gama media, sin interpenetración visible |
 | **3 · Dataset** | 2 (paralelo) | 50–100 tomas etiquetadas y splits por persona | Splits congelados; ninguna persona en train y test |
 | **4 · Modelo** | 3–4 | Clasificador exportado + evaluación | F1 ≥ 0,85 por paso en personas no vistas y latencia < 50 ms |
 | **5 · Física (opcional)** | 1–2 | Modo tela XPBD | 30 fps sostenidos o se queda apagado |
@@ -107,7 +107,7 @@ Cada fase se desarrolla detrás de bandera y no cambia el comportamiento por def
 | `?captura=1` | Modo captura de landmarks, solo en desarrollo | `bata-ar` |
 | `?percepcion=modelo` | Clasificador aprendido en lugar de las reglas | `bata-ar` |
 | `?bata=vivo` | Movimiento secundario del ruedo y las mangas (2a) | `bata-ar` |
-| `?bata=3d` | Bata 3D skinned con colisión (2b) | `bata-ar` |
+| `?bata=3d` | Bata 3D skinned (2b, primera rebanada) | `bata-ar` |
 
 Sin bandera, el AR se comporta exactamente como hoy y las pruebas actuales deben seguir pasando.
 

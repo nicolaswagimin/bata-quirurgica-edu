@@ -10,7 +10,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 | 0 · Spec + captura | cerrada con excepción de diversidad | 2026-11-07 | 2026-11-07 | 4f8cbc7 … c9fe54a |
 | 1 · Protocolo y pasos | cerrada: secuencia validada + motor v2 tras `?practica=v2` | 2026-11-07 | 2026-11-07 | 28f77de … |
 | 2a · Movimiento secundario | implementada · pendiente verla en dispositivo | 2026-11-08 | — | — |
-| 2b · Bata 3D skinned | pendiente | — | — | — |
+| 2b · Bata 3D skinned | en curso: activo, esqueleto y renderer; glTF y colisión pendientes | 2026-11-08 | — | — |
 | 3 · Dataset | pendiente | — | — | — |
 | 4 · Modelo | pendiente | — | — | — |
 | 5 · Física (opcional) | pendiente | — | — | — |
@@ -148,3 +148,19 @@ aislado. Siguiente: fase 2, la bata skinned con movimiento secundario.
 
 **Gate de 2a**: las pruebas pasan y el movimiento está acotado; falta verlo en un teléfono real y
 decidir la amplitud. La malla 3D con glTF, colisión y materiales queda para 2b.
+
+
+### 2026-11-08 — Fase 2b, primera rebanada: bata 3D con esqueleto
+
+- `gown-3d-mesh.ts`: geometría canónica de la bata (cuerpo de 6 anillos × 12 segmentos y dos
+  mangas), 11 huesos (raíz, columna, hombros, codos, muñecas y tres de ruedo), pesos de piel
+  normalizados y `boneTargets` que proyectan el cuerpo real a ese espacio.
+- `gown-3d.ts`: `SkinnedMesh` en three.js con `MeshStandardMaterial`, luz de estudio y cámara
+  ortográfica en píxeles; el grupo aplica posición, giro y ancho de hombros del jugador. Los
+  resortes de 2a mueven los huesos del ruedo y las muñecas. Si no hay WebGL, `ok=false` y la bata
+  2.5D sigue dibujándose.
+- `?bata=3d`: canvas WebGL debajo del canvas 2D; el 2D deja de pintar la bata puesta pero conserva
+  máscara, guantes, lazos, avisos y cursor.
+- Pruebas: 5 nuevas del activo/esqueleto y e2e de la bandera. 406 unitarias en total.
+- Pendiente: sustituir la malla procedural por el glTF, colisión con cápsulas, textura de tela y
+  medir los 30 fps en un teléfono real.
