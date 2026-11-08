@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ArPracticeFileSchema,
   BataPasosSchema,
   ChatRequestSchema,
   CreateProfileSchema,
@@ -25,6 +26,7 @@ describe('archivos de content/', () => {
   it.each([
     ['questions/seed.json', SeedFileSchema],
     ['protocolos/bata-pasos.json', BataPasosSchema],
+    ['protocolos/ar-practica-v2.json', ArPracticeFileSchema],
     ['credits.json', CreditsSchema],
     ['kb/sources.json', KbSourcesSchema],
     ['legal/privacidad.json', PrivacyPolicySchema],
@@ -96,6 +98,71 @@ describe('LessonsFileSchema', () => {
     const result = LessonsFileSchema.safeParse(broken);
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(['lessons', 0, 'keyPoints', 0]);
+  });
+});
+
+describe('ArPracticeFileSchema', () => {
+  const source = {
+    org: 'OMS',
+    title: 'WHO Guidelines for Safe Surgery',
+    year: 2009,
+    section: 'Objetivo 6: prevención de la infección del sitio quirúrgico',
+  };
+  const step = (id: string, order: number) => ({
+    id,
+    order,
+    donningIds: [],
+    title: id,
+    goal: 'g',
+    action: 'a',
+    look: 'l',
+    holdMs: 600,
+    commonError: 'e',
+    correction: 'c',
+    debrief: 'd',
+    voice: 'v',
+    source,
+  });
+  const valid = {
+    reviewNote: 'x',
+    version: 2,
+    steps: [step('a', 1), step('b', 2)],
+    decisions: [],
+  };
+
+  it('acepta un archivo válido', () => {
+    expect(ArPracticeFileSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('exige identificadores únicos y orden secuencial', () => {
+    expect(
+      ArPracticeFileSchema.safeParse({ ...valid, steps: [step('a', 1), step('a', 2)] }).success,
+    ).toBe(false);
+    expect(
+      ArPracticeFileSchema.safeParse({ ...valid, steps: [step('a', 2), step('b', 1)] }).success,
+    ).toBe(false);
+  });
+
+  it('no repite decisiones', () => {
+    const decision = { id: 'd', question: 'q', proposed: 'p', alternatives: ['a'] };
+    expect(ArPracticeFileSchema.safeParse({ ...valid, decisions: [decision] }).success).toBe(true);
+    expect(
+      ArPracticeFileSchema.safeParse({ ...valid, decisions: [decision, decision] }).success,
+    ).toBe(false);
+  });
+
+  it('la práctica AR v2 cubre todos los pasos del protocolo', () => {
+    const pasos = BataPasosSchema.parse(readJson('protocolos/bata-pasos.json'));
+    const practice = ArPracticeFileSchema.parse(readJson('protocolos/ar-practica-v2.json'));
+    const donning = new Set(pasos.donning.map((donningStep) => donningStep.id));
+    const covered = new Set<string>();
+    for (const practiceStep of practice.steps) {
+      for (const id of practiceStep.donningIds) {
+        expect(donning.has(id), `${practiceStep.id} referencia ${id}`).toBe(true);
+        covered.add(id);
+      }
+    }
+    for (const id of donning) expect(covered.has(id), `falta cubrir ${id}`).toBe(true);
   });
 });
 
