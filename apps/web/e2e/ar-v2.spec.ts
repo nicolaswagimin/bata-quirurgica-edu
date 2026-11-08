@@ -51,3 +51,22 @@ test('@emu práctica v2: sin la bandera se mantienen los 6 pasos actuales', asyn
   await expect(stamps).toHaveCount(6, { timeout: 25_000 });
   await expect(stamps.first()).toContainText('Mascarilla');
 });
+
+test('@emu bata viva: ?bata=vivo no rompe el espejo', async ({ page }) => {
+  test.setTimeout(90_000);
+  await loginOnly(page);
+
+  await page.goto('/bata-ar?bata=vivo&simularPose=1');
+  await expect(page.getByTestId('ar-status')).toHaveText(/Detectando|Pose encontrada/, {
+    timeout: 60_000,
+  });
+  const start = page.getByRole('button', { name: 'Comenzar' });
+  await expect(start).toBeVisible({ timeout: 30_000 });
+  await start.click();
+
+  const stamps = page
+    .getByRole('list', { name: 'Pasos de la colocación' })
+    .first()
+    .getByRole('listitem');
+  await expect(stamps).toHaveCount(6, { timeout: 25_000 });
+});
