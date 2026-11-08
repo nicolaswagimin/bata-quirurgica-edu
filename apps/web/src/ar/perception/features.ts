@@ -95,7 +95,12 @@ export function extractFeatures(input: ExtractInput): FeatureFrame | null {
   const rightShoulder = landmarks[BODY_POINT_INDEX.rightShoulder];
   const leftHip = landmarks[BODY_POINT_INDEX.leftHip];
   const rightHip = landmarks[BODY_POINT_INDEX.rightHip];
-  if (!visible(leftShoulder) || !visible(rightShoulder) || !visible(leftHip) || !visible(rightHip)) {
+  if (
+    !visible(leftShoulder) ||
+    !visible(rightShoulder) ||
+    !visible(leftHip) ||
+    !visible(rightHip)
+  ) {
     return null;
   }
 

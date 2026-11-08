@@ -44,9 +44,7 @@ export const FeaturePointSchema = z
   .strict();
 export type FeaturePoint = z.infer<typeof FeaturePointSchema>;
 
-export const VelocitySchema = z
-  .object({ x: z.number().finite(), y: z.number().finite() })
-  .strict();
+export const VelocitySchema = z.object({ x: z.number().finite(), y: z.number().finite() }).strict();
 export type Velocity = z.infer<typeof VelocitySchema>;
 
 /** Ángulos en radianes; `-1` significa "no disponible" porque falta un landmark. */

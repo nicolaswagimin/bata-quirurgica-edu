@@ -36,11 +36,7 @@ import { pressTargets, type TargetMap } from './press-targets.ts';
 import { syntheticPose } from './synthetic-pose.ts';
 
 /** Called with the raw pose of every processed frame; used by the dev-only capture mode. */
-export type ArFrameHook = (
-  landmarks: readonly Landmark[],
-  size: FrameSize,
-  now: number,
-) => void;
+export type ArFrameHook = (landmarks: readonly Landmark[], size: FrameSize, now: number) => void;
 
 export type ArGameOptions = { onFrame?: ArFrameHook };
 

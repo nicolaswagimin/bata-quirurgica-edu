@@ -1,7 +1,7 @@
 import { BODY_POINTS, type FeatureFrame } from '@bata/shared/perception';
 import { describe, expect, it } from 'vitest';
-import { extractFeatures } from '../../src/ar/perception/features.ts';
 import type { Landmark } from '../../src/ar/overlay-math.ts';
+import { extractFeatures } from '../../src/ar/perception/features.ts';
 
 const SIZE = { width: 1000, height: 1000 };
 
