@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { type Material, Mesh } from 'three';
+import { AnimationMixer, LoopRepeat, type Material, Mesh } from 'three';
 
 export const DRACO_DECODER_PATH = '/draco/';
 
@@ -49,7 +49,7 @@ export function ModelLayer({
   onShown,
   onHidden,
 }: ModelLayerProps) {
-  const { scene } = useGLTF(url, DRACO_DECODER_PATH);
+  const { scene, animations } = useGLTF(url, DRACO_DECODER_PATH);
   const { model, materials } = useMemo(() => {
     const clone = scene.clone(true);
     const list: FadeMaterial[] = [];
@@ -64,6 +64,31 @@ export function ModelLayer({
   const fade = useRef(0);
   const settled = useRef(false);
   const wasVisible = useRef(false);
+
+  // El GLB animado trae un clip de reposo (respiración y micro gestos). Sin él el visor vuelve a
+  // ser una foto: el fundido cambia de paso, no le da vida a la figura. El clip es el mismo en
+  // los seis pasos, así que se reproduce en bucle mientras la capa está visible.
+  const mixer = useMemo(
+    () => (animations.length ? new AnimationMixer(model) : null),
+    [animations, model],
+  );
+
+  useEffect(() => {
+    const clip = animations[0];
+    if (!mixer || !clip) return;
+    const action = mixer.clipAction(clip);
+    action.setLoop(LoopRepeat, Number.POSITIVE_INFINITY);
+    action.play();
+    return () => {
+      action.stop();
+      mixer.stopAllAction();
+    };
+  }, [mixer, animations]);
+
+  // Con `prefers-reduced-motion` el clip se congela, no se reproduce.
+  useEffect(() => {
+    if (mixer) mixer.timeScale = animate ? 1 : 0;
+  }, [mixer, animate]);
 
   // Runs after mount, so only once the GLB has loaded: Suspense holds this component until then.
   useEffect(() => {
@@ -84,6 +109,7 @@ export function ModelLayer({
   );
 
   useFrame((_, delta) => {
+    mixer?.update(delta);
     const target = visible ? 1 : 0;
     if (fade.current === target) {
       // A layer still waiting its turn is at 0 too, but it has not been shown: it must stay mounted.
