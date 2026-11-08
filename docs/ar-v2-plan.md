@@ -1,6 +1,6 @@
 # AR v2 — plan de reconocimiento, bata realista y práctica guiada
 
-Estado: **fase 0 cerrada** (10 tomas válidas; la diversidad de personas queda como requisito de entrada de la fase 4). Fase 1 pendiente. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
+Estado: **fase 1 cerrada** (secuencia validada por el director el 2026-11-07 y motor v2 tras `?practica=v2`). Fase 2 pendiente. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
 tocan y nada de esta rama se despliega. Avance por fase: [ar-v2-progreso.md](ar-v2-progreso.md).
 
 Este documento fija el diagnóstico, las correcciones al orden propuesto, la arquitectura, las fases

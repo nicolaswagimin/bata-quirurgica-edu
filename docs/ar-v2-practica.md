@@ -1,83 +1,78 @@
-# AR v2 — especificación de la práctica guiada (borrador)
+# AR v2 — especificación de la práctica guiada
 
-Estado: **borrador para validación del director de tesis**. No es guía clínica ni fuente de la
-aplicación hasta que se apruebe. La secuencia actual del juego (`juegoAr`) no cambia.
+Estado: **validada por el director de tesis el 2026-11-07**. La secuencia y las cuatro decisiones
+quedaron cerradas en [`content/protocolos/ar-practica-v2.json`](../content/protocolos/ar-practica-v2.json).
+Sigue siendo material educativo: no sustituye el protocolo institucional.
 
-- Contenido: [`content/protocolos/ar-practica-v2.json`](../content/protocolos/ar-practica-v2.json)
 - Esquema: `ArPracticeFileSchema` en [`packages/shared/src/schemas.ts`](../packages/shared/src/schemas.ts)
 - Plan general: [ar-v2-plan.md](ar-v2-plan.md)
+- Avance: [ar-v2-progreso.md](ar-v2-progreso.md)
 
 ## 1. Por qué existe
 
-La práctica actual mezcla pasos y no cuenta la misma historia que el protocolo: el juego empieza por
-la mascarilla, el protocolo empieza por las manos; `g2-manos` se llama “Manos sobre la cintura” pero
-la regla pide las manos por encima de la cintura; y `g3-bata` junta dos acciones distintas (tomar la
-bata y meter los brazos). Este borrador separa cada paso, le da un objetivo, un error frecuente y
-una corrección, y deja explícitas las decisiones clínicas que no puede tomar el código.
+La práctica anterior mezclaba pasos y no contaba la misma historia que el protocolo: el juego
+empezaba por la mascarilla, el protocolo por las manos; `g2-manos` se llamaba “Manos sobre la
+cintura” pero la regla pedía las manos por encima de la cintura; y `g3-bata` juntaba dos acciones
+distintas. La v2 separa cada paso, le da objetivo, error frecuente, corrección y debrief, y deja
+explícitas las decisiones clínicas.
 
-## 2. Secuencia propuesta (7 pasos)
+## 2. Secuencia aprobada (8 pasos)
 
-| # | Paso | Practica | Sostén | Acción |
+| # | Paso | Tipo | Protocolo | Sostén |
 |---|---|---|---|---|
-| 1 | `p1-mascarilla` | — (no está en el protocolo actual) | 0,6 s | Llevar las manos a la cara y ajustar la mascarilla |
-| 2 | `p2-manos` | `d1` | 1,5 s | Manos al frente del pecho, por encima de la cintura |
-| 3 | `p3-tomar-bata` | `d2` | 1,2 s | Tomar la bata por dentro, a la altura del cuello |
-| 4 | `p4-brazos` | `d3` | 1,5 s | Meter un brazo y luego el otro sin sacar las manos |
-| 5 | `p5-lazos` | `d4` | 3,5 s | Quieto con las manos al frente mientras el circulante amarra |
-| 6 | `p6-guantes` | `d5` | 1,2 s | Manos juntas dentro de los puños (técnica cerrada) |
-| 7 | `p7-solapa` | `d6` | 1,2 s | Cuarto de vuelta y regreso al frente |
+| 1 | Mascarilla | `mask` | — | 0,6 s |
+| 2 | Fricción de manos | `friction` | — | 20 s |
+| 3 | Secado estéril de manos | `band` | `d1` | 1,5 s |
+| 4 | Tomar la bata por dentro | `neck` | `d2` | 1,2 s |
+| 5 | Brazos en las mangas | `sleeves` | `d3` | 1,5 s |
+| 6 | Lazos posteriores | `still` | `d4` | 3,5 s |
+| 7 | Guantes en técnica cerrada | `gloves` | `d5` | 1,2 s |
+| 8 | Cierre de la solapa | `turn` | `d6` | 1,2 s |
 
-Cada paso del JSON lleva además: `goal` (para qué sirve), `look` (dónde mirar), `commonError`,
-`correction`, `debrief` (frase de cierre) y `voice` (lo que dice la voz). Los pasos que el AR no
-puede reproducir físicamente llevan `simulation` (por ejemplo, la fricción real de manos).
+El `kind` es lo que el motor v2 sabe evaluar: `mask` manos a la cara, `friction` movimiento continuo
+en la zona estéril con temporizador, `band` manos en la zona estéril, `neck` manos al cuello,
+`sleeves` puños en las mangas y brazos al frente, `still` quietud, `gloves` manos juntas y `turn`
+cuarto de vuelta y regreso.
 
-## 3. Qué cambia frente al juego actual
+Cada paso lleva también `goal`, `look`, `commonError`, `correction`, `debrief`, `voice`,
+`simulation` (cuando el AR no puede reproducir la acción real) y `source`.
 
-| Actual | v2 | Motivo |
+## 3. Decisiones del director (2026-11-07)
+
+| Decisión | Opción aprobada |
+|---|---|
+| Posición de la mascarilla | **Antes de la bata**: la mascarilla no es estéril y se pone primero |
+| Preparación de manos | **Añadir un paso de fricción con temporizador** |
+| ¿Tomar la bata y meter los brazos? | **Dos pasos separados** |
+| Nombre del paso de manos | **Secado estéril de manos** |
+
+Consecuencias en el contenido: la práctica pasa de 6 a 8 pasos; el paso 2 es la fricción con
+temporizador (20 s de práctica, con nota de que la duración real la define el protocolo
+institucional) y el paso 3 es el secado estéril con las manos en la zona estéril.
+
+## 4. Qué cambia frente al juego anterior
+
+| Antes | v2 | Motivo |
 |---|---|---|
-| `g2-manos` “Manos sobre la cintura” | `p2-manos` “Preparación de manos” | El título contradecía la regla (manos por encima de la cintura) |
-| `g3-bata` (tomar + brazos) | `p3-tomar-bata` + `p4-brazos` | Son dos acciones y dos errores distintos |
-| La mascarilla no está en el protocolo | `p1-mascarilla` con la decisión abierta | Hay que definir si va antes o después de la bata |
-| Sin debrief | `debrief` por paso | El cierre explica qué corregir, no solo “terminaste” |
+| `g2-manos` “Manos sobre la cintura” | `p2-friccion` + `p3-secado` | La fricción y el secado son acciones distintas; el título anterior contradecía la regla |
+| `g3-bata` (tomar + brazos) | `p4-tomar-bata` + `p5-brazos` | Dos acciones y dos errores distintos |
+| La mascarilla no estaba en el protocolo | `p1-mascarilla` | El director la mantiene antes de la bata |
+| Sin debrief | `debrief` por paso | El cierre dice qué corregir, no solo “terminaste” |
 
-## 4. Decisiones que debe tomar el director
+## 5. Cómo se consume
 
-Están en el JSON (`decisions`) y repetidas aquí para revisarlas juntas:
+- El motor v2 lee este archivo y se activa con **`?practica=v2`**; sin la bandera, el AR sigue
+  exactamente como hoy.
+- `juegoAr` se mantiene intacto hasta que el motor v2 esté probado con esta secuencia.
+- El texto de la interfaz, la voz y el debrief salen de los campos del JSON, no de cadenas
+  duplicadas en el código.
 
-1. **Posición de la mascarilla.** Propuesta: antes de la bata, como hoy. Alternativas: después de la
-   bata y antes de los guantes (secuencia de las guías OMS) o fuera de la práctica AR.
-2. **Preparación de manos.** Propuesta: solo se practica la posición en la zona estéril; la fricción
-   y el secado reales se hacen fuera del AR. Alternativas: añadir un paso con temporizador o solo
-   mencionarlo en la lección.
-3. **¿Tomar la bata y meter los brazos son dos pasos?** Propuesta: sí, separados. Alternativa: un
-   solo paso combinado, como hoy.
-4. **Nombre del paso de manos.** Propuesta: “Preparación de manos”. Alternativas: “Secado estéril de
-   manos” o “Manos frente al pecho”.
-
-## 5. Cómo se valida
-
-1. El director revisa la secuencia y cada decisión.
-2. Se corrige el JSON con su respuesta.
-3. `reviewNote` pasa a decir quién validó y cuándo; `decisions` queda vacío.
-4. Se actualiza este documento con la secuencia aprobada.
-
-La validación es una puerta humana: ninguna fase posterior cambia la secuencia sin ella.
-
-## 6. Qué pasa después de la aprobación
-
-- El motor v2 se implementa **detrás de `?practica=v2`**: sin la bandera, el AR sigue exactamente
-  como hoy y las pruebas actuales no cambian.
-- `juegoAr` se mantiene como está hasta que el motor v2 esté probado con la secuencia aprobada.
-- Recién entonces se alinean los textos de la app (`g2`), la voz y el debrief final.
-
-## 7. Fuentes
-
-Las citas de cada paso son las mismas que usa el protocolo actual:
+## 6. Fuentes
 
 - OMS, *WHO Guidelines for Safe Surgery* (2009), objetivo 6: prevención de la infección del sitio
-  quirúrgico (bata, mascarilla, lazos, guantes, solapa).
+  quirúrgico (mascarilla, bata, lazos, guantes, solapa).
 - OMS, *Global Guidelines for the Prevention of Surgical Site Infection* (2018), preparación
-  quirúrgica de las manos.
+  quirúrgica de las manos (fricción y secado).
 
 Ningún paso inventa una indicación clínica: describe la secuencia y el error frecuente con la fuente
 que ya respalda el protocolo.
