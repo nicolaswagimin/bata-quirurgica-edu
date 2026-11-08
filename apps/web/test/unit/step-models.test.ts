@@ -23,14 +23,21 @@ function jsonChunk(glb: Buffer): GltfJson {
 
 describe('stepModelUrl', () => {
   it('maps donning steps to their model and leaves doffing to the mannequin', () => {
-    expect(stepModelUrl('donning', 1)).toBe('/models/paso-1.glb');
-    expect(stepModelUrl('donning', DONNING_MODEL_COUNT)).toBe('/models/paso-6.glb');
+    expect(stepModelUrl('donning', 1)).toBe('/models/paso-1-anim.glb');
+    expect(stepModelUrl('donning', DONNING_MODEL_COUNT)).toBe('/models/paso-6-anim.glb');
     expect(stepModelUrl('donning', 7)).toBeNull();
     expect(stepModelUrl('doffing', 1)).toBeNull();
   });
 });
 
 describe('donning step models', () => {
+  it.each([1, 2, 3, 4, 5, 6])('loads an animated clip for step %i', async (order) => {
+    const url = stepModelUrl('donning', order);
+    const glb = await readFile(join(PUBLIC, url ?? ''));
+    expect(glb.byteLength).toBeLessThanOrEqual(MAX_BYTES);
+    expect(jsonChunk(glb).animations).toHaveLength(1);
+  });
+
   it.each([1, 2, 3, 4, 5, 6])('paso-%i.glb is static, compressed and within budget', async (n) => {
     const glb = await readFile(join(PUBLIC, 'models', `paso-${n}.glb`));
     expect(glb.byteLength).toBeLessThanOrEqual(MAX_BYTES);

@@ -1,7 +1,9 @@
 import { useGLTF } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
-import { AnimationMixer, LoopRepeat, type Material, Mesh } from 'three';
+import { createPortal, useFrame } from '@react-three/fiber';
+import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { AnimationMixer, LoopRepeat, type Material, Mesh, SkinnedMesh } from 'three';
+
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 
 export const DRACO_DECODER_PATH = '/draco/';
 
@@ -14,8 +16,8 @@ type FadeMaterial = { material: Material; opacity: number };
 // those. Skin must stay opaque, its texture has low-alpha areas a cutout would punch holes through.
 const CUTOUT_MATERIALS = /eyebrow|eyelash|mouth_protection/i;
 
-function fadeable(material: Material | Material[]): FadeMaterial {
-  const clone = (Array.isArray(material) ? material[0] : material)?.clone() as Material;
+function fadeable(material: Material): FadeMaterial {
+  const clone = material.clone();
   const opacity = clone.opacity;
   if (CUTOUT_MATERIALS.test(clone.name)) clone.alphaTest = 0.5;
   clone.transparent = true;
@@ -27,6 +29,7 @@ function fadeable(material: Material | Material[]): FadeMaterial {
 }
 
 type ModelLayerProps = {
+  children?: ReactNode;
   url: string;
   yaw: number;
   // The step the user asked for: once loaded it takes over from the visible layer.
@@ -38,8 +41,9 @@ type ModelLayerProps = {
   onHidden: (url: string) => void;
 };
 
-// One step's static GLB. Each layer owns cloned materials so two steps can crossfade independently.
+// One step's animated GLB. Each layer owns cloned materials so two steps can crossfade independently.
 export function ModelLayer({
+  children,
   url,
   yaw,
   requested,
@@ -51,13 +55,18 @@ export function ModelLayer({
 }: ModelLayerProps) {
   const { scene, animations } = useGLTF(url, DRACO_DECODER_PATH);
   const { model, materials } = useMemo(() => {
-    const clone = scene.clone(true);
+    const clone = cloneSkeleton(scene);
     const list: FadeMaterial[] = [];
     clone.traverse((object) => {
       if (!(object instanceof Mesh)) return;
-      const fading = fadeable(object.material);
-      object.material = fading.material;
-      list.push(fading);
+      const ownMaterial = (material: Material) => {
+        const fading = fadeable(material);
+        list.push(fading);
+        return fading.material;
+      };
+      object.material = Array.isArray(object.material)
+        ? object.material.map(ownMaterial)
+        : ownMaterial(object.material);
     });
     return { model: clone, materials: list };
   }, [scene]);
@@ -65,9 +74,6 @@ export function ModelLayer({
   const settled = useRef(false);
   const wasVisible = useRef(false);
 
-  // El GLB animado trae un clip de reposo (respiración y micro gestos). Sin él el visor vuelve a
-  // ser una foto: el fundido cambia de paso, no le da vida a la figura. El clip es el mismo en
-  // los seis pasos, así que se reproduce en bucle mientras la capa está visible.
   const mixer = useMemo(
     () => (animations.length ? new AnimationMixer(model) : null),
     [animations, model],
@@ -79,6 +85,7 @@ export function ModelLayer({
     const action = mixer.clipAction(clip);
     action.setLoop(LoopRepeat, Number.POSITIVE_INFINITY);
     action.play();
+    mixer.update(0);
     return () => {
       action.stop();
       mixer.stopAllAction();
@@ -104,8 +111,11 @@ export function ModelLayer({
   useEffect(
     () => () => {
       for (const { material } of materials) material.dispose();
+      model.traverse((object) => {
+        if (object instanceof SkinnedMesh) object.skeleton.dispose();
+      });
     },
-    [materials],
+    [materials, model],
   );
 
   useFrame((_, delta) => {
@@ -142,5 +152,11 @@ export function ModelLayer({
     }
   });
 
-  return <primitive object={model} rotation={[0, yaw, 0]} />;
+  const anchor = model.getObjectByName('WrapTurn') ?? model;
+  return (
+    <>
+      <primitive object={model} rotation={[0, yaw, 0]} />
+      {children && createPortal(<group>{children}</group>, anchor)}
+    </>
+  );
 }
