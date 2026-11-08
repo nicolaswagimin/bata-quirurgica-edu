@@ -1,6 +1,6 @@
 # AR v2 — plan de reconocimiento, bata realista y práctica guiada
 
-Estado: **fase 0 en curso**. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
+Estado: **fase 0 con la implementación completa; pendiente el gate de capturas**. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
 tocan y nada de esta rama se despliega. Avance por fase: [ar-v2-progreso.md](ar-v2-progreso.md).
 
 Este documento fija el diagnóstico, las correcciones al orden propuesto, la arquitectura, las fases
@@ -173,7 +173,7 @@ Un archivo por toma, `ar-captura-<paso>-<marca>.json`:
 
 ## 9. Primer paso operativo
 
-Fase 0, ya en curso:
+Fase 0, implementación completa y pendiente del gate de capturas:
 
 1. Contrato de features en `packages/shared/src/perception.ts`.
 2. Extractor puro en `apps/web/src/ar/perception/features.ts`.
