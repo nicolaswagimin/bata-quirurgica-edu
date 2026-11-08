@@ -9,7 +9,8 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 |---|---|---|---|---|
 | 0 · Spec + captura | cerrada con excepción de diversidad | 2026-11-07 | 2026-11-07 | 4f8cbc7 … c9fe54a |
 | 1 · Protocolo y pasos | cerrada: secuencia validada + motor v2 tras `?practica=v2` | 2026-11-07 | 2026-11-07 | 28f77de … |
-| 2 · Bata skinned | pendiente | — | — | — |
+| 2a · Movimiento secundario | implementada · pendiente verla en dispositivo | 2026-11-08 | — | — |
+| 2b · Bata 3D skinned | pendiente | — | — | — |
 | 3 · Dataset | pendiente | — | — | — |
 | 4 · Modelo | pendiente | — | — | — |
 | 5 · Física (opcional) | pendiente | — | — | — |
@@ -133,3 +134,17 @@ El contenido quedó con **8 pasos** (`p1`–`p8`), `kind` por paso, `validatedBy
 
 **Fase 1 cerrada.** La puerta clínica se cumplió (validación del 2026-11-07) y el motor v2 está
 aislado. Siguiente: fase 2, la bata skinned con movimiento secundario.
+
+
+### 2026-11-08 — Fase 2a: movimiento secundario de la bata
+
+- `GownSprings` en `apps/web/src/ar/gown-motion.ts`: resortes amortiguados que se atrasan en contra
+  de la aceleración del torso, con aceleración suavizada y desplazamiento acotado.
+- La malla ahora acepta el movimiento: el ruedo se desplaza con caída desde la cadera y las mangas
+  se atrasan más cerca del puño; con movimiento neutro la malla es idéntica a la anterior.
+- Bandera `?bata=vivo`; sin ella, el AR se dibuja exactamente como antes.
+- Pruebas: 10 nuevas del resorte y la malla; e2e de la bandera en el espejo.
+- Reducción de movimiento: con `prefers-reduced-motion` los resortes devuelven cero.
+
+**Gate de 2a**: las pruebas pasan y el movimiento está acotado; falta verlo en un teléfono real y
+decidir la amplitud. La malla 3D con glTF, colisión y materiales queda para 2b.
