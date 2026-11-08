@@ -65,16 +65,12 @@ export class PracticeAssist {
     this.announcedStep = -1;
   }
 
-  /**
-   * Advances the help timeline and draws the aids for the current step. `light` skips the ghost
-   * when the device is struggling, so the aids never cost the frame rate the game needs.
-   */
+  /** Advances the help timeline and draws the aids for the current step (a few canvas strokes). */
   frame(
     ctx: CanvasRenderingContext2D | null,
     body: BodyFrame | null,
     view: GameView | null,
     now: number,
-    light: boolean,
   ): AssistView {
     if (!view || view.done) return IDLE;
     const kind = this.kinds[view.stepIndex];
@@ -89,7 +85,7 @@ export class PracticeAssist {
     const statuses = visibleJoints(kind, jointStatus(body, kind));
     // While the pose is held, the step's own hint (from the engine) is the right message.
     const hint = state.level >= 1 && view.hold === 0 ? jointHint(statuses) : null;
-    if (ctx) this.draw(ctx, body, kind, statuses, view.hold, light);
+    if (ctx) this.draw(ctx, body, kind, statuses, view.hold);
     const announce = hint !== null && this.announcedStep !== view.stepIndex;
     if (announce) this.announcedStep = view.stepIndex;
     return { level: state.level, hint, announce };
@@ -101,9 +97,8 @@ export class PracticeAssist {
     kind: PracticeKind,
     statuses: readonly JointStatus[],
     hold: number,
-    light: boolean,
   ): void {
-    const ghost = light ? null : ghostSkeleton(body, kind);
+    const ghost = ghostSkeleton(body, kind);
     if (ghost) drawGhost(ctx, ghost, this.colors);
     drawJointStatus(ctx, statuses, this.colors, body.shoulderWidth / 60);
     if (hold > 0) {

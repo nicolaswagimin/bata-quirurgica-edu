@@ -227,7 +227,6 @@ export function useArGame<S extends PracticeStepLike>(
         : null;
       let assistKey = '';
       let framingKey = '';
-      let light = false;
       const gown3dCanvas = gown3dRef.current?.canvas.current ?? null;
       gown3d = gown3dCanvas ? new Gown3DRenderer(gown3dCanvas, colors) : null;
       const sampleCanvas = document.createElement('canvas');
@@ -355,7 +354,7 @@ export function useArGame<S extends PracticeStepLike>(
           if (aids) {
             const playing = flowState.phase === 'playing';
             const ctx = playing && canvas ? canvas.getContext('2d') : null;
-            const av = playing ? aids.frame(ctx, liveBody, lastView, now, light) : NO_ASSIST;
+            const av = playing ? aids.frame(ctx, liveBody, lastView, now) : NO_ASSIST;
             if (!playing) aids.reset();
             if (av.announce && av.hint) feedback.say(av.hint);
             const key = `${av.level}:${av.hint ?? ''}`;
@@ -399,7 +398,6 @@ export function useArGame<S extends PracticeStepLike>(
             setFps(Math.round(stats.fps));
             setDrawMs(Math.round(renderMs * 10) / 10);
             setLowPerformance(forceLow || stats.lowPerformance);
-            light = forceLow || stats.lowPerformance;
             const report = assessQuality({
               frame: frameSample,
               track,

@@ -112,7 +112,9 @@ export function ArResults({
         </p>
       ) : null}
       {total === 0 ? (
-        <p className="text-base text-muted">Sin avisos de técnica estéril. ¡Impecable!</p>
+        <p className="text-base text-muted">
+          Sin avisos de técnica estéril.{skipped > 0 ? '' : ' ¡Impecable!'}
+        </p>
       ) : (
         <div className="w-full text-left">
           <p className="text-sm font-bold">Avisos de técnica estéril: {total}</p>

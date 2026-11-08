@@ -213,7 +213,7 @@ despliegue con manos apiladas o a los lados); los cuatro se corrigieron con prue
 Fase 1b aprobada por el autor con capturas. Todo sigue solo con `?practica=v2`.
 
 - **Silueta fantasma**: la pose objetivo del paso, translúcida, con hombros y caderas del propio
-  jugador (`pose-targets.ts`, `assist-overlay.ts`). Si el dispositivo va lento no se dibuja.
+  jugador (`pose-targets.ts`, `assist-overlay.ts`). Son pocos trazos de canvas: se dibuja siempre.
 - **Articulaciones en color**: verde (≤ 0,2 anchos de hombro del objetivo), ámbar (≤ 0,5) y rojo,
   con flecha hacia el objetivo. Solo muñecas; los codos solo en mangas y despliegue, donde el motor
   sí los mira.

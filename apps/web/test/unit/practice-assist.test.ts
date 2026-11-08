@@ -65,28 +65,28 @@ describe('PracticeAssist', () => {
   it('a los 8 s da una pista con la articulación y la anuncia una vez', () => {
     const assist = new PracticeAssist(['band'], COLORS);
     const body = bodyFrame(HANDS_LOW, SIZE);
-    expect(assist.frame(null, body, view(0), 0, false).level).toBe(0);
-    const at8 = assist.frame(null, body, view(0), 8000, false);
+    expect(assist.frame(null, body, view(0), 0).level).toBe(0);
+    const at8 = assist.frame(null, body, view(0), 8000);
     expect(at8.level).toBe(1);
     expect(at8.hint).toMatch(/muñeca/);
     expect(at8.announce).toBe(true);
-    expect(assist.frame(null, body, view(0), 8100, false).announce).toBe(false);
-    expect(assist.frame(null, body, view(0), 15_000, false).level).toBe(2);
-    expect(assist.frame(null, body, view(0), 25_000, false).level).toBe(3);
+    expect(assist.frame(null, body, view(0), 8100).announce).toBe(false);
+    expect(assist.frame(null, body, view(0), 15_000).level).toBe(2);
+    expect(assist.frame(null, body, view(0), 25_000).level).toBe(3);
   });
 
   it('sin cuerpo el reloj se detiene', () => {
     const assist = new PracticeAssist(['band'], COLORS);
-    assist.frame(null, bodyFrame(HANDS_LOW, SIZE), view(0), 0, false);
-    assist.frame(null, null, view(0), 1, false);
-    expect(assist.frame(null, bodyFrame(HANDS_LOW, SIZE), view(0), 20_000, false).level).toBe(0);
+    assist.frame(null, bodyFrame(HANDS_LOW, SIZE), view(0), 0);
+    assist.frame(null, null, view(0), 1);
+    expect(assist.frame(null, bodyFrame(HANDS_LOW, SIZE), view(0), 20_000).level).toBe(0);
   });
 
   it('el giro no tiene pose objetivo ni pista de articulación', () => {
     const assist = new PracticeAssist(['turn'], COLORS);
     const body = bodyFrame(HANDS_LOW, SIZE);
-    assist.frame(null, body, view(0), 0, false);
-    const at9 = assist.frame(null, body, view(0), 9000, false);
+    assist.frame(null, body, view(0), 0);
+    const at9 = assist.frame(null, body, view(0), 9000);
     expect(at9.level).toBe(1);
     expect(at9.hint).toBeNull();
   });
@@ -94,10 +94,10 @@ describe('PracticeAssist', () => {
   it('si a los 8 s está sosteniendo, la pista se anuncia cuando vuelve a fallar', () => {
     const assist = new PracticeAssist(['band'], COLORS);
     const body = bodyFrame(HANDS_LOW, SIZE);
-    assist.frame(null, body, view(0), 0, false);
-    const holding = assist.frame(null, body, view(0, 0.5), 8000, false);
+    assist.frame(null, body, view(0), 0);
+    const holding = assist.frame(null, body, view(0, 0.5), 8000);
     expect(holding.announce).toBe(false);
-    const failing = assist.frame(null, body, view(0), 8200, false);
+    const failing = assist.frame(null, body, view(0), 8200);
     expect(failing.hint).not.toBeNull();
     expect(failing.announce).toBe(true);
   });
