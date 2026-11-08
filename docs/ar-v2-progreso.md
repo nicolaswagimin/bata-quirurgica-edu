@@ -7,7 +7,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 
 | Fase | Estado | Inicio | Cierre | Commits |
 |---|---|---|---|---|
-| 0 · Spec + captura | 10 tomas válidas · pendiente la segunda persona | 2026-11-07 | — | 4f8cbc7 … fb28d35 |
+| 0 · Spec + captura | cerrada con excepción de diversidad | 2026-11-07 | 2026-11-07 | 4f8cbc7 … c9fe54a |
 | 1 · Protocolo y pasos | pendiente | — | — | — |
 | 2 · Bata skinned | pendiente | — | — | — |
 | 3 · Dataset | pendiente | — | — | — |
@@ -56,6 +56,31 @@ más píxeles en la próxima tanda.
 
 **Gate de la fase 0 pendiente**: falta la segunda persona (2–3 tomas bastan) además de estas 10.
 Hasta entonces la fase no se marca cerrada.
+
+### 2026-11-07 — Cierre de la fase 0 (con excepción)
+
+Decisión del autor: no hay más personas disponibles por ahora, así que la fase se cierra con una
+sola persona. Queda registrado como excepción, no como gate completo.
+
+**Cumplido**
+
+- Contrato de features y captura, extractor normalizado al torso, grabador, consentimiento,
+  descarga, borrado y validador de `tools/vision/`.
+- 10 tomas válidas (`10 válidas · 0 con errores`), los seis pasos cubiertos y muñecas visibles en
+  el 100 % de los frames.
+- La captura no se puede activar en producción: `isCaptureEnabled` exige `import.meta.env.DEV`.
+- Compuerta: 371 unitarias, 65 de emulador, 7 e2e de AR, 11 del validador; CI de la rama en verde.
+
+**Excepción**
+
+- El gate pedía 2 personas y solo hay 1. El dataset sirve para validar el pipeline y entrenar un
+  primer modelo, pero **no para generalizar**.
+- Mitigación obligatoria antes de la fase 4: grabar 1–2 personas más (mínimo 5 tomas cada una),
+  con luz y distancia distintas, y congelar los splits **por persona**.
+- No se considera el dataset final de entrenamiento.
+
+**Fase 1 desbloqueada**: protocolo y rediseño del paso a paso. La validación del orden y de las
+acciones con el director de tesis es la puerta de esa fase.
 
 ## Cómo se actualiza
 

@@ -1,6 +1,6 @@
 # AR v2 — plan de reconocimiento, bata realista y práctica guiada
 
-Estado: **fase 0 con la implementación completa; pendiente el gate de capturas**. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
+Estado: **fase 0 cerrada** (10 tomas válidas; la diversidad de personas queda como requisito de entrada de la fase 4). Fase 1 pendiente. Rama `feat/ar-v2`, creada desde `main`; `main` y producción no se
 tocan y nada de esta rama se despliega. Avance por fase: [ar-v2-progreso.md](ar-v2-progreso.md).
 
 Este documento fija el diagnóstico, las correcciones al orden propuesto, la arquitectura, las fases
@@ -94,6 +94,10 @@ puro y el render se valida con capturas y FPS.
 | **5 · Física (opcional)** | 1–2 | Modo tela XPBD | 30 fps sostenidos o se queda apagado |
 
 Total realista: 8–12 semanas en secuencia; 6–8 si el dataset corre en paralelo con la bata.
+
+> **Nota de cierre de la fase 0.** Se cerró con 10 tomas válidas de una sola persona porque no había
+> más disponibles. El pipeline está validado, pero antes de la fase 4 hay que grabar 1–2 personas
+> más y congelar los splits por persona; hasta entonces no es un dataset de entrenamiento final.
 
 Cada fase se desarrolla detrás de bandera y no cambia el comportamiento por defecto:
 
