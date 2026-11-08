@@ -12,6 +12,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 | 2a · Movimiento secundario | implementada · pendiente verla en dispositivo | 2026-11-08 | — | — |
 | 2b · Bata 3D skinned | en curso: activo, esqueleto y renderer; glTF y colisión pendientes | 2026-11-08 | — | — |
 | 1b · Secuencia v3 (video de referencia) | implementada · pendiente de validación del director y de tu aprobación | 2026-11-08 | — | — |
+| 2c · Ayudas visuales (`?practica=v2`) | implementada · pendiente de tu aprobación | 2026-11-08 | — | — |
 | 3 · Dataset | pendiente | — | — | — |
 | 4 · Modelo | pendiente | — | — | — |
 | 5 · Física (opcional) | pendiente | — | — | — |
@@ -205,3 +206,36 @@ motor detecta las manos cerca de la cara), «qué mirar» de tomar la bata indic
 centro, y se corrigió la redacción del cuarto de vuelta. La revisión de Codex del motor encontró 4
 problemas (perfil con un solo frame, dos cuartos que pasaban por 360°, final sin volver de frente y
 despliegue con manos apiladas o a los lados); los cuatro se corrigieron con pruebas negativas.
+
+
+### 2026-11-08 — Fase 2c: ayudas visuales para la postura
+
+Fase 1b aprobada por el autor con capturas. Todo sigue solo con `?practica=v2`.
+
+- **Silueta fantasma**: la pose objetivo del paso, translúcida, con hombros y caderas del propio
+  jugador (`pose-targets.ts`, `assist-overlay.ts`). Si el dispositivo va lento no se dibuja.
+- **Articulaciones en color**: verde (≤ 0,2 anchos de hombro del objetivo), ámbar (≤ 0,5) y rojo,
+  con flecha hacia el objetivo. Solo muñecas; los codos solo en mangas y despliegue, donde el motor
+  sí los mira.
+- **Anillo de sostén** sobre la cabeza mientras se mantiene la postura.
+- **Ayuda progresiva** (`assist-timeline.ts`, `practice-assist.ts`, `ar-assist.tsx`): a los 8 s una
+  pista en texto y voz con la articulación a corregir (se dice una vez por paso); a los 15 s una
+  miniatura que reproduce en bucle el capítulo del paso en el modelo 3D de `/bata-3d` (carga
+  perezosa: three.js solo baja si hace falta; con movimiento reducido, cuadro fijo); a los 25 s
+  «Saltar paso», activable sosteniendo la mano 1 s. El reloj se detiene si no hay cuerpo.
+- **Saltar paso**: el paso queda como no completado (`skippedIds`), la escena avanza para que el
+  siguiente paso tenga sentido y la práctica **no se envía al backend**: «esta práctica no suma
+  XP». No hubo que cambiar el API.
+- **Guía de encuadre**: mensajes concretos (`framing-advice.ts`): sin cuerpo, pies, cabeza, muy
+  cerca, muy lejos y descentrado, con el espejo resuelto desde la perspectiva del usuario.
+- Módulos aislados escritos por Codex (`codex:codex-rescue`): `pose-targets.ts`,
+  `assist-overlay.ts`, `assist-timeline.ts` y `framing-advice.ts`, con sus pruebas. Claude escribió
+  la integración (hook, página, motor, resultados, miniatura) y filtró los codos.
+
+Revisión de Codex de la fase 2c: 5 hallazgos válidos, todos corregidos con prueba. El aviso de voz
+ya no se pierde si a los 8 s el jugador estaba sosteniendo; «Saltar paso» lleva el id del paso
+mostrado y no salta el siguiente si el actual terminó en el mismo frame; en v2 la cuenta atrás espera
+a que el consejo de encuadre esté bien; el e2e recorre la práctica saltando pasos (con la bandera de
+QA `simularAyudaRapida`, solo en la build e2e) y verifica que **no** se hace `POST /quiz/practice`;
+y se corrigió una prueba unitaria vacía. Verificado aparte: la miniatura 3D está en un chunk propio
+(`procedure-viewer`, 89 kB gzip) que solo se descarga a los 15 s.

@@ -106,3 +106,30 @@ test('@emu bata 3D: ?bata=3d monta el canvas y el espejo sigue', async ({ page }
     .getByRole('listitem');
   await expect(stamps).toHaveCount(6, { timeout: 25_000 });
 });
+
+test('@emu práctica v2: ayuda progresiva, saltar pasos y sin XP', async ({ page }) => {
+  test.setTimeout(180_000);
+  await loginOnly(page);
+  // El XP solo lo decide el backend: una práctica con pasos saltados no debe enviarse.
+  const practicePosts: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/quiz/practice')) {
+      practicePosts.push(request.url());
+    }
+  });
+
+  // `simularAyudaRapida` (solo build e2e) acelera la ayuda ×10: el botón sale a los 2,5 s.
+  const stamps = await stampsFor(page, '/bata-ar?practica=v2&simularPose=1&simularAyudaRapida=1');
+  await expect(stamps).toHaveCount(7, { timeout: 25_000 });
+  await expect(page.getByTestId('ar-assist')).toBeVisible({ timeout: 30_000 });
+
+  const skip = page.getByRole('button', { name: 'Saltar paso' });
+  const results = page.getByRole('status', { name: 'Resultado de la práctica' });
+  for (let i = 0; i < 7 && !(await results.isVisible()); i += 1) {
+    await expect(skip.or(results)).toBeVisible({ timeout: 30_000 });
+    if (await skip.isVisible()) await skip.click();
+  }
+  await expect(results).toBeVisible({ timeout: 30_000 });
+  await expect(results).toContainText('esta práctica no suma XP');
+  expect(practicePosts).toEqual([]);
+});

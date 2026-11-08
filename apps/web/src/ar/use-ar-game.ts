@@ -1,7 +1,7 @@
 // The AR mirror game loop. Everything runs in the browser: frames go from the <video> to the pose
 // model and the canvas and are never uploaded. React state only changes when something visible
 // changes; per-frame values (dwell rings, drawing) bypass React.
-import type { ArGameStep } from '@bata/shared/schemas';
+import type { ArGameStep, PracticeKind } from '@bata/shared/schemas';
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArTargetRegistry } from '../components/ar-hover-button.tsx';
@@ -19,6 +19,7 @@ import {
 } from './camera-quality.ts';
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
+import { type FramingAdvice, framingAdvice } from './framing-advice.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
 import {
   type GameInput,
@@ -40,6 +41,7 @@ import {
   type Violation,
   ViolationTracker,
 } from './posture.ts';
+import { type AssistView, PracticeAssist, readAssistColors } from './practice-assist.ts';
 import { pressTargets, type TargetMap } from './press-targets.ts';
 import { syntheticPose } from './synthetic-pose.ts';
 
@@ -47,7 +49,10 @@ import { syntheticPose } from './synthetic-pose.ts';
 export type ArFrameHook = (landmarks: readonly Landmark[], size: FrameSize, now: number) => void;
 
 export type PracticeStepLike = { id: string };
-export type PracticeSessionLike = { update(input: GameInput): GameView };
+export type PracticeSessionLike = {
+  update(input: GameInput): GameView;
+  skip?(now: number, stepId?: string): void;
+};
 
 export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
   onFrame?: ArFrameHook;
@@ -57,7 +62,11 @@ export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
   gownMotion?: boolean;
   /** `?bata=3d`: canvas WebGL for the skinned gown. */
   gown3d?: { canvas: RefObject<HTMLCanvasElement | null> };
+  /** Phase 2 aids (ghost, joint colours, hold ring, progressive help): the kind of each step. */
+  assist?: { kinds: readonly PracticeKind[] };
 };
+
+const NO_ASSIST: AssistView = { level: 0, hint: null, announce: false };
 
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
 
@@ -84,6 +93,10 @@ export function useArGame<S extends PracticeStepLike>(
   gownMotionRef.current = options.gownMotion;
   const gown3dRef = useRef(options.gown3d);
   gown3dRef.current = options.gown3d;
+  const assistRef = useRef(options.assist);
+  assistRef.current = options.assist;
+  const [assist, setAssist] = useState<AssistView>(NO_ASSIST);
+  const [framing, setFraming] = useState<FramingAdvice | null>(null);
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
@@ -101,7 +114,11 @@ export function useArGame<S extends PracticeStepLike>(
   const feedback = useMemo(() => new ArFeedback(), []);
   const [voice, setVoiceState] = useState(feedback.voice);
   const [sound, setSoundState] = useState(feedback.sound);
-  const flowRef = useRef(new GameFlow());
+  // v2 waits for the framing advice to be satisfied (head, feet, distance, centred) to count down.
+  const [initialFlow] = useState(
+    () => new GameFlow(options.assist ? (lm) => framingAdvice(lm).ok : undefined),
+  );
+  const flowRef = useRef(initialFlow);
   const sessionRef = useRef<PracticeSessionLike | null>(null);
   const targets = useRef<TargetMap>(new Map());
 
@@ -125,6 +142,7 @@ export function useArGame<S extends PracticeStepLike>(
     setErrors({});
     sessionRef.current = null;
     setPractice(null);
+    setAssist(NO_ASSIST);
     if (e2eFlag('simularPracticaCompleta')) {
       flowRef.current.finish();
       setFlow({ phase: 'done', secondsLeft: 0 });
@@ -134,6 +152,15 @@ export function useArGame<S extends PracticeStepLike>(
     flowRef.current.start();
     setFlow({ phase: 'framing', secondsLeft: 0 });
   }, [feedback, steps]);
+
+  /** "Saltar paso" (v2): the current step is left as not completed and earns no XP. */
+  const skip = useCallback(
+    (stepId: string) => {
+      sessionRef.current?.skip?.(performance.now(), stepId);
+      feedback.tick();
+    },
+    [feedback],
+  );
 
   const stop = useCallback(() => {
     flowRef.current.reset();
@@ -190,6 +217,17 @@ export function useArGame<S extends PracticeStepLike>(
       const canvas = canvasRef.current;
       const colors = readArColors();
       const renderer = canvas ? new ArRenderer(canvas, colors) : null;
+      const assistKinds = assistRef.current?.kinds;
+      const aids = assistKinds
+        ? new PracticeAssist(
+            assistKinds,
+            readAssistColors(),
+            e2eFlag('simularAyudaRapida') ? 10 : 1,
+          )
+        : null;
+      let assistKey = '';
+      let framingKey = '';
+      let light = false;
       const gown3dCanvas = gown3dRef.current?.canvas.current ?? null;
       gown3d = gown3dCanvas ? new Gown3DRenderer(gown3dCanvas, colors) : null;
       const sampleCanvas = document.createElement('canvas');
@@ -314,6 +352,23 @@ export function useArGame<S extends PracticeStepLike>(
             renderMs = renderMs * 0.9 + ms * 0.1;
           }
           gown3d?.render(liveBody, activeScene, gownMotion, video.videoWidth, video.videoHeight);
+          if (aids) {
+            const playing = flowState.phase === 'playing';
+            const ctx = playing && canvas ? canvas.getContext('2d') : null;
+            const av = playing ? aids.frame(ctx, liveBody, lastView, now, light) : NO_ASSIST;
+            if (!playing) aids.reset();
+            if (av.announce && av.hint) feedback.say(av.hint);
+            const key = `${av.level}:${av.hint ?? ''}`;
+            if (key !== assistKey) {
+              assistKey = key;
+              setAssist(av);
+            }
+            const advice = flowState.phase === 'framing' ? framingAdvice(landmarks) : null;
+            if ((advice?.message ?? '') !== framingKey) {
+              framingKey = advice?.message ?? '';
+              setFraming(advice);
+            }
+          }
           const hasGown = renderBody !== null;
           if (hasGown !== anchored) {
             anchored = hasGown;
@@ -344,6 +399,7 @@ export function useArGame<S extends PracticeStepLike>(
             setFps(Math.round(stats.fps));
             setDrawMs(Math.round(renderMs * 10) / 10);
             setLowPerformance(forceLow || stats.lowPerformance);
+            light = forceLow || stats.lowPerformance;
             const report = assessQuality({
               frame: frameSample,
               track,
@@ -386,6 +442,8 @@ export function useArGame<S extends PracticeStepLike>(
     practice,
     flow,
     errors,
+    assist,
+    framing,
     quality,
     run,
     voice,
@@ -393,6 +451,7 @@ export function useArGame<S extends PracticeStepLike>(
     registry,
     feedback,
     start,
+    skip,
     stop,
     setVoice,
     setSound,

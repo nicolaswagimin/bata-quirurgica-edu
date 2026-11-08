@@ -42,6 +42,11 @@ export class GameFlow {
   private outSince: number | null = null;
   private countdownStart = 0;
 
+  /** `ready` decides when the body is framed; v2 passes the stricter framing advice. */
+  constructor(
+    private readonly ready: (landmarks: readonly Landmark[]) => boolean = fullBodyInFrame,
+  ) {}
+
   start(): void {
     this.phase = 'framing';
     this.inFrameSince = null;
@@ -57,7 +62,7 @@ export class GameFlow {
   }
 
   update(landmarks: readonly Landmark[], now: number): FlowView {
-    const inFrame = fullBodyInFrame(landmarks);
+    const inFrame = this.ready(landmarks);
     if (this.phase === 'framing') {
       if (inFrame) {
         this.inFrameSince ??= now;

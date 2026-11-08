@@ -35,7 +35,14 @@ function XpLine({ r }: { r: PracticeCompleteResponse }) {
  * the warnings by kind and the XP. The practice is saved once and XP is decided by
  * POST /quiz/practice, never here.
  */
-export function ArResults({ errors }: { errors: Partial<Record<Violation, number>> }) {
+export function ArResults({
+  errors,
+  skipped = 0,
+}: {
+  errors: Partial<Record<Violation, number>>;
+  /** Steps skipped with "Saltar paso": the practice is not saved and earns no XP. */
+  skipped?: number;
+}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const submit = useMutation({
@@ -63,8 +70,8 @@ export function ArResults({ errors }: { errors: Partial<Record<Violation, number
   });
   const { mutate, isIdle } = submit;
   useEffect(() => {
-    if (isIdle) mutate();
-  }, [isIdle, mutate]);
+    if (isIdle && skipped === 0) mutate();
+  }, [isIdle, mutate, skipped]);
 
   const entries = Object.entries(errors).filter(([, n]) => (n ?? 0) > 0) as [Violation, number][];
   const total = entries.reduce((sum, [, n]) => sum + n, 0);
@@ -82,11 +89,19 @@ export function ArResults({ errors }: { errors: Partial<Record<Violation, number
           <PixelSprite sprite={MEDAL} className="size-20 landscape:size-12" />
         </span>
       </div>
-      <p className="font-pixel text-2xl font-semibold text-seal landscape:text-lg">Bata puesta</p>
+      <p className="font-pixel text-2xl font-semibold text-seal landscape:text-lg">
+        {skipped > 0 ? 'Casi lista' : 'Bata puesta'}
+      </p>
       <p className="font-mono text-[40px] leading-none font-bold tabular-nums landscape:text-2xl">
         {score}
         <span className="text-xl text-muted">/100</span>
       </p>
+      {skipped > 0 ? (
+        <p className="text-balance">
+          Saltaste {skipped === 1 ? '1 paso' : `${skipped} pasos`}: esta práctica no suma XP.
+          Repítela completa para ganarlo.
+        </p>
+      ) : null}
       {submit.isPending ? <p className="text-muted">Guardando tu práctica…</p> : null}
       {submit.data ? <XpLine r={submit.data} /> : null}
       {submit.isError ? (

@@ -93,6 +93,7 @@ export class PracticeSessionV2 {
   private index = 0;
   private holdStart: number | null = null;
   private completed: string[] = [];
+  private skipped: string[] = [];
   private turn: TurnTracker = newTurnTracker();
   private readonly turnMode: TurnMode;
   private scene: Scene = INITIAL_SCENE;
@@ -243,6 +244,21 @@ export class PracticeSessionV2 {
     }
   }
 
+  /**
+   * "Saltar paso": the current step is left as not completed (no XP) and the scene jumps to the
+   * state the step would have produced, so the next steps still make sense.
+   */
+  skip(now: number, stepId?: string): void {
+    const step = this.steps[this.index];
+    // The button belongs to the step it was shown for; if that step just finished, do nothing.
+    if (!step || (stepId !== undefined && step.id !== stepId)) return;
+    this.holdStart = null;
+    this.missStart = null;
+    this.advance(step, now);
+    this.completed.pop();
+    this.skipped.push(step.id);
+  }
+
   /** True while a miss is recent enough to freeze the hold instead of resetting it. */
   private paused(now: number): boolean {
     this.missStart ??= now;
@@ -253,6 +269,10 @@ export class PracticeSessionV2 {
     this.completed.push(step.id);
     this.index += 1;
     this.turn = newTurnTracker();
+    // A skipped "take the gown" step still has to leave the gown hanging for the sleeves.
+    if (step.kind === 'neck' && this.scene.gown === 'hidden') {
+      this.scene = { ...this.scene, gown: 'hanging' };
+    }
     if (step.kind === 'mask') this.scene = { ...this.scene, mask: 'snapping', maskT: 0 };
     if (step.kind === 'sleeves') this.scene = { ...this.scene, gown: 'donning', gownT: 0 };
     if (step.kind === 'still') this.scene = { ...this.scene, ties: 'tied', tieT: 1 };
@@ -299,6 +319,7 @@ export class PracticeSessionV2 {
       hold,
       hint,
       completedIds: [...this.completed],
+      skippedIds: [...this.skipped],
       done: this.index >= this.steps.length,
       scene: this.scene,
       warningsOn: this.index > 0,

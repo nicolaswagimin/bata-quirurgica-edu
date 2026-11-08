@@ -302,3 +302,33 @@ describe('práctica v3: despliegue y giro configurable', () => {
     expect(feed(session, pose(), 3800, 1500).done).toBe(true);
   });
 });
+
+describe('saltar paso', () => {
+  it('avanza sin completar el paso y lo registra como saltado', () => {
+    const session = new PracticeSessionV2([stepOf('neck'), stepOf('band')], true);
+    feed(session, pose(), 0, 100);
+    session.skip(200);
+    const view = feed(session, pose(), 250, 0);
+    expect(view.stepIndex).toBe(1);
+    expect(view.completedIds).toEqual([]);
+    expect(view.skippedIds).toEqual(['s-neck']);
+    // La bata queda colgada para que el paso de mangas siga teniendo sentido.
+    expect(view.scene.gown).toBe('hanging');
+  });
+
+  it('saltar el último paso termina la práctica', () => {
+    const session = new PracticeSessionV2([stepOf('turn')], true);
+    session.skip(0);
+    const view = feed(session, pose(), 50, 0);
+    expect(view.done).toBe(true);
+    expect(view.skippedIds).toEqual(['s-turn']);
+  });
+
+  it('ignora un salto pedido para un paso que ya terminó', () => {
+    const session = new PracticeSessionV2([stepOf('neck'), stepOf('band')], true);
+    session.skip(0, 's-band');
+    const view = feed(session, pose(), 50, 0);
+    expect(view.stepIndex).toBe(0);
+    expect(view.skippedIds).toEqual([]);
+  });
+});

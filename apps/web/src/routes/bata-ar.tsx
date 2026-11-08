@@ -22,6 +22,7 @@ import {
   type PracticeStepLike,
   useArGame,
 } from '../ar/use-ar-game.ts';
+import { ArAssist } from '../components/ar-assist.tsx';
 import { ArBodyGuide } from '../components/ar-body-guide.tsx';
 import { ArHoverButton, ArTargetsContext } from '../components/ar-hover-button.tsx';
 import { ArCountdown, ArInstruction, ArStepProgress, ArWarnings } from '../components/ar-hud.tsx';
@@ -94,6 +95,9 @@ export default function BataArPage() {
 
   // Fase 1: secuencia v3 detrás de ?practica=v2. Sin la bandera se juega la v1.
   const [practiceV2Enabled] = useState(() => isPracticeV2Enabled(window.location.search));
+  const [reducedMotionPref] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
   const [practiceV2] = useState(() =>
     resolvePractice(practiceSpec, practiceConfig(practiceSpec, window.location.search)),
   );
@@ -115,6 +119,8 @@ export default function BataArPage() {
     ...(practiceV2Enabled ? { createSession: createV2Session } : {}),
     ...(gownMotionEnabled ? { gownMotion: true } : {}),
     ...(gown3dEnabled ? { gown3d: { canvas: gown3dCanvasRef } } : {}),
+    // Fase 2: ayudas visuales y ayuda progresiva, solo con la práctica v2.
+    ...(practiceV2Enabled ? { assist: { kinds: practiceV2.steps.map((s) => s.kind) } } : {}),
   });
   const { flow, practice, status, quality } = game;
   const phase = flow.phase;
@@ -129,7 +135,7 @@ export default function BataArPage() {
     phase === 'ready'
       ? 'Apoya el celular a la altura de la cintura y aléjate unos 2 metros'
       : phase === 'framing'
-        ? 'Aléjate hasta que se vea tu cuerpo'
+        ? (game.framing?.message ?? 'Aléjate hasta que se vea tu cuerpo')
         : phase === 'countdown'
           ? '¡Listo! Quédate ahí'
           : phase === 'done'
@@ -264,10 +270,29 @@ export default function BataArPage() {
           ) : null}
         </div>
 
+        {/* Right edge: progressive help for a stuck step (v2 only). */}
+        {practiceV2Enabled && phase === 'playing' ? (
+          <div className="pointer-events-none absolute top-[30%] right-3 landscape:top-auto landscape:right-20 landscape:bottom-4">
+            <ArAssist
+              level={game.assist.level}
+              hint={game.assist.hint}
+              step={practiceV2.steps[practice?.stepIndex ?? -1] ?? null}
+              reducedMotion={reducedMotionPref}
+              onSkip={game.skip}
+            />
+          </div>
+        ) : null}
+
         {/* Centre: countdown and results only */}
         <div className="pointer-events-none absolute inset-0 grid place-items-center landscape:pt-24 landscape:pr-4 landscape:pb-4 landscape:pl-[36%]">
           {phase === 'countdown' ? <ArCountdown seconds={flow.secondsLeft} /> : null}
-          {phase === 'done' ? <ArResults key={game.run} errors={game.errors} /> : null}
+          {phase === 'done' ? (
+            <ArResults
+              key={game.run}
+              errors={game.errors}
+              skipped={practice?.skippedIds?.length ?? 0}
+            />
+          ) : null}
         </div>
 
         {/* Bottom: the actions of the current phase */}

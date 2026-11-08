@@ -8,6 +8,7 @@ export function sameView(a: GameView | null, b: GameView): boolean {
     a.stepIndex === b.stepIndex &&
     a.hint === b.hint &&
     a.done === b.done &&
+    (a.skippedIds?.length ?? 0) === (b.skippedIds?.length ?? 0) &&
     a.exempt.join() === b.exempt.join() &&
     Math.abs(a.hold - b.hold) < 0.05
   );
