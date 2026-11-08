@@ -532,10 +532,24 @@ export type BataPasos = z.infer<typeof BataPasosSchema>;
 // sostén, error frecuente, corrección y debrief. `donningIds` enlaza con el protocolo y `decisions`
 // recoge lo que el director de tesis debe validar antes de implementar el motor v2.
 
+/** Interacción que el motor v2 sabe evaluar; el contenido no necesita conocer la geometría. */
+export const PracticeKindSchema = z.enum([
+  'mask',
+  'friction',
+  'band',
+  'neck',
+  'sleeves',
+  'still',
+  'gloves',
+  'turn',
+]);
+export type PracticeKind = z.infer<typeof PracticeKindSchema>;
+
 export const ArPracticeStepSchema = z
   .object({
     id: IdSchema,
     order: z.number().int().min(1),
+    kind: PracticeKindSchema,
     /** Pasos de `bata-pasos.json#donning` que practica; vacío si el paso no está en el protocolo. */
     donningIds: z.array(IdSchema),
     title: z.string().min(1).max(80),
@@ -545,8 +559,8 @@ export const ArPracticeStepSchema = z
     action: z.string().min(1).max(240),
     /** Dónde mirar o qué parte del cuerpo importa. */
     look: z.string().min(1).max(200),
-    /** Cuánto debe sostener la posición. */
-    holdMs: z.number().int().min(300).max(10_000),
+    /** Cuánto debe sostener la posición o el movimiento (timer de fricción incluido). */
+    holdMs: z.number().int().min(300).max(60_000),
     commonError: z.string().min(1).max(240),
     correction: z.string().min(1).max(240),
     /** Frase de cierre del paso, para el debrief final. */
@@ -567,6 +581,8 @@ export const PracticeDecisionSchema = z
     question: z.string().min(1).max(300),
     proposed: z.string().min(1).max(300),
     alternatives: z.array(z.string().min(1).max(300)).min(1).max(4),
+    /** Opción aprobada por el director; vacío mientras la decisión siga abierta. */
+    chosen: z.string().min(1).max(300).optional(),
   })
   .strict();
 export type PracticeDecision = z.infer<typeof PracticeDecisionSchema>;
@@ -575,6 +591,12 @@ export const ArPracticeFileSchema = z
   .object({
     reviewNote: z.string().min(1),
     version: z.literal(2),
+    /** Quién validó la secuencia y el día (YYYY-MM-DD); van juntos o no van. */
+    validatedBy: z.string().min(1).max(120).optional(),
+    validatedAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha YYYY-MM-DD')
+      .optional(),
     steps: z.array(ArPracticeStepSchema).min(1),
     decisions: z.array(PracticeDecisionSchema),
   })
@@ -598,6 +620,13 @@ export const ArPracticeFileSchema = z
         });
       }
     });
+    if (Boolean(file.validatedBy) !== Boolean(file.validatedAt)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'validatedBy y validatedAt deben ir juntos',
+        path: ['validatedBy'],
+      });
+    }
     const decisionIds = new Set<string>();
     file.decisions.forEach((decision, i) => {
       if (decisionIds.has(decision.id)) {
@@ -608,6 +637,17 @@ export const ArPracticeFileSchema = z
         });
       }
       decisionIds.add(decision.id);
+      if (
+        decision.chosen &&
+        decision.chosen !== decision.proposed &&
+        !decision.alternatives.includes(decision.chosen)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'chosen debe ser la propuesta o una de las alternativas',
+          path: ['decisions', i, 'chosen'],
+        });
+      }
     });
   });
 export type ArPracticeFile = z.infer<typeof ArPracticeFileSchema>;

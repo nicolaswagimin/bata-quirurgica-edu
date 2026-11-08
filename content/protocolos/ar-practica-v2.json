@@ -1,10 +1,13 @@
 {
-  "reviewNote": "Borrador de la práctica guiada AR v2: secuencia, acciones, tiempos y correcciones pendientes de validación por el director de tesis contra el protocolo institucional. Las decisiones abiertas están en `decisions`; hasta que se validen, este archivo no es guía clínica ni fuente de la aplicación.",
+  "reviewNote": "Secuencia validada por el director de tesis el 2026-11-07. Las cuatro decisiones quedaron cerradas en `decisions` con la opción elegida; el motor v2 las consume detrás de ?practica=v2.",
   "version": 2,
+  "validatedBy": "Director de tesis",
+  "validatedAt": "2026-11-07",
   "steps": [
     {
       "id": "p1-mascarilla",
       "order": 1,
+      "kind": "mask",
       "donningIds": [],
       "title": "Mascarilla",
       "goal": "Cubrir nariz y boca antes de la exposición.",
@@ -24,19 +27,20 @@
       }
     },
     {
-      "id": "p2-manos",
+      "id": "p2-friccion",
       "order": 2,
-      "donningIds": ["d1"],
-      "title": "Preparación de manos",
-      "goal": "Reducir la carga microbiana antes de la técnica estéril.",
-      "action": "Frota y seca las manos; en el AR, llévalas al frente del pecho, por encima de la cintura, y sostenlas.",
-      "look": "Manos dentro de la zona estéril, del pecho a la cintura.",
-      "holdMs": 1500,
-      "commonError": "Bajar las manos por debajo de la cintura.",
-      "correction": "Sube las manos frente al pecho y no las bajes.",
-      "debrief": "Manos listas y en zona estéril.",
-      "voice": "Manos al frente, por encima de la cintura.",
-      "simulation": "La fricción y el secado reales se hacen fuera del AR; aquí se practica la posición.",
+      "kind": "friction",
+      "donningIds": [],
+      "title": "Fricción de manos",
+      "goal": "Reducir la carga microbiana con fricción en toda la mano.",
+      "action": "Frota palmas, dorsos y espacios entre los dedos durante el tiempo indicado.",
+      "look": "Manos a la altura del pecho y en movimiento continuo.",
+      "holdMs": 20000,
+      "commonError": "Frotar solo las palmas o dejar las manos quietas.",
+      "correction": "Mantén el movimiento y cubre palmas, dorsos y dedos.",
+      "debrief": "Fricción completa: toda la mano cubierta.",
+      "voice": "Sigue frotando: cubre toda la mano.",
+      "simulation": "El AR mide tiempo y movimiento; la duración real la define el protocolo institucional.",
       "source": {
         "org": "OMS",
         "title": "Global Guidelines for the Prevention of Surgical Site Infection",
@@ -45,8 +49,31 @@
       }
     },
     {
-      "id": "p3-tomar-bata",
+      "id": "p3-secado",
       "order": 3,
+      "kind": "band",
+      "donningIds": ["d1"],
+      "title": "Secado estéril de manos",
+      "goal": "Secar sin contaminar y mantener las manos en zona estéril.",
+      "action": "Seca las manos con una compresa estéril y llévalas al frente del pecho, por encima de la cintura.",
+      "look": "Manos dentro de la zona estéril, del pecho a la cintura.",
+      "holdMs": 1500,
+      "commonError": "Bajar las manos por debajo de la cintura.",
+      "correction": "Sube las manos frente al pecho y no las bajes.",
+      "debrief": "Manos secas y en zona estéril.",
+      "voice": "Manos al frente, por encima de la cintura.",
+      "simulation": "El secado real se hace fuera del AR; aquí se practica la posición.",
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      }
+    },
+    {
+      "id": "p4-tomar-bata",
+      "order": 4,
+      "kind": "neck",
       "donningIds": ["d2"],
       "title": "Tomar la bata por dentro",
       "goal": "Abrir la bata sin contaminar la cara externa.",
@@ -65,8 +92,9 @@
       }
     },
     {
-      "id": "p4-brazos",
-      "order": 4,
+      "id": "p5-brazos",
+      "order": 5,
+      "kind": "sleeves",
       "donningIds": ["d3"],
       "title": "Brazos en las mangas",
       "goal": "Vestir la bata manteniendo las manos dentro de los puños.",
@@ -85,8 +113,9 @@
       }
     },
     {
-      "id": "p5-lazos",
-      "order": 5,
+      "id": "p6-lazos",
+      "order": 6,
+      "kind": "still",
       "donningIds": ["d4"],
       "title": "Lazos posteriores",
       "goal": "Dejar que el circulante cierre la bata sin contaminarte.",
@@ -105,8 +134,9 @@
       }
     },
     {
-      "id": "p6-guantes",
-      "order": 6,
+      "id": "p7-guantes",
+      "order": 7,
+      "kind": "gloves",
       "donningIds": ["d5"],
       "title": "Guantes en técnica cerrada",
       "goal": "Cubrir los puños sin tocar la piel con el exterior del guante.",
@@ -125,8 +155,9 @@
       }
     },
     {
-      "id": "p7-solapa",
-      "order": 7,
+      "id": "p8-solapa",
+      "order": 8,
+      "kind": "turn",
       "donningIds": ["d6"],
       "title": "Cierre de la solapa",
       "goal": "Cubrir la espalda con la lengüeta sin contaminar el frente.",
@@ -154,17 +185,19 @@
         "Antes de la bata: la mascarilla no es estéril y se pone primero.",
         "Después de la bata y antes de los guantes, siguiendo la secuencia de las guías OMS.",
         "Fuera de la práctica AR: solo se menciona en la lección."
-      ]
+      ],
+      "chosen": "Antes de la bata: la mascarilla no es estéril y se pone primero."
     },
     {
       "id": "manos-simulacion",
-      "question": "¿La preparación de manos se practica en el AR o solo se menciona?",
+      "question": "¿Cómo se practica la preparación de manos?",
       "proposed": "Solo se practica la posición en zona estéril; la fricción y el secado reales se hacen fuera del AR.",
       "alternatives": [
         "Solo la posición en zona estéril.",
         "Añadir un paso de fricción con temporizador.",
         "Solo mencionarla en la lección previa."
-      ]
+      ],
+      "chosen": "Añadir un paso de fricción con temporizador."
     },
     {
       "id": "bata-dos-pasos",
@@ -173,17 +206,19 @@
       "alternatives": [
         "Dos pasos separados.",
         "Un solo paso combinado, como en la versión actual del juego."
-      ]
+      ],
+      "chosen": "Dos pasos separados."
     },
     {
       "id": "manos-titulo",
-      "question": "¿Cómo se llama el paso de preparación de manos en la interfaz?",
+      "question": "¿Cómo se llama el paso de manos en la interfaz?",
       "proposed": "Preparación de manos.",
       "alternatives": [
         "Preparación de manos.",
         "Secado estéril de manos.",
         "Manos frente al pecho."
-      ]
+      ],
+      "chosen": "Secado estéril de manos."
     }
   ]
 }

@@ -111,6 +111,7 @@ describe('ArPracticeFileSchema', () => {
   const step = (id: string, order: number) => ({
     id,
     order,
+    kind: 'band',
     donningIds: [],
     title: id,
     goal: 'g',
@@ -141,6 +142,34 @@ describe('ArPracticeFileSchema', () => {
     expect(
       ArPracticeFileSchema.safeParse({ ...valid, steps: [step('a', 2), step('b', 1)] }).success,
     ).toBe(false);
+  });
+
+  it('exige que la validación y la fecha vayan juntas', () => {
+    expect(ArPracticeFileSchema.safeParse({ ...valid, validatedBy: 'Director' }).success).toBe(
+      false,
+    );
+    expect(ArPracticeFileSchema.safeParse({ ...valid, validatedAt: '2026-11-07' }).success).toBe(
+      false,
+    );
+    expect(
+      ArPracticeFileSchema.safeParse({
+        ...valid,
+        validatedBy: 'Director',
+        validatedAt: '2026-11-07',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('solo acepta una decisión elegida entre las opciones', () => {
+    const decision = { id: 'd', question: 'q', proposed: 'p', alternatives: ['a'] };
+    expect(
+      ArPracticeFileSchema.safeParse({ ...valid, decisions: [{ ...decision, chosen: 'b' }] })
+        .success,
+    ).toBe(false);
+    expect(
+      ArPracticeFileSchema.safeParse({ ...valid, decisions: [{ ...decision, chosen: 'a' }] })
+        .success,
+    ).toBe(true);
   });
 
   it('no repite decisiones', () => {
