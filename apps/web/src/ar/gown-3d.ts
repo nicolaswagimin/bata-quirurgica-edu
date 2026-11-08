@@ -98,13 +98,6 @@ export class Gown3DRenderer {
       return;
     }
 
-    const targets = boneTargets(body, motion);
-    for (let i = 0; i < this.bones.length; i++) {
-      const target = targets[GOWN3D_BONES[i] as Gown3DBone];
-      this.bones[i]?.position.set(target[0], target[1], target[2]);
-    }
-    this.skeleton.update();
-
     const across = new THREE.Vector3(body.across.x, body.across.y, 0).normalize();
     const down = new THREE.Vector3(body.down.x, body.down.y, 0).normalize();
     const normal = new THREE.Vector3().crossVectors(across, down).normalize();
@@ -113,7 +106,16 @@ export class Gown3DRenderer {
     );
     this.group.position.set(body.shoulderMid.x, body.shoulderMid.y, 0);
     this.group.scale.setScalar(body.shoulderWidth);
+
+    const targets = boneTargets(body, motion);
+    for (let i = 0; i < this.bones.length; i++) {
+      const target = targets[GOWN3D_BONES[i] as Gown3DBone];
+      this.bones[i]?.position.set(target[0], target[1], target[2]);
+    }
+    // Los huesos tienen que estar en world antes de recalcular la piel; si no, la bata va un frame
+    // atrás del cuerpo.
     this.group.updateMatrixWorld(true);
+    this.skeleton.update();
 
     this.renderer.render(this.scene, this.camera);
   }
