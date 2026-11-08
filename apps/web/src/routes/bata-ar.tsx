@@ -1,9 +1,13 @@
+import type { CaptureTake, FeatureFrame } from '@bata/shared/perception';
 import { BataPasosSchema } from '@bata/shared/schemas';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
-import { type ArStatus, useArGame } from '../ar/use-ar-game.ts';
+import { CaptureRecorder, isCaptureEnabled } from '../ar/perception/capture.ts';
+import { CapturePanel } from '../ar/perception/capture-panel.tsx';
+import { extractFeatures } from '../ar/perception/features.ts';
+import { type ArFrameHook, type ArStatus, useArGame } from '../ar/use-ar-game.ts';
 import { ArBodyGuide } from '../components/ar-body-guide.tsx';
 import { ArHoverButton, ArTargetsContext } from '../components/ar-hover-button.tsx';
 import { ArCountdown, ArInstruction, ArStepProgress, ArWarnings } from '../components/ar-hud.tsx';
@@ -38,7 +42,55 @@ export default function BataArPage() {
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   hotspotRef.current = hotspotId;
   const navigate = useNavigate();
-  const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, steps);
+
+  // Fase 0: captura de landmarks solo en desarrollo y solo con ?captura=1.
+  const [captureEnabled] = useState(() =>
+    isCaptureEnabled({ dev: import.meta.env.DEV, search: window.location.search }),
+  );
+  const recorderRef = useRef<CaptureRecorder | null>(null);
+  if (captureEnabled && !recorderRef.current) recorderRef.current = new CaptureRecorder();
+  const recorder = recorderRef.current;
+  const [takes, setTakes] = useState<CaptureTake[]>([]);
+  const lastFrame = useRef<{ frame: FeatureFrame; at: number } | null>(null);
+
+  const onFrame = useCallback<ArFrameHook>(
+    (landmarks, size, now) => {
+      if (!recorder?.isRecording()) {
+        lastFrame.current = null;
+        return;
+      }
+      const previous = lastFrame.current;
+      const frame = extractFeatures({
+        landmarks,
+        size,
+        t: recorder.elapsed(now),
+        dtMs: previous ? now - previous.at : undefined,
+        previous: previous?.frame ?? null,
+      });
+      if (!frame) return;
+      recorder.push(frame, now);
+      lastFrame.current = { frame, at: now };
+    },
+    [recorder],
+  );
+
+  const handleTake = useCallback((take: CaptureTake) => {
+    setTakes((prev) => [...prev, take]);
+  }, []);
+  const handleClear = useCallback(() => {
+    setTakes([]);
+    recorder?.clear();
+    lastFrame.current = null;
+  }, [recorder]);
+
+  const game = useArGame(
+    videoRef,
+    canvasRef,
+    stageRef,
+    hotspotRef,
+    steps,
+    captureEnabled ? { onFrame } : undefined,
+  );
   const { flow, practice, status, quality } = game;
   const phase = flow.phase;
   // Pose and speed already have their own guidance; the hint is for camera problems only.
@@ -254,6 +306,19 @@ export default function BataArPage() {
             </div>
           ) : null}
         </div>
+
+        {captureEnabled && recorder ? (
+          <CapturePanel
+            steps={steps}
+            currentStepId={
+              practice && !practice.done ? (steps[practice.stepIndex]?.id ?? null) : null
+            }
+            recorder={recorder}
+            takes={takes}
+            onTake={handleTake}
+            onClear={handleClear}
+          />
+        ) : null}
       </section>
     </ArTargetsContext.Provider>
   );
