@@ -30,11 +30,11 @@ const SLEEVE_SEGMENTS = 8;
 /** Ruedo y cintura de referencia, en anchos de hombros. */
 const BODY_RINGS = [
   { v: 0, halfWidth: 0.5, halfDepth: 0.17 },
-  { v: 0.3, halfWidth: 0.46, halfDepth: 0.19 },
-  { v: 0.65, halfWidth: 0.42, halfDepth: 0.2 },
-  { v: 1, halfWidth: 0.45, halfDepth: 0.21 },
-  { v: 1.35, halfWidth: 0.49, halfDepth: 0.23 },
-  { v: 1.7, halfWidth: 0.53, halfDepth: 0.25 },
+  { v: 0.3, halfWidth: 0.47, halfDepth: 0.19 },
+  { v: 0.65, halfWidth: 0.4, halfDepth: 0.2 },
+  { v: 1, halfWidth: 0.48, halfDepth: 0.22 },
+  { v: 1.35, halfWidth: 0.56, halfDepth: 0.24 },
+  { v: 1.7, halfWidth: 0.66, halfDepth: 0.27 },
 ] as const;
 const SLEEVE_RINGS = [
   { side: 1 as const, x: 0.5, y: 0, radius: 0.17 },

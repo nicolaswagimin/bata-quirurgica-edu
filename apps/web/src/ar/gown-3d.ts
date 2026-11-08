@@ -5,9 +5,10 @@ import * as THREE from 'three';
 import type { Scene } from './game-steps.ts';
 import { boneTargets, buildGown3D, GOWN3D_BONES, type Gown3DBone } from './gown-3d-mesh.ts';
 import type { GownMotion } from './gown-motion.ts';
+import { createFabricCanvas } from './gown-render.ts';
 import type { BodyFrame } from './posture.ts';
 
-export type Gown3DColors = { fabric: string; trim: string };
+export type Gown3DColors = { fabric: string; trim: string; paper: string };
 
 export class Gown3DRenderer {
   readonly ok: boolean;
@@ -17,6 +18,7 @@ export class Gown3DRenderer {
   private readonly group = new THREE.Group();
   private readonly mesh: THREE.SkinnedMesh | null = null;
   private readonly skeleton: THREE.Skeleton | null = null;
+  private readonly texture: THREE.Texture | null = null;
   private readonly bones: THREE.Bone[] = [];
   private width = 0;
   private height = 0;
@@ -32,6 +34,8 @@ export class Gown3DRenderer {
     this.renderer.setPixelRatio(1);
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.15;
 
     const data = buildGown3D();
     const geometry = new THREE.BufferGeometry();
@@ -50,9 +54,20 @@ export class Gown3DRenderer {
       this.group.add(bone);
     }
     this.skeleton = new THREE.Skeleton(this.bones);
+    const fabricCanvas = createFabricCanvas(colors);
+    const texture = fabricCanvas ? new THREE.CanvasTexture(fabricCanvas) : null;
+    if (texture) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2);
+      texture.anisotropy = 4;
+    }
+    this.texture = texture;
     const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(colors.fabric),
-      roughness: 0.9,
+      map: texture,
+      color: texture ? 0xffffff : new THREE.Color(colors.fabric),
+      roughness: 0.88,
       metalness: 0.02,
       side: THREE.DoubleSide,
     });
@@ -65,10 +80,12 @@ export class Gown3DRenderer {
     // the body transform (position, turn and shoulder width) every frame.
     mesh.bind(this.skeleton);
 
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
-    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 2.2));
+    const key = new THREE.DirectionalLight(0xffffff, 3.2);
     key.position.set(320, -420, 900);
-    this.scene.add(key, key.target);
+    const fill = new THREE.DirectionalLight(0xcfe8ff, 1.2);
+    fill.position.set(-420, 160, 700);
+    this.scene.add(key, key.target, fill, fill.target);
     this.camera.position.set(0, 0, 1000);
     this.camera.lookAt(0, 0, 0);
   }
@@ -130,6 +147,7 @@ export class Gown3DRenderer {
         });
       else material.dispose();
     }
+    this.texture?.dispose();
     this.renderer?.dispose();
   }
 }

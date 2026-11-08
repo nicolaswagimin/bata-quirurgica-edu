@@ -20,7 +20,13 @@ import {
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
-import { type GameInput, GameSession, type GameView, type Scene } from './game-steps.ts';
+import {
+  type GameInput,
+  GameSession,
+  type GameView,
+  INITIAL_SCENE,
+  type Scene,
+} from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
 import { Gown3DRenderer } from './gown-3d.ts';
 import { GownSprings } from './gown-motion.ts';
@@ -194,6 +200,8 @@ export function useArGame<S extends PracticeStepLike>(
       let lastSampleAt = 0;
       let lastQualityKey = '';
       const forceLow = e2eFlag('simularFpsBajo');
+      // Solo QA: fuerza la bata puesta para revisar la malla 3D sin recorrer la práctica.
+      const showcase = e2eFlag('simularBataPuesta');
       const simulate = simulatedPoseVariant();
       let lastVideoTime = -1;
       let nextDetectAt = 0;
@@ -288,8 +296,11 @@ export function useArGame<S extends PracticeStepLike>(
             lastSpringAt = now;
           }
 
-          const activeScene =
-            flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null;
+          const activeScene: Scene | null = showcase
+            ? { ...INITIAL_SCENE, gown: 'worn', gownT: 1 }
+            : flowState.phase === 'playing' || flowState.phase === 'done'
+              ? scene
+              : null;
           if (renderer) {
             const ms = renderer.draw(video, renderBody, active, {
               scene: activeScene,
