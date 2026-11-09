@@ -7,6 +7,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { ArTargetRegistry } from '../components/ar-hover-button.tsx';
 import { ArRenderer, readArColors } from './ar-render.ts';
 import { BodyHold } from './body-hold.ts';
+import { approxWorldFromImage } from './camera-fov.ts';
 import { bootCameraAndPose, stopTracks } from './camera-pose.ts';
 import {
   assessQuality,
@@ -30,7 +31,9 @@ import {
 } from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
 import { Gown3DRenderer } from './gown-3d.ts';
+import type { GownQuality } from './gown-fallback.ts';
 import { GownSprings } from './gown-motion.ts';
+import { GownRigDriver } from './gown-rig-driver.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
@@ -62,6 +65,8 @@ export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
   gownMotion?: boolean;
   /** `?bata=3d`: canvas WebGL for the skinned gown. */
   gown3d?: { canvas: RefObject<HTMLCanvasElement | null> };
+  /** Phase 3: realistic rigged gown (`?practica=v2`), optional XPBD with `?tela=xpbd`. */
+  gownRig?: { canvas: RefObject<HTMLCanvasElement | null>; xpbd: boolean };
   /** Phase 2 aids (ghost, joint colours, hold ring, progressive help): the kind of each step. */
   assist?: { kinds: readonly PracticeKind[] };
 };
@@ -93,6 +98,10 @@ export function useArGame<S extends PracticeStepLike>(
   gownMotionRef.current = options.gownMotion;
   const gown3dRef = useRef(options.gown3d);
   gown3dRef.current = options.gown3d;
+  const gownRigRef = useRef(options.gownRig);
+  gownRigRef.current = options.gownRig;
+  const [gownQuality, setGownQuality] = useState<GownQuality | null>(null);
+  const [gownDrawn, setGownDrawn] = useState(false);
   const assistRef = useRef(options.assist);
   assistRef.current = options.assist;
   const [assist, setAssist] = useState<AssistView>(NO_ASSIST);
@@ -189,6 +198,7 @@ export function useArGame<S extends PracticeStepLike>(
     let stream: MediaStream | null = null;
     let landmarker: PoseLandmarker | null = null;
     let gown3d: Gown3DRenderer | null = null;
+    let rig: GownRigDriver | null = null;
     let frameId = 0;
 
     async function boot() {
@@ -227,6 +237,15 @@ export function useArGame<S extends PracticeStepLike>(
         : null;
       let assistKey = '';
       let framingKey = '';
+      const rigOptions = gownRigRef.current;
+      const rigCanvas = rigOptions?.canvas.current ?? null;
+      rig = rigCanvas
+        ? new GownRigDriver(rigCanvas, colors.fabric, reducedMotion(), rigOptions?.xpbd ?? false)
+        : null;
+      let rigDrew = false;
+      const noFpsFallback = e2eFlag('sinRespaldoFps');
+      let rigQuality = '';
+      let lastFps = 30;
       const gown3dCanvas = gown3dRef.current?.canvas.current ?? null;
       gown3d = gown3dCanvas ? new Gown3DRenderer(gown3dCanvas, colors) : null;
       const sampleCanvas = document.createElement('canvas');
@@ -338,6 +357,28 @@ export function useArGame<S extends PracticeStepLike>(
             : flowState.phase === 'playing' || flowState.phase === 'done'
               ? scene
               : null;
+          // The 3D gown first, so the 2D renderer knows this frame's result (never both, never neither).
+          if (rig) {
+            // Metric pose for the 3D gown; the synthetic e2e pose has none, so approximate it.
+            const world = simulate
+              ? approxWorldFromImage(landmarks, size)
+              : (result.worldLandmarks?.[0] ?? null);
+            rigDrew = rig.frame({
+              world: liveBody ? world : null,
+              image: landmarks,
+              size,
+              worn: activeScene?.gown === 'worn',
+              now,
+              // QA only: the headless browser runs at ~5 fps, which would always trigger the fallback.
+              fps: noFpsFallback ? 60 : lastFps,
+            });
+            const qualityKey = `${rig.quality}:${rig.drawnOnce}`;
+            if (qualityKey !== rigQuality) {
+              rigQuality = qualityKey;
+              setGownQuality(rig.quality);
+              setGownDrawn(rig.drawnOnce);
+            }
+          }
           if (renderer) {
             const ms = renderer.draw(video, renderBody, active, {
               scene: activeScene,
@@ -346,7 +387,7 @@ export function useArGame<S extends PracticeStepLike>(
               cursors: !renderBody, // with a body the posture rings already mark the hands
               landmarks,
               gownMotion,
-              gown3d: gown3d?.ok ?? false,
+              gown3d: (gown3d?.ok ?? false) || rigDrew,
             });
             renderMs = renderMs * 0.9 + ms * 0.1;
           }
@@ -386,6 +427,7 @@ export function useArGame<S extends PracticeStepLike>(
               SAMPLE_WIDTH,
               SAMPLE_HEIGHT,
             );
+            rig?.setLuma(frameSample.luma);
           }
           const track = trackQuality.update(raw, size, liveBody !== null);
           const stats = monitor.record(now);
@@ -396,6 +438,7 @@ export function useArGame<S extends PracticeStepLike>(
           if (now - lastFpsUpdate >= FPS_REFRESH_MS) {
             lastFpsUpdate = now;
             setFps(Math.round(stats.fps));
+            lastFps = forceLow ? 10 : stats.fps;
             setDrawMs(Math.round(renderMs * 10) / 10);
             setLowPerformance(forceLow || stats.lowPerformance);
             const report = assessQuality({
@@ -422,6 +465,7 @@ export function useArGame<S extends PracticeStepLike>(
       cancelled = true;
       cancelAnimationFrame(frameId);
       gown3d?.dispose();
+      rig?.dispose();
       stopTracks(stream);
       landmarker?.close();
       feedback.dispose();
@@ -442,6 +486,8 @@ export function useArGame<S extends PracticeStepLike>(
     errors,
     assist,
     framing,
+    gownQuality,
+    gownDrawn,
     quality,
     run,
     voice,

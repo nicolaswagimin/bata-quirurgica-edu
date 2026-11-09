@@ -8,7 +8,12 @@ function param(name: string): string | null {
 
 /** `?simularFpsBajo=1` and `?simularPracticaCompleta=1`. */
 export function e2eFlag(
-  name: 'simularFpsBajo' | 'simularPracticaCompleta' | 'simularBataPuesta' | 'simularAyudaRapida',
+  name:
+    | 'simularFpsBajo'
+    | 'simularPracticaCompleta'
+    | 'simularBataPuesta'
+    | 'simularAyudaRapida'
+    | 'sinRespaldoFps',
 ): boolean {
   return param(name) === '1';
 }

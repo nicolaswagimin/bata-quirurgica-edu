@@ -13,6 +13,7 @@ rama se despliega. Plan completo: [ar-v2-plan.md](ar-v2-plan.md).
 | 2b · Bata 3D skinned | en curso: activo, esqueleto y renderer; glTF y colisión pendientes | 2026-11-08 | — | — |
 | 1b · Secuencia v3 (video de referencia) | implementada · pendiente de validación del director y de tu aprobación | 2026-11-08 | — | — |
 | 2c · Ayudas visuales (`?practica=v2`) | implementada · pendiente de tu aprobación | 2026-11-08 | — | — |
+| 2d · Bata realista con físicas (`?practica=v2`) | implementada · pendiente de tu aprobación y de medirla en un teléfono | 2026-11-08 | — | — |
 | 3 · Dataset | pendiente | — | — | — |
 | 4 · Modelo | pendiente | — | — | — |
 | 5 · Física (opcional) | pendiente | — | — | — |
@@ -239,3 +240,48 @@ a que el consejo de encuadre esté bien; el e2e recorre la práctica saltando pa
 QA `simularAyudaRapida`, solo en la build e2e) y verifica que **no** se hace `POST /quiz/practice`;
 y se corrigió una prueba unitaria vacía. Verificado aparte: la miniatura 3D está en un chunk propio
 (`procedure-viewer`, 89 kB gzip) que solo se descarga a los 15 s.
+
+
+### 2026-11-08 — Fase 2d: bata realista con físicas
+
+Fase 2c aprobada por el autor. Todo con `?practica=v2`; `?bata=2d` la apaga para QA.
+
+- **Calibración del campo de visión** (`camera-fov.ts`, Codex): con los `worldLandmarks`
+  métricos de MediaPipe y los 2D se estiman la focal y la traslación de la cámara, así que la bata
+  usa una cámara en perspectiva y no flota. En pruebas sintéticas con ruido: error de FOV < 0,8° y
+  de traslación < 4 cm. Se deja de alimentar 3 s después de estar lista (cuesta CPU). Mientras no
+  está lista usa 63° horizontales (cámara frontal típica).
+- **Bata del pipeline de Blender** (`tools/bata-3d/export_ar_gown.py`, Codex; corrida aquí porque
+  en el entorno de Codex Blender no arranca sin GPU): la misma bata cerrada del modo 3D, sin
+  persona, con esqueleto simplificado de 24 huesos (columna, hombros, brazos, ruedo ×4×2, mangas,
+  lazos) y pesos transferidos del cuerpo de MPFB. `bata-ar-rig.glb`: **149 KB, 24 500 triángulos**.
+  Contrato en `tools/bata-3d/AR_RIG.md`. Corrección de Claude: vértices con peso 0 dividían por cero.
+- **Retargeting** (`rig-retarget.ts`, `gown-rig.ts`): la cadera ubica y orienta la bata, y cada
+  hueso de brazo apunta a su articulación. GLTFLoader quita los puntos de los nombres de hueso:
+  se mapean al contrato.
+- **Huesos de resorte** (`spring-bones.ts`, Codex): ruedo, mangas y lazos con Verlet, rigidez hacia
+  la pose animada y colisión contra cápsulas del cuerpo; 0,02 ms por actualización.
+- **Tela no tejida** (`nonwoven-material.ts`): textura de fibras, normal map del mismo campo y
+  `sheen` suave, generados en el dispositivo. La luz sigue el brillo de la imagen de la cámara,
+  suavizada.
+- **Oclusión**: esferas de solo profundidad en las manos, que se ven delante de la bata. **No** se
+  usó la máscara de segmentación de MediaPipe: cuesta fps en gama media y para las manos no hizo
+  falta.
+- **XPBD opcional** (`xpbd-cloth.ts`, Codex; `?tela=xpbd`): una falda proxy de 6×16 simulada como
+  tela y fijada a la cintura guía los huesos del ruedo. No deforma vértice por vértice la malla. Se
+  queda solo si un paso cuesta < 4 ms en el dispositivo y si el juego mantiene 30 fps; si no, baja a
+  resortes. Apagada por defecto y con movimiento reducido.
+- **Respaldo automático** (`gown-fallback.ts`): XPBD < 30 fps → resortes; resortes < 20 fps → bata
+  2.5D (3 s sostenidos, tras 4 s de arranque). Un fallo de WebGL o del GLB va directo a 2.5D.
+- QA solo en la build e2e: `sinRespaldoFps` (el navegador de pruebas va a ~5 fps).
+
+**Pendiente de verdad**: medir en un celular de gama media (fps con resortes y con XPBD) y
+comprobar la calibración con una cámara real; hasta ahora solo se vio con la pose simulada.
+
+Revisión de Codex de la fase 2d: 8 hallazgos válidos, todos corregidos. Los lazos del GLB tenían
+el pivote en el piso (se reexportó: 24 500 triángulos, 150 KB, máximo 4 influencias, verificado al
+reimportar); la pérdida del contexto WebGL ahora activa el respaldo; la calibración se reinicia si
+cambia la resolución de la cámara; la bata 3D se dibuja antes que la 2D, así nunca se ven las dos
+ni ninguna en un frame; los resortes y la XPBD se reinician tras una pausa larga o pérdida de pose;
+los largos de los resortes siguen la escala del cuerpo; al cerrar se liberan texturas y el cargador
+Draco; y el e2e exige que el modelo se haya dibujado (`data-drawn`), no solo la calidad.

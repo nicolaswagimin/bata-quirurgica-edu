@@ -133,3 +133,49 @@ test('@emu práctica v2: ayuda progresiva, saltar pasos y sin XP', async ({ page
   await expect(results).toContainText('esta práctica no suma XP');
   expect(practicePosts).toEqual([]);
 });
+
+// Fase 3: bata realista con esqueleto. El navegador de pruebas va a ~5 fps, así que para ver la
+// bata 3D se usa `sinRespaldoFps` (solo build e2e) y para probar el respaldo, `simularFpsBajo`.
+async function rigQuality(page: import('@playwright/test').Page, url: string) {
+  await page.goto(url);
+  await expect(page.getByTestId('ar-status')).toHaveText(/Detectando|Pose encontrada/, {
+    timeout: 60_000,
+  });
+  return page.getByTestId('ar-gown-rig');
+}
+
+test('@emu bata realista: el GLB con resortes se dibuja en la práctica v2', async ({ page }) => {
+  test.setTimeout(120_000);
+  await loginOnly(page);
+  const rig = await rigQuality(
+    page,
+    '/bata-ar?practica=v2&simularPose=1&simularBataPuesta=1&sinRespaldoFps=1',
+  );
+  // El modelo cargó y se dibujó de verdad, no solo que la calidad diga "resortes".
+  await expect(rig).toHaveAttribute('data-drawn', 'true', { timeout: 30_000 });
+  await expect(rig).toHaveAttribute('data-quality', 'springs');
+});
+
+test('@emu bata realista: con fps bajos vuelve sola a la bata 2.5D', async ({ page }) => {
+  test.setTimeout(120_000);
+  await loginOnly(page);
+  const rig = await rigQuality(
+    page,
+    '/bata-ar?practica=v2&simularPose=1&simularBataPuesta=1&simularFpsBajo=1',
+  );
+  await expect(rig).toHaveAttribute('data-quality', '2d', { timeout: 30_000 });
+});
+
+test('@emu bata realista: ?bata=2d la apaga y ?tela=xpbd es opcional', async ({ page }) => {
+  test.setTimeout(150_000);
+  await loginOnly(page);
+  await rigQuality(page, '/bata-ar?practica=v2&bata=2d&simularPose=1');
+  await expect(page.getByTestId('ar-gown-rig')).toHaveCount(0);
+  const rig = await rigQuality(
+    page,
+    '/bata-ar?practica=v2&tela=xpbd&simularPose=1&simularBataPuesta=1&sinRespaldoFps=1',
+  );
+  await page.waitForTimeout(9000);
+  // XPBD queda si cabe en el presupuesto del dispositivo; si no, baja sola a resortes.
+  await expect(rig).toHaveAttribute('data-quality', /^(xpbd|springs)$/);
+});

@@ -106,6 +106,14 @@ export default function BataArPage() {
   // Fase 2b: bata 3D skinned sobre el video con ?bata=3d.
   const [gown3dEnabled] = useState(() => isGown3dEnabled(window.location.search));
   const gown3dCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Fase 3: bata realista con esqueleto y físicas en la práctica v2 (`?bata=2d` la apaga para QA).
+  const [gownRigEnabled] = useState(
+    () =>
+      isPracticeV2Enabled(window.location.search) && !window.location.search.includes('bata=2d'),
+  );
+  const [xpbdEnabled] = useState(
+    () => new URLSearchParams(window.location.search).get('tela') === 'xpbd',
+  );
   const practiceSteps = practiceV2Enabled ? practiceV2.steps : steps;
   const createV2Session = useCallback(
     (sessionSteps: readonly PracticeStepLike[], reducedMotion: boolean) =>
@@ -119,6 +127,9 @@ export default function BataArPage() {
     ...(practiceV2Enabled ? { createSession: createV2Session } : {}),
     ...(gownMotionEnabled ? { gownMotion: true } : {}),
     ...(gown3dEnabled ? { gown3d: { canvas: gown3dCanvasRef } } : {}),
+    ...(gownRigEnabled && !gown3dEnabled
+      ? { gownRig: { canvas: gown3dCanvasRef, xpbd: xpbdEnabled } }
+      : {}),
     // Fase 2: ayudas visuales y ayuda progresiva, solo con la práctica v2.
     ...(practiceV2Enabled ? { assist: { kinds: practiceV2.steps.map((s) => s.kind) } } : {}),
   });
@@ -193,10 +204,12 @@ export default function BataArPage() {
               className="absolute inset-0 size-full -scale-x-100 object-cover"
               aria-label="Vista de tu cámara en modo espejo"
             />
-            {gown3dEnabled ? (
+            {gown3dEnabled || gownRigEnabled ? (
               <canvas
                 ref={gown3dCanvasRef}
-                data-testid="ar-gown-3d"
+                data-testid={gown3dEnabled ? 'ar-gown-3d' : 'ar-gown-rig'}
+                data-quality={game.gownQuality ?? undefined}
+                data-drawn={game.gownDrawn ? 'true' : undefined}
                 className="pointer-events-none absolute inset-0 size-full -scale-x-100 object-cover"
               />
             ) : null}
