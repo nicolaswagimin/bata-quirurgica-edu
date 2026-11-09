@@ -82,4 +82,11 @@ describe('GameFlow', () => {
     f.update(body(), 3700);
     expect(f.update(body(), 6800).phase).toBe('playing');
   });
+
+  it('a stricter readiness check (v2 framing advice) keeps it framing', () => {
+    const f = new GameFlow(() => false);
+    f.start();
+    f.update(body(), 0);
+    expect(f.update(body(), 2000).phase).toBe('framing');
+  });
 });

@@ -1,12 +1,13 @@
 // The AR mirror game loop. Everything runs in the browser: frames go from the <video> to the pose
 // model and the canvas and are never uploaded. React state only changes when something visible
 // changes; per-frame values (dwell rings, drawing) bypass React.
-import type { ArGameStep } from '@bata/shared/schemas';
+import type { ArGameStep, PracticeKind } from '@bata/shared/schemas';
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArTargetRegistry } from '../components/ar-hover-button.tsx';
 import { ArRenderer, readArColors } from './ar-render.ts';
 import { BodyHold } from './body-hold.ts';
+import { approxWorldFromImage } from './camera-fov.ts';
 import { bootCameraAndPose, stopTracks } from './camera-pose.ts';
 import {
   assessQuality,
@@ -19,11 +20,22 @@ import {
 } from './camera-quality.ts';
 import { e2eFlag, simulatedPoseVariant } from './e2e-hooks.ts';
 import { ArFeedback } from './feedback-audio.ts';
+import { type FramingAdvice, framingAdvice } from './framing-advice.ts';
 import { type FlowView, fullBodyInFrame, GameFlow } from './game-flow.ts';
-import { GameSession, type GameView, type Scene } from './game-steps.ts';
+import {
+  type GameInput,
+  GameSession,
+  type GameView,
+  INITIAL_SCENE,
+  type Scene,
+} from './game-steps.ts';
 import { doneView, sameView } from './game-view.ts';
+import { Gown3DRenderer } from './gown-3d.ts';
+import type { GownQuality } from './gown-fallback.ts';
+import { GownSprings } from './gown-motion.ts';
+import { GownRigDriver } from './gown-rig-driver.ts';
 import { DwellTracker } from './hover-targets.ts';
-import { FpsMonitor } from './overlay-math.ts';
+import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
 import type { PoseDelegate } from './pose.ts';
 import {
   bodyFrame,
@@ -32,8 +44,34 @@ import {
   type Violation,
   ViolationTracker,
 } from './posture.ts';
+import { type AssistView, PracticeAssist, readAssistColors } from './practice-assist.ts';
 import { pressTargets, type TargetMap } from './press-targets.ts';
 import { syntheticPose } from './synthetic-pose.ts';
+
+/** Called with the raw pose of every processed frame; used by the dev-only capture mode. */
+export type ArFrameHook = (landmarks: readonly Landmark[], size: FrameSize, now: number) => void;
+
+export type PracticeStepLike = { id: string };
+export type PracticeSessionLike = {
+  update(input: GameInput): GameView;
+  skip?(now: number, stepId?: string): void;
+};
+
+export type ArGameOptions<S extends PracticeStepLike = PracticeStepLike> = {
+  onFrame?: ArFrameHook;
+  /** Replaces the default v1 GameSession; `?practica=v2` passes PracticeSessionV2. */
+  createSession?: (steps: readonly S[], reducedMotion: boolean) => PracticeSessionLike;
+  /** `?bata=vivo`: springs the hem and sleeves with the torso's acceleration. */
+  gownMotion?: boolean;
+  /** `?bata=3d`: canvas WebGL for the skinned gown. */
+  gown3d?: { canvas: RefObject<HTMLCanvasElement | null> };
+  /** Phase 3: realistic rigged gown (`?practica=v2`), optional XPBD with `?tela=xpbd`. */
+  gownRig?: { canvas: RefObject<HTMLCanvasElement | null>; xpbd: boolean };
+  /** Phase 2 aids (ghost, joint colours, hold ring, progressive help): the kind of each step. */
+  assist?: { kinds: readonly PracticeKind[] };
+};
+
+const NO_ASSIST: AssistView = { level: 0, hint: null, announce: false };
 
 export type ArStatus = 'loading' | 'detecting' | 'found' | 'camera-error' | 'model-error';
 
@@ -42,13 +80,32 @@ const FRAME_SAMPLE_MS = 700;
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function useArGame(
+export function useArGame<S extends PracticeStepLike>(
   videoRef: RefObject<HTMLVideoElement | null>,
   canvasRef: RefObject<HTMLCanvasElement | null>,
   stageRef: RefObject<HTMLElement | null>,
   hotspotRef: RefObject<string | null>,
-  steps: readonly ArGameStep[],
+  steps: readonly S[],
+  options: ArGameOptions<S> = {},
 ) {
+  // Refs keep the hook out of the effect dependencies: passing new callbacks never restarts the
+  // camera and the pose model.
+  const onFrameRef = useRef(options.onFrame);
+  onFrameRef.current = options.onFrame;
+  const createSessionRef = useRef(options.createSession);
+  createSessionRef.current = options.createSession;
+  const gownMotionRef = useRef(options.gownMotion);
+  gownMotionRef.current = options.gownMotion;
+  const gown3dRef = useRef(options.gown3d);
+  gown3dRef.current = options.gown3d;
+  const gownRigRef = useRef(options.gownRig);
+  gownRigRef.current = options.gownRig;
+  const [gownQuality, setGownQuality] = useState<GownQuality | null>(null);
+  const [gownDrawn, setGownDrawn] = useState(false);
+  const assistRef = useRef(options.assist);
+  assistRef.current = options.assist;
+  const [assist, setAssist] = useState<AssistView>(NO_ASSIST);
+  const [framing, setFraming] = useState<FramingAdvice | null>(null);
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
   const [fps, setFps] = useState(0);
@@ -66,8 +123,12 @@ export function useArGame(
   const feedback = useMemo(() => new ArFeedback(), []);
   const [voice, setVoiceState] = useState(feedback.voice);
   const [sound, setSoundState] = useState(feedback.sound);
-  const flowRef = useRef(new GameFlow());
-  const sessionRef = useRef<GameSession | null>(null);
+  // v2 waits for the framing advice to be satisfied (head, feet, distance, centred) to count down.
+  const [initialFlow] = useState(
+    () => new GameFlow(options.assist ? (lm) => framingAdvice(lm).ok : undefined),
+  );
+  const flowRef = useRef(initialFlow);
+  const sessionRef = useRef<PracticeSessionLike | null>(null);
   const targets = useRef<TargetMap>(new Map());
 
   const registry = useMemo<ArTargetRegistry>(
@@ -90,6 +151,7 @@ export function useArGame(
     setErrors({});
     sessionRef.current = null;
     setPractice(null);
+    setAssist(NO_ASSIST);
     if (e2eFlag('simularPracticaCompleta')) {
       flowRef.current.finish();
       setFlow({ phase: 'done', secondsLeft: 0 });
@@ -99,6 +161,15 @@ export function useArGame(
     flowRef.current.start();
     setFlow({ phase: 'framing', secondsLeft: 0 });
   }, [feedback, steps]);
+
+  /** "Saltar paso" (v2): the current step is left as not completed and earns no XP. */
+  const skip = useCallback(
+    (stepId: string) => {
+      sessionRef.current?.skip?.(performance.now(), stepId);
+      feedback.tick();
+    },
+    [feedback],
+  );
 
   const stop = useCallback(() => {
     flowRef.current.reset();
@@ -126,6 +197,8 @@ export function useArGame(
     let cancelled = false;
     let stream: MediaStream | null = null;
     let landmarker: PoseLandmarker | null = null;
+    let gown3d: Gown3DRenderer | null = null;
+    let rig: GownRigDriver | null = null;
     let frameId = 0;
 
     async function boot() {
@@ -148,9 +221,33 @@ export function useArGame(
       const tracker = new ViolationTracker();
       const dwell = new DwellTracker();
       const bodyHold = new BodyHold();
+      const gownSprings = gownMotionRef.current ? new GownSprings() : null;
+      let lastSpringAt = 0;
       const trackQuality = new TrackQuality();
       const canvas = canvasRef.current;
-      const renderer = canvas ? new ArRenderer(canvas, readArColors()) : null;
+      const colors = readArColors();
+      const renderer = canvas ? new ArRenderer(canvas, colors) : null;
+      const assistKinds = assistRef.current?.kinds;
+      const aids = assistKinds
+        ? new PracticeAssist(
+            assistKinds,
+            readAssistColors(),
+            e2eFlag('simularAyudaRapida') ? 10 : 1,
+          )
+        : null;
+      let assistKey = '';
+      let framingKey = '';
+      const rigOptions = gownRigRef.current;
+      const rigCanvas = rigOptions?.canvas.current ?? null;
+      rig = rigCanvas
+        ? new GownRigDriver(rigCanvas, colors.fabric, reducedMotion(), rigOptions?.xpbd ?? false)
+        : null;
+      let rigDrew = false;
+      const noFpsFallback = e2eFlag('sinRespaldoFps');
+      let rigQuality = '';
+      let lastFps = 30;
+      const gown3dCanvas = gown3dRef.current?.canvas.current ?? null;
+      gown3d = gown3dCanvas ? new Gown3DRenderer(gown3dCanvas, colors) : null;
       const sampleCanvas = document.createElement('canvas');
       sampleCanvas.width = SAMPLE_WIDTH;
       sampleCanvas.height = SAMPLE_HEIGHT;
@@ -159,6 +256,8 @@ export function useArGame(
       let lastSampleAt = 0;
       let lastQualityKey = '';
       const forceLow = e2eFlag('simularFpsBajo');
+      // Solo QA: fuerza la bata puesta para revisar la malla 3D sin recorrer la práctica.
+      const showcase = e2eFlag('simularBataPuesta');
       const simulate = simulatedPoseVariant();
       let lastVideoTime = -1;
       let nextDetectAt = 0;
@@ -184,6 +283,7 @@ export function useArGame(
           const raw = simulate ? syntheticPose(now, simulate) : (result.landmarks[0] ?? []);
           const landmarks = smoother.smooth(raw);
           const size = { width: video.videoWidth, height: video.videoHeight };
+          onFrameRef.current?.(raw, size, now);
           const liveBody = bodyFrame(landmarks, size);
           // Brief dropouts keep the last body on screen; the rules still use the live one.
           const renderBody = bodyHold.update(liveBody, now);
@@ -204,7 +304,10 @@ export function useArGame(
             setFlow(view);
           }
           if (view.phase === 'playing' && !sessionRef.current) {
-            sessionRef.current = new GameSession(steps, still);
+            sessionRef.current = createSessionRef.current
+              ? createSessionRef.current(steps, still)
+              : // El default solo se usa cuando la página pasa los pasos v1 de `juegoAr`.
+                new GameSession(steps as unknown as readonly ArGameStep[], still);
             feedback.success();
           }
           const session = sessionRef.current;
@@ -242,15 +345,69 @@ export function useArGame(
           // Touch-free buttons: hands over a registered target fill its ring.
           pressTargets(stageRef.current, landmarks, size, targets.current, dwell, now);
 
+          let gownMotion: ReturnType<GownSprings['update']> | null = null;
+          if (gownSprings) {
+            if (liveBody) gownMotion = gownSprings.update(liveBody, now - lastSpringAt, still);
+            else gownSprings.reset();
+            lastSpringAt = now;
+          }
+
+          const activeScene: Scene | null = showcase
+            ? { ...INITIAL_SCENE, gown: 'worn', gownT: 1 }
+            : flowState.phase === 'playing' || flowState.phase === 'done'
+              ? scene
+              : null;
+          // The 3D gown first, so the 2D renderer knows this frame's result (never both, never neither).
+          if (rig) {
+            // Metric pose for the 3D gown; the synthetic e2e pose has none, so approximate it.
+            const world = simulate
+              ? approxWorldFromImage(landmarks, size)
+              : (result.worldLandmarks?.[0] ?? null);
+            rigDrew = rig.frame({
+              world: liveBody ? world : null,
+              image: landmarks,
+              size,
+              worn: activeScene?.gown === 'worn',
+              now,
+              // QA only: the headless browser runs at ~5 fps, which would always trigger the fallback.
+              fps: noFpsFallback ? 60 : lastFps,
+            });
+            const qualityKey = `${rig.quality}:${rig.drawnOnce}`;
+            if (qualityKey !== rigQuality) {
+              rigQuality = qualityKey;
+              setGownQuality(rig.quality);
+              setGownDrawn(rig.drawnOnce);
+            }
+          }
           if (renderer) {
             const ms = renderer.draw(video, renderBody, active, {
-              scene: flowState.phase === 'playing' || flowState.phase === 'done' ? scene : null,
+              scene: activeScene,
               reducedMotion: still,
               hotspot: hotspotRef.current,
               cursors: !renderBody, // with a body the posture rings already mark the hands
               landmarks,
+              gownMotion,
+              gown3d: (gown3d?.ok ?? false) || rigDrew,
             });
             renderMs = renderMs * 0.9 + ms * 0.1;
+          }
+          gown3d?.render(liveBody, activeScene, gownMotion, video.videoWidth, video.videoHeight);
+          if (aids) {
+            const playing = flowState.phase === 'playing';
+            const ctx = playing && canvas ? canvas.getContext('2d') : null;
+            const av = playing ? aids.frame(ctx, liveBody, lastView, now) : NO_ASSIST;
+            if (!playing) aids.reset();
+            if (av.announce && av.hint) feedback.say(av.hint);
+            const key = `${av.level}:${av.hint ?? ''}`;
+            if (key !== assistKey) {
+              assistKey = key;
+              setAssist(av);
+            }
+            const advice = flowState.phase === 'framing' ? framingAdvice(landmarks) : null;
+            if ((advice?.message ?? '') !== framingKey) {
+              framingKey = advice?.message ?? '';
+              setFraming(advice);
+            }
           }
           const hasGown = renderBody !== null;
           if (hasGown !== anchored) {
@@ -270,6 +427,7 @@ export function useArGame(
               SAMPLE_WIDTH,
               SAMPLE_HEIGHT,
             );
+            rig?.setLuma(frameSample.luma);
           }
           const track = trackQuality.update(raw, size, liveBody !== null);
           const stats = monitor.record(now);
@@ -280,6 +438,7 @@ export function useArGame(
           if (now - lastFpsUpdate >= FPS_REFRESH_MS) {
             lastFpsUpdate = now;
             setFps(Math.round(stats.fps));
+            lastFps = forceLow ? 10 : stats.fps;
             setDrawMs(Math.round(renderMs * 10) / 10);
             setLowPerformance(forceLow || stats.lowPerformance);
             const report = assessQuality({
@@ -305,6 +464,8 @@ export function useArGame(
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
+      gown3d?.dispose();
+      rig?.dispose();
       stopTracks(stream);
       landmarker?.close();
       feedback.dispose();
@@ -323,6 +484,10 @@ export function useArGame(
     practice,
     flow,
     errors,
+    assist,
+    framing,
+    gownQuality,
+    gownDrawn,
     quality,
     run,
     voice,
@@ -330,6 +495,7 @@ export function useArGame(
     registry,
     feedback,
     start,
+    skip,
     stop,
     setVoice,
     setSound,

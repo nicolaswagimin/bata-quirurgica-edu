@@ -29,18 +29,13 @@ function mulberry32(seed: number) {
 }
 
 /** Builds the two tiles once per session; returns null where 2D canvases are unavailable. */
-export function createGownTextures(ctx: Ctx, colors: GownColors): GownTextures | null {
-  const fabricTile = document.createElement('canvas');
-  fabricTile.width = 256;
-  fabricTile.height = 256;
-  const f = fabricTile.getContext('2d');
-  const knitTile = document.createElement('canvas');
-  knitTile.width = 40;
-  knitTile.height = 24;
-  const k = knitTile.getContext('2d');
-  if (!f || !k) return null;
-
-  // SMS non-woven: flat base, fine light/dark speckle and short random fibres.
+/** Tile de tela SMS reutilizable: el 2D lo usa como patrón y el 3D como textura. */
+export function createFabricCanvas(colors: GownColors): HTMLCanvasElement | null {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const f = canvas.getContext('2d');
+  if (!f) return null;
   const rand = mulberry32(13795);
   f.fillStyle = colors.fabric;
   f.fillRect(0, 0, 256, 256);
@@ -63,6 +58,16 @@ export function createGownTextures(ctx: Ctx, colors: GownColors): GownTextures |
     f.stroke();
   }
   f.globalAlpha = 1;
+  return canvas;
+}
+
+export function createGownTextures(ctx: Ctx, colors: GownColors): GownTextures | null {
+  const fabricTile = createFabricCanvas(colors);
+  const knitTile = document.createElement('canvas');
+  knitTile.width = 40;
+  knitTile.height = 24;
+  const k = knitTile.getContext('2d');
+  if (!fabricTile || !k) return null;
 
   // Knit cuff: ribs running along the forearm.
   k.fillStyle = colors.trim;

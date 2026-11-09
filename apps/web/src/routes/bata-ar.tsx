@@ -1,9 +1,28 @@
-import { BataPasosSchema } from '@bata/shared/schemas';
+import type { CaptureTake } from '@bata/shared/perception';
+import { ArPracticeFileSchema, type ArPracticeStep, BataPasosSchema } from '@bata/shared/schemas';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import practicaV3Json from '../../../../content/protocolos/ar-practica-v3.json';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
 import { QUALITY_HINTS } from '../ar/camera-quality.ts';
-import { type ArStatus, useArGame } from '../ar/use-ar-game.ts';
+import { isGown3dEnabled } from '../ar/gown-3d-mesh.ts';
+import { isGownMotionEnabled } from '../ar/gown-motion.ts';
+import {
+  type CapturedFrame,
+  CaptureRecorder,
+  captureFrame,
+  isCaptureEnabled,
+} from '../ar/perception/capture.ts';
+import { CapturePanel } from '../ar/perception/capture-panel.tsx';
+import { practiceConfig, resolvePractice } from '../ar/practice-config.ts';
+import { isPracticeV2Enabled, PracticeSessionV2 } from '../ar/practice-session-v2.ts';
+import {
+  type ArFrameHook,
+  type ArStatus,
+  type PracticeStepLike,
+  useArGame,
+} from '../ar/use-ar-game.ts';
+import { ArAssist } from '../components/ar-assist.tsx';
 import { ArBodyGuide } from '../components/ar-body-guide.tsx';
 import { ArHoverButton, ArTargetsContext } from '../components/ar-hover-button.tsx';
 import { ArCountdown, ArInstruction, ArStepProgress, ArWarnings } from '../components/ar-hud.tsx';
@@ -12,6 +31,8 @@ import { Pictogram } from '../components/pictogram.tsx';
 
 const { hotspots, juegoAr } = BataPasosSchema.parse(pasosJson);
 const steps = [...juegoAr].sort((a, b) => a.order - b.order);
+// `?practica=v2` usa la secuencia v3 (pendiente de validación); la v2 validada queda como historial.
+const practiceSpec = ArPracticeFileSchema.parse(practicaV3Json);
 
 const STATUS_TEXT: Record<ArStatus, string> = {
   loading: 'Cargando modelo',
@@ -38,7 +59,80 @@ export default function BataArPage() {
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   hotspotRef.current = hotspotId;
   const navigate = useNavigate();
-  const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, steps);
+
+  // Fase 0: captura de landmarks solo en desarrollo y solo con ?captura=1.
+  const [captureEnabled] = useState(() =>
+    isCaptureEnabled({ dev: import.meta.env.DEV, search: window.location.search }),
+  );
+  const recorderRef = useRef<CaptureRecorder | null>(null);
+  if (captureEnabled && !recorderRef.current) recorderRef.current = new CaptureRecorder();
+  const recorder = recorderRef.current;
+  const [takes, setTakes] = useState<CaptureTake[]>([]);
+  const lastFrame = useRef<CapturedFrame | null>(null);
+
+  const onFrame = useCallback<ArFrameHook>(
+    (landmarks, size, now) => {
+      if (!recorder) return;
+      lastFrame.current = captureFrame({
+        recorder,
+        landmarks,
+        size,
+        now,
+        previous: lastFrame.current,
+      });
+    },
+    [recorder],
+  );
+
+  const handleTake = useCallback((take: CaptureTake) => {
+    setTakes((prev) => [...prev, take]);
+  }, []);
+  const handleClear = useCallback(() => {
+    setTakes([]);
+    recorder?.clear();
+    lastFrame.current = null;
+  }, [recorder]);
+
+  // Fase 1: secuencia v3 detrás de ?practica=v2. Sin la bandera se juega la v1.
+  const [practiceV2Enabled] = useState(() => isPracticeV2Enabled(window.location.search));
+  const [reducedMotionPref] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  const [practiceV2] = useState(() =>
+    resolvePractice(practiceSpec, practiceConfig(practiceSpec, window.location.search)),
+  );
+  // Fase 2a: movimiento secundario del ruedo y las mangas con ?bata=vivo.
+  const [gownMotionEnabled] = useState(() => isGownMotionEnabled(window.location.search));
+  // Fase 2b: bata 3D skinned sobre el video con ?bata=3d.
+  const [gown3dEnabled] = useState(() => isGown3dEnabled(window.location.search));
+  const gown3dCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Fase 3: bata realista con esqueleto y físicas en la práctica v2 (`?bata=2d` la apaga para QA).
+  const [gownRigEnabled] = useState(
+    () =>
+      isPracticeV2Enabled(window.location.search) && !window.location.search.includes('bata=2d'),
+  );
+  const [xpbdEnabled] = useState(
+    () => new URLSearchParams(window.location.search).get('tela') === 'xpbd',
+  );
+  const practiceSteps = practiceV2Enabled ? practiceV2.steps : steps;
+  const createV2Session = useCallback(
+    (sessionSteps: readonly PracticeStepLike[], reducedMotion: boolean) =>
+      new PracticeSessionV2(sessionSteps as readonly ArPracticeStep[], reducedMotion, {
+        turn: practiceV2.turn,
+      }),
+    [practiceV2.turn],
+  );
+  const game = useArGame(videoRef, canvasRef, stageRef, hotspotRef, practiceSteps, {
+    ...(captureEnabled ? { onFrame } : {}),
+    ...(practiceV2Enabled ? { createSession: createV2Session } : {}),
+    ...(gownMotionEnabled ? { gownMotion: true } : {}),
+    ...(gown3dEnabled ? { gown3d: { canvas: gown3dCanvasRef } } : {}),
+    ...(gownRigEnabled && !gown3dEnabled
+      ? { gownRig: { canvas: gown3dCanvasRef, xpbd: xpbdEnabled } }
+      : {}),
+    // Fase 2: ayudas visuales y ayuda progresiva, solo con la práctica v2.
+    ...(practiceV2Enabled ? { assist: { kinds: practiceV2.steps.map((s) => s.kind) } } : {}),
+  });
   const { flow, practice, status, quality } = game;
   const phase = flow.phase;
   // Pose and speed already have their own guidance; the hint is for camera problems only.
@@ -46,13 +140,13 @@ export default function BataArPage() {
     quality?.primary && quality.primary !== 'pose' && quality.primary !== 'lento'
       ? QUALITY_HINTS[quality.primary]
       : null;
-  const current = practice && !practice.done ? steps[practice.stepIndex] : null;
+  const current = practice && !practice.done ? practiceSteps[practice.stepIndex] : null;
 
   const instruction =
     phase === 'ready'
       ? 'Apoya el celular a la altura de la cintura y aléjate unos 2 metros'
       : phase === 'framing'
-        ? 'Aléjate hasta que se vea tu cuerpo'
+        ? (game.framing?.message ?? 'Aléjate hasta que se vea tu cuerpo')
         : phase === 'countdown'
           ? '¡Listo! Quédate ahí'
           : phase === 'done'
@@ -63,7 +157,9 @@ export default function BataArPage() {
   const spoken =
     phase === 'playing'
       ? current
-        ? `Paso ${current.order}. ${current.instruction}`
+        ? 'voice' in current
+          ? current.voice
+          : `Paso ${current.order}. ${current.instruction}`
         : ''
       : instruction;
   useEffect(() => {
@@ -108,6 +204,15 @@ export default function BataArPage() {
               className="absolute inset-0 size-full -scale-x-100 object-cover"
               aria-label="Vista de tu cámara en modo espejo"
             />
+            {gown3dEnabled || gownRigEnabled ? (
+              <canvas
+                ref={gown3dCanvasRef}
+                data-testid={gown3dEnabled ? 'ar-gown-3d' : 'ar-gown-rig'}
+                data-quality={game.gownQuality ?? undefined}
+                data-drawn={game.gownDrawn ? 'true' : undefined}
+                className="pointer-events-none absolute inset-0 size-full -scale-x-100 object-cover"
+              />
+            ) : null}
             <canvas
               ref={canvasRef}
               className="pointer-events-none absolute inset-0 size-full -scale-x-100 object-cover"
@@ -140,6 +245,11 @@ export default function BataArPage() {
                   Cámara {qualityLabel(quality.score)}
                 </p>
               ) : null}
+              {practiceV2Enabled && practiceV2.pending ? (
+                <p data-testid="ar-practice-pending" className={chip}>
+                  Secuencia en revisión
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col items-end gap-3">
               <div className="pointer-events-auto flex gap-2">
@@ -161,22 +271,41 @@ export default function BataArPage() {
               </div>
               {practice && phase === 'playing' ? (
                 <div className="hidden landscape:block">
-                  <ArStepProgress steps={steps} view={practice} vertical />
+                  <ArStepProgress steps={practiceSteps} view={practice} vertical />
                 </div>
               ) : null}
             </div>
           </div>
           {practice && phase === 'playing' ? (
             <div className="landscape:hidden">
-              <ArStepProgress steps={steps} view={practice} />
+              <ArStepProgress steps={practiceSteps} view={practice} />
             </div>
           ) : null}
         </div>
 
+        {/* Right edge: progressive help for a stuck step (v2 only). */}
+        {practiceV2Enabled && phase === 'playing' ? (
+          <div className="pointer-events-none absolute top-[30%] right-3 landscape:top-auto landscape:right-20 landscape:bottom-4">
+            <ArAssist
+              level={game.assist.level}
+              hint={game.assist.hint}
+              step={practiceV2.steps[practice?.stepIndex ?? -1] ?? null}
+              reducedMotion={reducedMotionPref}
+              onSkip={game.skip}
+            />
+          </div>
+        ) : null}
+
         {/* Centre: countdown and results only */}
         <div className="pointer-events-none absolute inset-0 grid place-items-center landscape:pt-24 landscape:pr-4 landscape:pb-4 landscape:pl-[36%]">
           {phase === 'countdown' ? <ArCountdown seconds={flow.secondsLeft} /> : null}
-          {phase === 'done' ? <ArResults key={game.run} errors={game.errors} /> : null}
+          {phase === 'done' ? (
+            <ArResults
+              key={game.run}
+              errors={game.errors}
+              skipped={practice?.skippedIds?.length ?? 0}
+            />
+          ) : null}
         </div>
 
         {/* Bottom: the actions of the current phase */}
@@ -254,6 +383,19 @@ export default function BataArPage() {
             </div>
           ) : null}
         </div>
+
+        {captureEnabled && recorder ? (
+          <CapturePanel
+            steps={practiceSteps}
+            currentStepId={
+              practice && !practice.done ? (practiceSteps[practice.stepIndex]?.id ?? null) : null
+            }
+            recorder={recorder}
+            takes={takes}
+            onTake={handleTake}
+            onClear={handleClear}
+          />
+        ) : null}
       </section>
     </ArTargetsContext.Provider>
   );

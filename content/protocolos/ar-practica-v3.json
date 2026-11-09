@@ -1,0 +1,233 @@
+{
+  "reviewNote": "Borrador pendiente de validación del director de tesis. Los tiempos son de sostén en AR, no la duración clínica de cada maniobra. Las propuestas de config y decisions no constituyen aprobación.",
+  "version": 3,
+  "status": "pendiente-validacion",
+  "reference": "Guía local tools/bata-3d/referencia/guia-video.md, NO verificada contra las capturas del video. La técnica cerrada de guantes fue agregada porque el video la omite; también se adaptó el ingreso de las manos para mantenerlas dentro de los puños. Las fuentes OMS aportan el marco de bioseguridad, no validan esta secuencia.",
+  "config": {
+    "giro": "cuarto",
+    "mascarilla": false,
+    "secado": true
+  },
+  "turnText": {
+    "cuarto": {
+      "action": "Retén la tira izquierda, entrega la tarjeta al circulante y gira un cuarto de vuelta; vuelve al frente y ata.",
+      "voice": "Entrega la tarjeta, gira un cuarto de vuelta y vuelve al frente para atar.",
+      "correction": "Gira un cuarto de vuelta sobre tu eje y vuelve al frente; separa la tira por la mitad, lejos de la tarjeta, y ata."
+    },
+    "360": {
+      "action": "Retén la tira izquierda, entrega la tarjeta al circulante y gira 360° sobre tu eje; termina de frente y ata.",
+      "voice": "Entrega la tarjeta y da una vuelta completa sobre tu eje para atar.",
+      "correction": "Completa 360° sobre tu eje; toma la tira por la mitad, sepárala de la tarjeta que conserva el circulante y ata."
+    }
+  },
+  "steps": [
+    {
+      "id": "v3-mascarilla",
+      "order": 1,
+      "kind": "mask",
+      "donningIds": [],
+      "toggle": "mascarilla",
+      "title": "Mascarilla",
+      "goal": "Confirmar visualmente la mascarilla ya puesta, sin tocar la cara con las manos preparadas.",
+      "action": "Acerca las manos a la cara, sin tocarla, y confirma que la mascarilla cubre nariz y boca.",
+      "look": "Nariz y boca cubiertas; gorro y gafas ya puestos antes de iniciar.",
+      "holdMs": 600,
+      "commonError": "Llevar las manos preparadas a la cara para ajustar la mascarilla.",
+      "correction": "Acerca las manos sin tocar la cara ni la mascarilla; el ajuste se hace antes de la preparación de manos.",
+      "debrief": "Confirmación opcional de la mascarilla, con gorro y gafas ya puestos.",
+      "voice": "Acerca las manos a la mascarilla, sin tocarla.",
+      "simulation": "Este paso opcional recuerda una comprobación previa; el AR no certifica el ajuste ni la protección de la mascarilla.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "v3-secado",
+      "order": 2,
+      "kind": "band",
+      "donningIds": ["d1"],
+      "toggle": "secado",
+      "title": "Secado de manos",
+      "goal": "Secar manos y antebrazos con toalla estéril, desde los dedos hasta el codo, sin retroceder.",
+      "action": "Seca con toques de dedos a codo; usa el otro extremo de la toalla para el segundo brazo.",
+      "look": "Codos a 90°, manos al pecho y torso inclinado unos 10°; toma la toalla sin tocar la bata ni la mesa.",
+      "holdMs": 2500,
+      "commonError": "Volver del codo a la muñeca con la toalla o bajar las manos de la cintura.",
+      "correction": "Avanza dedos → muñeca → antebrazo → codo sin regresar; desecha la toalla con las manos sobre la cintura.",
+      "debrief": "Secado en un solo sentido, con un extremo distinto para cada brazo y manos sobre la cintura.",
+      "voice": "Seca de dedos a codo, sin regresar. Cambia de extremo para el otro brazo.",
+      "simulation": "El AR aproxima la postura; no ve la toalla estéril, sus contactos, el sentido del secado ni su descarte.",
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      }
+    },
+    {
+      "id": "v3-tomar-bata",
+      "order": 3,
+      "kind": "neck",
+      "donningIds": ["d2"],
+      "title": "Tomar la bata por dentro",
+      "goal": "Levantar la bata doblada tipo libro tocando solo la cara interna expuesta.",
+      "action": "Toma el centro interno bajo el cuello, levanta la bata en vertical y da un paso atrás.",
+      "look": "Manos juntas al centro, bajo el cuello; eleva unos 35 cm sin rozar la mesa y retrocede unos 50 cm.",
+      "holdMs": 1000,
+      "commonError": "Agarrar la cara externa o arrastrar la bata sobre la mesa.",
+      "correction": "Sujeta solo la parte superior central interna, bajo el cuello; despeja el espacio antes de levantar.",
+      "debrief": "Bata levantada por dentro y separada de la mesa en un espacio libre.",
+      "voice": "Toma la bata por dentro, levántala y da un paso atrás.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "v3-despliegue",
+      "order": 4,
+      "kind": "unfold",
+      "donningIds": ["d2"],
+      "title": "Despliegue sin sacudir",
+      "goal": "Abrir la bata por gravedad y orientar la cara interna hacia el cuerpo.",
+      "action": "Ubica las sisas, desliza las manos por dentro de los hombros y deja caer la bata sin sacudir.",
+      "look": "Bata a la altura de los hombros, lejos del cuerpo; cara interna hacia ti y externa hacia el frente.",
+      "holdMs": 1500,
+      "commonError": "Sacudir la bata o apoyar su exterior contra el cuerpo.",
+      "correction": "Sostén la bata alejada del cuerpo y deja que su peso la despliegue.",
+      "debrief": "Bata desplegada por su peso, con las sisas ubicadas y la cara interna hacia el cuerpo.",
+      "voice": "Ubica las sisas y deja caer la bata por su peso, sin sacudir.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "v3-mangas",
+      "order": 5,
+      "kind": "sleeves",
+      "donningIds": ["d3"],
+      "title": "Brazos en las mangas",
+      "goal": "Introducir ambos brazos manteniendo las manos dentro de las mangas para la técnica cerrada.",
+      "action": "Introduce ambos brazos hacia adelante y un poco arriba; detén las manos dentro de los puños.",
+      "look": "Unos 45° entre los brazos, sin abrirlos en cruz; manos en el borde interno de los puños, sobre la cintura.",
+      "holdMs": 1200,
+      "commonError": "Asomar los dedos por los puños o extender los brazos en cruz.",
+      "correction": "Avanza con ambos brazos a la vez y detén las manos antes de que salgan de las mangas.",
+      "debrief": "Brazos en las mangas y manos dentro de los puños, preparadas para el enguantado cerrado.",
+      "voice": "Introduce ambos brazos; deja las manos dentro de los puños.",
+      "simulation": "El AR aproxima la postura de los brazos; no comprueba que las manos permanezcan dentro de los puños.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "v3-amarre",
+      "order": 6,
+      "kind": "still",
+      "donningIds": ["d4"],
+      "title": "Amarre del circulante",
+      "goal": "Permitir que el circulante acomode la bata, cierre el cuello y ate las dos tiras internas.",
+      "action": "Permanece quieto, con las manos al pecho y dentro de los puños, mientras el circulante cierra y ata.",
+      "look": "El circulante trabaja desde atrás: cara interna de hombros, cierre del cuello y tiras internas de cintura.",
+      "holdMs": 2500,
+      "commonError": "Ayudar con las manos o permitir que el circulante toque el frente o las mangas.",
+      "correction": "Deja que solo las manos del circulante acomoden la bata por dentro y por detrás; no debe tocar frente ni mangas.",
+      "debrief": "Cuello cerrado y tiras internas atadas por el circulante, con las manos propias dentro de los puños.",
+      "voice": "Permanece quieto. El circulante cierra el cuello y ata las tiras internas.",
+      "simulation": "El AR observa tu quietud; no ve al circulante ni verifica sus contactos, el cierre del cuello o el amarre.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "v3-guantes",
+      "order": 7,
+      "kind": "gloves",
+      "donningIds": ["d5"],
+      "title": "Guantes en técnica cerrada",
+      "goal": "Ensayar la secuencia cerrada agregada a la guía, pendiente de validación del director.",
+      "action": "Toma el guante a través de la manga, voltéalo sobre el puño e introduce la mano; repite al otro lado.",
+      "look": "Guante sobre la palma de la manga contraria, palma hacia abajo y dedos al codo; manos aún dentro de las mangas.",
+      "holdMs": 1500,
+      "commonError": "Sacar los dedos para agarrar el guante o dejar el puño descubierto.",
+      "correction": "Sujeta el borde a través de la tela, voltéalo sobre el puño y empuja la mano; cubre todo el puño, 3–5 cm por encima.",
+      "debrief": "Secuencia cerrada ensayada en ambas manos; cobertura del puño pendiente de revisión presencial.",
+      "voice": "Toma el guante a través de la tela, cubre el puño e introduce la mano. Repite.",
+      "simulation": "El video omite los guantes. Esta secuencia agregada está pendiente del director; el AR no verifica la manipulación ni la cobertura del puño.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "v3-tarjeta-giro",
+      "order": 8,
+      "kind": "turn",
+      "donningIds": ["d6"],
+      "title": "Tarjeta de transferencia y giro",
+      "goal": "Envolver la espalda con la solapa y cerrar las tiras externas mediante la tarjeta de transferencia.",
+      "action": "Retén la tira izquierda, entrega la tarjeta con la derecha, gira y separa la tira para atar.",
+      "look": "El circulante toma solo la punta de la tarjeta, sin tocar guante ni tira; conserva las manos sobre la cintura.",
+      "holdMs": 1200,
+      "commonError": "Tomar la tira junto a la tarjeta o dejar que el circulante toque el guante o la tira.",
+      "correction": "Sujeta la tira por la mitad, lejos de la tarjeta, y tira para separarla; deja la tarjeta al circulante y ata al frente o al costado.",
+      "debrief": "Tiras externas atadas; la espalda sigue siendo no estéril aunque quede cubierta por la solapa.",
+      "voice": "Retén la tira izquierda, entrega la tarjeta, gira y ata las tiras.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      },
+      "simulation": "El AR aproxima el giro; no verifica guantes, tarjeta, transferencia ni amarre. El circulante conserva la tarjeta al separar la tira."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "giro",
+      "question": "¿El giro para cerrar la solapa es de 360° o de un cuarto de vuelta?",
+      "proposed": "Cuarto de vuelta como configuración provisional, pendiente del director.",
+      "alternatives": ["Vuelta completa de 360° sobre el eje."]
+    },
+    {
+      "id": "mascarilla",
+      "question": "¿La práctica AR incluye un paso para confirmar la mascarilla?",
+      "proposed": "No: el instrumentador ya llega con gorro, mascarilla y gafas.",
+      "alternatives": ["Sí: un paso corto al inicio para confirmar nariz y boca cubiertas."]
+    },
+    {
+      "id": "secado-en-ar",
+      "question": "¿El secado de manos es un paso del AR o solo de la lección?",
+      "proposed": "Incluir el secado como primer paso activo del AR con la configuración actual.",
+      "alternatives": ["Solo en la lección de Aprende; el AR empieza al tomar la bata."]
+    },
+    {
+      "id": "cierre-cuello",
+      "question": "¿El cuello de la bata se cierra con Velcro o con lazo?",
+      "proposed": "Velcro.",
+      "alternatives": ["Lazo."]
+    },
+    {
+      "id": "guantes-secuencia",
+      "question": "¿Es correcta la secuencia de la técnica cerrada (guante sobre la manga contraria, dedos al codo, voltear sobre el puño)?",
+      "proposed": "Ensayar guante sobre la palma de la manga contraria, palma abajo y dedos al codo; voltear sobre el puño, introducir la mano y repetir. Pendiente de validación.",
+      "alternatives": ["Ajustarla según la indicación del director."]
+    }
+  ]
+}
