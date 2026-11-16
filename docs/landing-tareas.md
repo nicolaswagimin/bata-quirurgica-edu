@@ -9,4 +9,4 @@ capturas); `/login` redirige a `/ingresar` conservando `?redirect=`; flujo Codex
 | Tarea | Spec resumida | Resultado | Correcciones |
 |---|---|---|---|
 | L1 rutas | `/` decide portada o inicio según sesión; `/ingresar` reemplaza `/login` (redirección); enlaces, pruebas y regla web actualizados | Codex: router con `IndexGate` (carga diferida de home/landing), `/login` → `/ingresar` con `redirect`, cierre de sesión a `/`; compuerta + 10/10 smoke | ninguna |
-| L2 portada | Dra. Menta animada, diálogo letra a letra accesible, 6 secciones, sprites propios, e2e | pendiente | — |
+| L2 portada | Dra. Menta animada, diálogo letra a letra accesible, 6 secciones, sprites propios, e2e | Codex: hero con Menta por capas CSS (respira, parpadea, tapabocas al hablar), diálogo con reducer puro, 6 sprites, 5 secciones, 17 e2e; chunk 15 kB sin three/mediapipe | Claude: filas del hero en escritorio (hueco entre h1 e intro) y e2e acotado a `main` |

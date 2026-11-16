@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import * as LANDING_SPRITES from '../../src/art/landing-sprites.ts';
 import { LESSON_ART } from '../../src/art/lesson-sprites.ts';
 import {
   FLAME,
@@ -25,6 +26,7 @@ const seed = JSON.parse(
 ) as { missions: { iconKey: string }[] };
 
 const ALL: Record<string, Sprite> = {
+  ...LANDING_SPRITES,
   MASCOT,
   FLAME,
   HEART,
@@ -37,6 +39,10 @@ const ALL: Record<string, Sprite> = {
 };
 
 describe('pixel sprites', () => {
+  it.each(Object.entries(LANDING_SPRITES))('%s is 16×16', (_, sprite) => {
+    expect(sprite.rows).toHaveLength(16);
+    for (const row of sprite.rows) expect(row).toHaveLength(16);
+  });
   it.each(Object.entries(ALL))('%s is a rectangular grid of palette characters', (_, sprite) => {
     const width = sprite.rows[0]?.length ?? 0;
     expect(width).toBeGreaterThan(0);

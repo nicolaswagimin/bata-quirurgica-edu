@@ -21,6 +21,9 @@ test('un visitante anónimo en / permanece en /', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
   await expect(page).toHaveURL((url) => url.pathname === '/');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Domina la bata quirúrgica, misión a misión' }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toHaveCount(0);
 });
 
