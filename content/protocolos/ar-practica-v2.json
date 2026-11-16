@@ -1,0 +1,224 @@
+{
+  "reviewNote": "Secuencia validada por el director de tesis el 2026-11-07. Las cuatro decisiones quedaron cerradas en `decisions` con la opción elegida; el motor v2 las consume detrás de ?practica=v2.",
+  "version": 2,
+  "validatedBy": "Director de tesis",
+  "validatedAt": "2026-11-07",
+  "steps": [
+    {
+      "id": "p1-mascarilla",
+      "order": 1,
+      "kind": "mask",
+      "donningIds": [],
+      "title": "Mascarilla",
+      "goal": "Cubrir nariz y boca antes de la exposición.",
+      "action": "Lleva las dos manos a la cara y ajusta la mascarilla sobre nariz, boca y orejas.",
+      "look": "Borde superior sobre la nariz y sin huecos en los lados.",
+      "holdMs": 600,
+      "commonError": "Dejar la nariz descubierta o tocar el frente de la mascarilla.",
+      "correction": "Ajusta por los bordes y sujeta solo por las tiras.",
+      "debrief": "Mascarilla ajustada: nariz y boca cubiertas.",
+      "voice": "Ajusta la mascarilla sobre nariz y boca.",
+      "simulation": "El AR comprueba que las manos lleguen a la cara; la colocación real se practica con la mascarilla puesta.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "p2-friccion",
+      "order": 2,
+      "kind": "friction",
+      "donningIds": [],
+      "title": "Fricción de manos",
+      "goal": "Reducir la carga microbiana con fricción en toda la mano.",
+      "action": "Frota palmas, dorsos y espacios entre los dedos durante el tiempo indicado.",
+      "look": "Manos a la altura del pecho y en movimiento continuo.",
+      "holdMs": 20000,
+      "commonError": "Frotar solo las palmas o dejar las manos quietas.",
+      "correction": "Mantén el movimiento y cubre palmas, dorsos y dedos.",
+      "debrief": "Fricción completa: toda la mano cubierta.",
+      "voice": "Sigue frotando: cubre toda la mano.",
+      "simulation": "El AR mide tiempo y movimiento; la duración real la define el protocolo institucional.",
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      }
+    },
+    {
+      "id": "p3-secado",
+      "order": 3,
+      "kind": "band",
+      "donningIds": ["d1"],
+      "title": "Secado estéril de manos",
+      "goal": "Secar sin contaminar y mantener las manos en zona estéril.",
+      "action": "Seca las manos con una compresa estéril y llévalas al frente del pecho, por encima de la cintura.",
+      "look": "Manos dentro de la zona estéril, del pecho a la cintura.",
+      "holdMs": 1500,
+      "commonError": "Bajar las manos por debajo de la cintura.",
+      "correction": "Sube las manos frente al pecho y no las bajes.",
+      "debrief": "Manos secas y en zona estéril.",
+      "voice": "Manos al frente, por encima de la cintura.",
+      "simulation": "El secado real se hace fuera del AR; aquí se practica la posición.",
+      "source": {
+        "org": "OMS",
+        "title": "Global Guidelines for the Prevention of Surgical Site Infection",
+        "year": 2018,
+        "section": "Preparación quirúrgica de las manos"
+      }
+    },
+    {
+      "id": "p4-tomar-bata",
+      "order": 4,
+      "kind": "neck",
+      "donningIds": ["d2"],
+      "title": "Tomar la bata por dentro",
+      "goal": "Abrir la bata sin contaminar la cara externa.",
+      "action": "Toma la bata por la cara interna, a la altura del cuello, y déjala desplegar lejos del cuerpo.",
+      "look": "Manos en el cuello, sin tocar el frente.",
+      "holdMs": 1200,
+      "commonError": "Coger la bata por el frente o dejarla tocar el piso.",
+      "correction": "Sujeta solo por dentro, a la altura del cuello.",
+      "debrief": "Bata abierta sin tocar la cara estéril.",
+      "voice": "Toma la bata por dentro, a la altura del cuello.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "p5-brazos",
+      "order": 5,
+      "kind": "sleeves",
+      "donningIds": ["d3"],
+      "title": "Brazos en las mangas",
+      "goal": "Vestir la bata manteniendo las manos dentro de los puños.",
+      "action": "Introduce un brazo y luego el otro en las mangas, sin sacar las manos.",
+      "look": "Puños en las muñecas y manos dentro.",
+      "holdMs": 1500,
+      "commonError": "Sacar las manos por el puño antes de tiempo.",
+      "correction": "Mantén las manos dentro y extiende los brazos al frente.",
+      "debrief": "Bata puesta con las manos protegidas.",
+      "voice": "Mete los brazos sin sacar las manos.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "p6-lazos",
+      "order": 6,
+      "kind": "still",
+      "donningIds": ["d4"],
+      "title": "Lazos posteriores",
+      "goal": "Dejar que el circulante cierre la bata sin contaminarte.",
+      "action": "Quédate quieto con las manos al frente mientras el circulante amarra por detrás.",
+      "look": "Manos al frente, sin girarte.",
+      "holdMs": 3500,
+      "commonError": "Girarte o ayudar con las manos.",
+      "correction": "Quédate quieto; el circulante toca solo la zona posterior.",
+      "debrief": "Lazos cerrados sin romper la esterilidad.",
+      "voice": "Quieto: te están amarrando.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "p7-guantes",
+      "order": 7,
+      "kind": "gloves",
+      "donningIds": ["d5"],
+      "title": "Guantes en técnica cerrada",
+      "goal": "Cubrir los puños sin tocar la piel con el exterior del guante.",
+      "action": "Junta las manos dentro de los puños y calza cada guante sobre el puño de la manga.",
+      "look": "El guante cubre el puño de la manga.",
+      "holdMs": 1200,
+      "commonError": "Tocar el exterior del guante con la mano desnuda.",
+      "correction": "Usa la técnica cerrada: la mano va dentro del puño.",
+      "debrief": "Guantes puestos sin contacto.",
+      "voice": "Manos juntas dentro de los puños.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    },
+    {
+      "id": "p8-solapa",
+      "order": 8,
+      "kind": "turn",
+      "donningIds": ["d6"],
+      "title": "Cierre de la solapa",
+      "goal": "Cubrir la espalda con la lengüeta sin contaminar el frente.",
+      "action": "Entrega la lengüeta frontal, gira un cuarto de vuelta y vuelve de frente para amarrar.",
+      "look": "Giro de hombros; el frente estéril queda intacto.",
+      "holdMs": 1200,
+      "commonError": "Girar completamente o tocar la lengüeta con el guante.",
+      "correction": "Gira un cuarto de vuelta y vuelve de frente.",
+      "debrief": "Solapa cerrada y espalda cubierta.",
+      "voice": "Gira un cuarto de vuelta y vuelve al frente.",
+      "source": {
+        "org": "OMS",
+        "title": "WHO Guidelines for Safe Surgery",
+        "year": 2009,
+        "section": "Objetivo 6: prevención de la infección del sitio quirúrgico"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "mascarilla-posicion",
+      "question": "¿La mascarilla se coloca antes de la bata o después?",
+      "proposed": "Antes de la bata, como en la versión actual del juego.",
+      "alternatives": [
+        "Antes de la bata: la mascarilla no es estéril y se pone primero.",
+        "Después de la bata y antes de los guantes, siguiendo la secuencia de las guías OMS.",
+        "Fuera de la práctica AR: solo se menciona en la lección."
+      ],
+      "chosen": "Antes de la bata: la mascarilla no es estéril y se pone primero."
+    },
+    {
+      "id": "manos-simulacion",
+      "question": "¿Cómo se practica la preparación de manos?",
+      "proposed": "Solo se practica la posición en zona estéril; la fricción y el secado reales se hacen fuera del AR.",
+      "alternatives": [
+        "Solo la posición en zona estéril.",
+        "Añadir un paso de fricción con temporizador.",
+        "Solo mencionarla en la lección previa."
+      ],
+      "chosen": "Añadir un paso de fricción con temporizador."
+    },
+    {
+      "id": "bata-dos-pasos",
+      "question": "¿Tomar la bata y meter los brazos son dos pasos separados?",
+      "proposed": "Sí: son dos acciones con errores distintos y conviene evaluarlas por separado.",
+      "alternatives": [
+        "Dos pasos separados.",
+        "Un solo paso combinado, como en la versión actual del juego."
+      ],
+      "chosen": "Dos pasos separados."
+    },
+    {
+      "id": "manos-titulo",
+      "question": "¿Cómo se llama el paso de manos en la interfaz?",
+      "proposed": "Preparación de manos.",
+      "alternatives": [
+        "Preparación de manos.",
+        "Secado estéril de manos.",
+        "Manos frente al pecho."
+      ],
+      "chosen": "Secado estéril de manos."
+    }
+  ]
+}

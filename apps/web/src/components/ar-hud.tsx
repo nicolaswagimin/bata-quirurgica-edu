@@ -1,4 +1,3 @@
-import type { ArGameStep } from '@bata/shared/schemas';
 import type { GameView } from '../ar/game-steps.ts';
 import { VIOLATION_SHORT, VIOLATION_TEXT, type Violation } from '../ar/posture.ts';
 import { Pictogram } from './pictogram.tsx';
@@ -24,12 +23,15 @@ export function ArInstruction({ text, sub }: { text: string; sub?: string | null
 }
 
 /** Six numbered stamps: done ones inked, the current one ringed, with the hold filling under it. */
+/** Minimal step shape shared by the v1 game steps and the v2 practice steps. */
+export type HudStep = { id: string; order: number; title: string };
+
 export function ArStepProgress({
   steps,
   view,
   vertical = false,
 }: {
-  steps: readonly ArGameStep[];
+  steps: readonly HudStep[];
   view: GameView;
   vertical?: boolean;
 }) {

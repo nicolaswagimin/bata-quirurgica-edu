@@ -37,6 +37,12 @@ function mesh(over?: Parameters<typeof pose>[0]) {
 
 const ys = (pts: { y: number }[]) => pts.map((p) => p.y);
 
+const MOTION = {
+  hem: { x: 0.2, y: 0 },
+  sleeveLeft: { x: 0.2, y: 0 },
+  sleeveRight: { x: -0.2, y: 0 },
+};
+
 describe('gownMesh', () => {
   it('covers shoulders to mid-calf with a 6-column body grid', () => {
     const m = mesh();
@@ -87,5 +93,47 @@ describe('gownMesh', () => {
     expect(m.hotspots.map((h) => h.id).sort()).toEqual(
       ['cierre-posterior', 'cuello', 'mangas', 'punos', 'zona-esteril'].sort(),
     );
+  });
+});
+
+describe('secondary motion', () => {
+  it('desplaza el ruedo y las mangas sin cambiar la topología', () => {
+    const frame = bodyFrame(pose(), SIZE);
+    if (!frame) throw new Error('no frame');
+    const still = gownMesh(frame);
+    const moving = gownMesh(frame, MOTION);
+    const last = moving.body.length - 1;
+    const before = still.body[last]?.p[2];
+    const after = moving.body[last]?.p[2];
+    if (!before || !after) throw new Error('sin quad final');
+    expect(moving.body.length).toBe(still.body.length);
+    expect(after.x - before.x).toBeCloseTo(0.2 * frame.shoulderWidth, 0);
+
+    const sleeveBefore = still.sleeves[1]?.p[0];
+    const sleeveAfter = moving.sleeves[1]?.p[0];
+    if (!sleeveBefore || !sleeveAfter) throw new Error('sin manga');
+    expect(sleeveAfter.x - sleeveBefore.x).toBeCloseTo(0.2 * frame.shoulderWidth, 0);
+  });
+
+  it('no mueve la parte del torso por encima de la cadera', () => {
+    const frame = bodyFrame(pose(), SIZE);
+    if (!frame) throw new Error('no frame');
+    const still = gownMesh(frame);
+    const moving = gownMesh(frame, MOTION);
+    expect(moving.body[0]?.p[0]).toEqual(still.body[0]?.p[0]);
+  });
+
+  it('con movimiento neutro la malla es idéntica', () => {
+    const frame = bodyFrame(pose(), SIZE);
+    if (!frame) throw new Error('no frame');
+    expect(
+      JSON.stringify(
+        gownMesh(frame, {
+          hem: { x: 0, y: 0 },
+          sleeveLeft: { x: 0, y: 0 },
+          sleeveRight: { x: 0, y: 0 },
+        }),
+      ),
+    ).toBe(JSON.stringify(gownMesh(frame)));
   });
 });

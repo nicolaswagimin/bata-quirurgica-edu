@@ -7,6 +7,8 @@ import { CHAPTER_SECONDS, createProcedure, PROCEDURE_MODEL } from './procedure.t
 
 type Props = {
   label: string;
+  /** Size of the canvas box; the AR step preview uses a small thumbnail. */
+  className?: string;
   time: number;
   playing: boolean;
   onTime: (seconds: number) => void;
@@ -21,7 +23,7 @@ function Performance({
   onShown,
   hotspotIds,
   activeHotspotId,
-}: Omit<Props, 'label'>) {
+}: Omit<Props, 'label' | 'className'>) {
   const { scene } = useGLTF(PROCEDURE_MODEL, '/draco/');
   const stage = useMemo(() => createProcedure(scene), [scene]);
   const markers = useRef(new Map<string, Group>());
@@ -79,9 +81,13 @@ function Performance({
     </>
   );
 }
-export function ProcedureViewer({ label, ...props }: Props) {
+export function ProcedureViewer({
+  label,
+  className = 'h-96 w-full sm:h-[32rem]',
+  ...props
+}: Props) {
   return (
-    <div role="img" aria-label={label} className="h-96 w-full sm:h-[32rem]">
+    <div role="img" aria-label={label} className={className}>
       <Canvas
         camera={{ position: [1.65, 1.6, 2.65], fov: 36 }}
         dpr={[1, 1.6]}

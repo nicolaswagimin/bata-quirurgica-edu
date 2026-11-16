@@ -2,6 +2,7 @@ import { BataPasosSchema } from '@bata/shared/schemas';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import pasosJson from '../../../../content/protocolos/bata-pasos.json';
+import { DonningSteps3d } from '../components/donning-steps-3d.tsx';
 import { pageTitle } from '../components/ui-classes.ts';
 import { chapterAt, parseChapters, toFilmTime, toModelTime } from '../three/chapters.ts';
 import { Mannequin } from '../three/mannequin.tsx';
@@ -295,6 +296,7 @@ export default function Bata3dPage() {
         </Link>
         .
       </p>
+      <DonningSteps3d />
     </div>
   );
 }

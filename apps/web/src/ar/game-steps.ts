@@ -60,6 +60,8 @@ export interface GameView {
   warningsOn: boolean;
   /** Warnings that do not apply right now (the sleeve openings sit by the armpits). */
   exempt: readonly Violation[];
+  /** Steps skipped with "Saltar paso" (v2 only): not completed and worth no XP. */
+  skippedIds?: string[];
 }
 
 export interface GameInput {

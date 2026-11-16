@@ -779,3 +779,196 @@ def build_gown(human, rig, colliders, closure, covered=False, shell_points=None,
     gown.data.update()
     trims, bows = add_trims(gown, rig, marks, points, trim, closure, covered)
     return gown, trims, marks, bows
+
+
+FABRIC_V2 = (0.030, 0.165, 0.255, 1)  # v2 only: deeper surgical blue, linear RGBA
+
+
+def sleeve_shell_v2(rig, side, profile):
+    """Loose sleeve covers wrist/palm and overlaps knit; world metres, Z up.
+
+    Join/remesh uses the legacy pipeline. The last 4 cm gather onto the cuff
+    ellipse, with the same radial frame and sewing plane as the knit.
+    """
+    from sleeve_seam_v2 import TAPER_LENGTH_M, taper_radius
+    radius_at = taper_radius
+    if profile.get('coverage_guard', False):
+        from sleeve_guard_v2 import guarded_taper_radius
+        radius_at = guarded_taper_radius
+    shoulder = bone_head(rig, f'upperarm01.{side}')
+    elbow = bone_head(rig, f'lowerarm01.{side}')
+    wrist, axis = profile['wrist'], profile['axis']
+    offset = profile['across']*profile['offset'][0] + profile['normal']*profile['offset'][1]
+    root = shoulder + Vector((-0.07 if side == 'L' else 0.07, 0, -0.005))
+    path = [root, shoulder, elbow, wrist - axis*0.06 + offset,
+            wrist + offset, profile['rim']]
+    sizes = [0.065, 0.065, 0.058, profile['palm_radius'], profile['palm_radius'], max(profile['seam_axes'])+0.0015]
+    samples, radii = [], []
+    for a, b, ra, rb in zip(path, path[1:], sizes, sizes[1:]):
+        for i in range(18):
+            t = i/18
+            samples.append(a.lerp(b, t))
+            radii.append(ra*(1-t) + rb*t)
+    samples.append(path[-1])
+    radii.append(sizes[-1])
+    rings, u = [], None
+    for i, center in enumerate(samples):
+        direction = (samples[min(i+1, len(samples)-1)] - samples[max(0, i-1)]).normalized()
+        u = direction.orthogonal().normalized() if u is None else (u-direction*u.dot(direction)).normalized()
+        v = direction.cross(u).normalized()
+        ring = []
+        for j in range(48):
+            a = 2*math.pi*j/48
+            point = center+radii[i]*(u*math.cos(a)+v*math.sin(a))
+            delta = point-wrist-offset
+            z = delta.dot(axis)
+            if z >= profile['sleeve_end']-TAPER_LENGTH_M:
+                radial = delta-axis*z
+                angle = math.atan2(radial.dot(profile['normal']), radial.dot(profile['across']))
+                point = wrist+offset+axis*z+radial.normalized()*radius_at(z, angle, profile)
+            ring.append(point)
+        rings.append(ring)
+    return loft(f'v2-sleeve-{side}', rings)
+
+
+def sleeve_rig_v2(rig, profiles):
+    """Read-only coordinate adapter for legacy sleeve cutting/pinning, metres.
+
+    Legacy helpers put the rim 6 cm before their supplied wrist. Supply virtual
+    wrist landmarks placing that rim at the new MCP-region seam. Real rig/bones
+    and the legacy functions are untouched; neck landmarks remain unchanged.
+    """
+    from types import SimpleNamespace
+    bones = {bone.name: bone for bone in rig.pose.bones}
+    inverse = rig.matrix_world.inverted()
+    for side, p in profiles.items():
+        virtual_wrist = p['rim'] + p['axis']*SLEEVE_END
+        bones[f'wrist.{side}'] = SimpleNamespace(head=inverse @ virtual_wrist)
+        bones[f'lowerarm02.{side}'] = SimpleNamespace(head=inverse @ (virtual_wrist-p['axis']*0.2))
+    return SimpleNamespace(matrix_world=rig.matrix_world, pose=SimpleNamespace(bones=bones))
+
+
+def restore_sleeve_rims_v2(gown, profiles):
+    """Seat the open cloth boundary on the shared seam plane, world metres.
+
+    The knit root stays at least 1 cm upstream. Match its actual polygonal
+    outer ellipse plus 1.5 mm, without flaring back to the palm radius.
+    """
+    from sleeve_seam_v2 import SEAM_ALLOWANCE_M, cuff_radius
+    bm = bmesh.new()
+    bm.from_mesh(gown.data)
+    inverse = gown.matrix_world.inverted()
+    boundary = {v for edge in bm.edges if edge.is_boundary for v in edge.verts}
+    for side, p in profiles.items():
+        seam = [v for v in boundary if (gown.matrix_world @ v.co-p['rim']).length < 0.08]
+        if len(seam) < 12:
+            raise RuntimeError(f'{side}: missing sleeve boundary after legacy remesh/simulation')
+        for vertex in seam:
+            delta = gown.matrix_world @ vertex.co-p['rim']
+            radial = delta-p['axis']*delta.dot(p['axis'])
+            angle = math.atan2(radial.dot(p['normal']), radial.dot(p['across']))
+            radius = cuff_radius(p, angle)+SEAM_ALLOWANCE_M
+            vertex.co = inverse @ (p['rim']+radial.normalized()*radius)
+        print('SLEEVE rim', side, 'vertices', len(seam), 'sewn ellipse semi-axes cm',
+              tuple(round((r+SEAM_ALLOWANCE_M)*100, 3) for r in p['seam_axes']),
+              'wrist-to-rim cm', round(p['sleeve_end']*100, 2), 'pinned at MCP seam')
+    bm.to_mesh(gown.data)
+    bm.free()
+    gown.data.update()
+
+
+def outward_normals_v2(obj, closed=False):
+    """Weld, discard degenerate faces and orient normals outside, mesh metres."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=0.00005)
+    bmesh.ops.dissolve_degenerate(bm, edges=list(bm.edges), dist=0.00001)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    nonmanifold = sum(not e.is_manifold for e in bm.edges)
+    print('GOWN topology', obj.name, 'nonmanifold edges', nonmanifold, 'closed', closed)
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.update()
+    if closed and nonmanifold:
+        raise RuntimeError('V2 union must be watertight before cutting garment openings')
+
+
+
+def sleeve_folds_v2(gown, rig, profiles):
+    """Local irregular compression and inner elbow folds; world metres.
+
+    Compression occupies only the final 8 cm above the cuff. The middle of the
+    forearm has no periodic displacement. Finished forearm radius >= 4.8 cm.
+    """
+    for side in ('L', 'R'):
+        shoulder = bone_head(rig, f'upperarm01.{side}')
+        wrist = bone_head(rig, f'wrist.{side}')
+        elbow = bone_head(rig, f'lowerarm01.{side}')
+        axis = (wrist - elbow).normalized()
+        length = (wrist - elbow).length
+        p = profiles[side]
+        offset = p['across']*p['offset'][0] + p['normal']*p['offset'][1]
+        u = axis.orthogonal().normalized()
+        v = axis.cross(u).normalized()
+        inner = (shoulder - elbow).normalized() + axis
+        inner = (inner - axis * inner.dot(axis)).normalized()
+        for vertex in gown.data.vertices:
+            delta = vertex.co - wrist - offset
+            along = delta.dot(axis)
+            radial = delta - axis * along
+            if not (-length - 0.055 < along < p['sleeve_end'] - 0.002 and 0.025 < radial.length < 0.09):
+                continue
+            angle = math.atan2(radial.dot(v), radial.dot(u))
+            distance = p['sleeve_end'] - along
+            displacement = 0.0
+            if 0 < distance < 0.08:
+                for center, width, amplitude, phase in ((0.014, 0.007, 0.0035, 0.4),
+                                                       (0.039, 0.009, 0.0045, 2.1),
+                                                       (0.065, 0.006, 0.0030, 4.0)):
+                    shift = 0.004 * math.sin(angle + phase) + 0.0015 * math.sin(2 * angle - phase)
+                    q = (distance - center - shift) / width
+                    displacement += amplitude * (1 - 2*q*q) * math.exp(-q*q) * (0.85 + 0.15*math.sin(angle + phase))
+                displacement *= math.sin(math.pi * distance / 0.08) ** 2
+            inner_weight = max(0, (radial.normalized().dot(inner) - 0.15) / 0.85) ** 2
+            for bend_offset in (-0.022, 0.004, 0.033):
+                q = (along + length - bend_offset + 0.012*math.sin(angle)) / 0.010
+                displacement += 0.0035 * inner_weight * (1 - 2*q*q) * math.exp(-q*q)
+            radius = max(0.048, radial.length + displacement)
+            vertex.co = wrist + offset + axis * along + radial.normalized() * radius
+    gown.data.update()
+
+
+def build_gown_v2(human, rig, colliders, profiles, closure='open'):
+    """Configured unwrapped gown; world metres, Z up, figure faces -Y.
+
+    Separate entry point deliberately leaves every legacy function unchanged.
+    Cuffs are built by steps_v2 after the simulation, without capped ends.
+    """
+    from sleeve_clearance_v2 import enforce_hand_clearance, smooth_hand_sleeves
+    marks = landmarks(rig)
+    points = evaluated_body(human)
+    torso, center = torso_shell(points, marks)
+    gown = unify([torso, sleeve_shell_v2(rig, 'L', profiles['L']), sleeve_shell_v2(rig, 'R', profiles['R'])])
+    gown.name = 'v2-gown'
+    rim_rig = sleeve_rig_v2(rig, profiles)
+    open_garment(gown, rim_rig, marks, center, closure)
+    restore_sleeve_rims_v2(gown, profiles)  # pin the sewn ellipse before simulation
+    if closure == 'tied':
+        from back_closure_v2 import simulate_closed_back
+        simulate_closed_back(gown, rim_rig, colliders, marks, center)
+    else:
+        simulate(gown, rim_rig, colliders, marks, center, closure)
+    smooth_hand_sleeves(gown, profiles)
+    enforce_hand_clearance(gown, profiles, 'post-smooth')
+    sleeve_folds_v2(gown, rig, profiles)
+    restore_sleeve_rims_v2(gown, profiles)
+    enforce_hand_clearance(gown, profiles, 'post-folds')
+    outward_normals_v2(gown)
+    gown.data.materials.append(fabric_material('v2-gown-fabric', FABRIC_V2, 0.9))
+    print('GOWN v2 colour linear RGB', FABRIC_V2[:3], 'roughness', 0.9)
+    gown.data.polygons.foreach_set('use_smooth', [True] * len(gown.data.polygons))
+    ring = neckline(gown, marks)
+    if ring:
+        ribbon('v2-neck-binding', ring[::max(1, len(ring) // 44)],
+               fabric_material('v2-binding', TRIM), width=0, thickness=0.0042)
+    return gown, marks

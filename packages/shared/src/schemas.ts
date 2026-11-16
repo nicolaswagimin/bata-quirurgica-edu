@@ -527,6 +527,184 @@ export const BataPasosSchema = z
   });
 export type BataPasos = z.infer<typeof BataPasosSchema>;
 
+// ---------- Práctica guiada AR v2 (content/protocolos/ar-practica-v2.json) ----------
+// Borrador de la secuencia didáctica: cada paso define objetivo, acción, qué mirar, tiempo de
+// sostén, error frecuente, corrección y debrief. `donningIds` enlaza con el protocolo y `decisions`
+// recoge lo que el director de tesis debe validar antes de implementar el motor v2.
+
+/** Interacción que el motor v2 sabe evaluar; el contenido no necesita conocer la geometría. */
+export const PracticeKindSchema = z.enum([
+  'mask',
+  'friction',
+  'band',
+  'neck',
+  'sleeves',
+  'still',
+  'gloves',
+  'turn',
+  /** Bata desplegada a la altura de los hombros, lejos del cuerpo y sin sacudirla (v3). */
+  'unfold',
+]);
+export type PracticeKind = z.infer<typeof PracticeKindSchema>;
+
+export const ArPracticeStepSchema = z
+  .object({
+    id: IdSchema,
+    order: z.number().int().min(1),
+    kind: PracticeKindSchema,
+    /** Pasos de `bata-pasos.json#donning` que practica; vacío si el paso no está en el protocolo. */
+    donningIds: z.array(IdSchema),
+    title: z.string().min(1).max(80),
+    /** Para qué sirve el paso, en una frase. */
+    goal: z.string().min(1).max(240),
+    /** Qué hace el estudiante, en imperativo. */
+    action: z.string().min(1).max(240),
+    /** Dónde mirar o qué parte del cuerpo importa. */
+    look: z.string().min(1).max(200),
+    /** Cuánto debe sostener la posición o el movimiento (timer de fricción incluido). */
+    holdMs: z.number().int().min(300).max(60_000),
+    commonError: z.string().min(1).max(240),
+    correction: z.string().min(1).max(240),
+    /** Frase de cierre del paso, para el debrief final. */
+    debrief: z.string().min(1).max(240),
+    /** Lo que dice la voz: corto, sin leer todo el texto. */
+    voice: z.string().min(1).max(160),
+    /** Nota cuando el AR no puede reproducir la acción real (lavado de manos, mascarilla). */
+    simulation: z.string().min(1).max(240).optional(),
+    /** Paso opcional: solo entra en la práctica si la opción de `config` con este nombre está activa. */
+    toggle: z.enum(['mascarilla', 'secado']).optional(),
+    source: SourceRefSchema,
+  })
+  .strict();
+export type ArPracticeStep = z.infer<typeof ArPracticeStepSchema>;
+
+/** Pregunta clínica que el director de tesis debe resolver antes de implementar el paso. */
+export const PracticeDecisionSchema = z
+  .object({
+    id: IdSchema,
+    question: z.string().min(1).max(300),
+    proposed: z.string().min(1).max(300),
+    alternatives: z.array(z.string().min(1).max(300)).min(1).max(4),
+    /** Opción aprobada por el director; vacío mientras la decisión siga abierta. */
+    chosen: z.string().min(1).max(300).optional(),
+  })
+  .strict();
+export type PracticeDecision = z.infer<typeof PracticeDecisionSchema>;
+
+/** Textos del paso de giro, según la opción de giro elegida. */
+const TurnTextSchema = z
+  .object({
+    action: z.string().min(1).max(240),
+    voice: z.string().min(1).max(160),
+    correction: z.string().min(1).max(240),
+  })
+  .strict();
+
+/**
+ * Puntos abiertos que la práctica deja configurables mientras el director decide (v3). La URL puede
+ * sobrescribirlos para QA (`?giro=360|cuarto`, `?mascarilla=1|0`, `?secado=1|0`).
+ */
+export const ArPracticeConfigSchema = z
+  .object({
+    giro: z.enum(['cuarto', '360']),
+    mascarilla: z.boolean(),
+    secado: z.boolean(),
+  })
+  .strict();
+export type ArPracticeConfig = z.infer<typeof ArPracticeConfigSchema>;
+
+export const ArPracticeFileSchema = z
+  .object({
+    reviewNote: z.string().min(1),
+    version: z.union([z.literal(2), z.literal(3)]),
+    /** Estado clínico de la secuencia; si falta, lo indica `validatedBy`. */
+    status: z.enum(['pendiente-validacion', 'validada']).optional(),
+    /** De dónde sale el movimiento (p. ej. la guía del video) y si ya se contrastó. */
+    reference: z.string().min(1).max(400).optional(),
+    config: ArPracticeConfigSchema.optional(),
+    turnText: z.object({ cuarto: TurnTextSchema, '360': TurnTextSchema }).strict().optional(),
+    /** Quién validó la secuencia y el día (YYYY-MM-DD); van juntos o no van. */
+    validatedBy: z.string().min(1).max(120).optional(),
+    validatedAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha YYYY-MM-DD')
+      .optional(),
+    steps: z.array(ArPracticeStepSchema).min(1),
+    decisions: z.array(PracticeDecisionSchema),
+  })
+  .strict()
+  .superRefine((file, ctx) => {
+    const ids = new Set<string>();
+    file.steps.forEach((step, i) => {
+      if (ids.has(step.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Id repetido: ${step.id}`,
+          path: ['steps', i, 'id'],
+        });
+      }
+      ids.add(step.id);
+      if (step.order !== i + 1) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `order debe ser ${i + 1}`,
+          path: ['steps', i, 'order'],
+        });
+      }
+    });
+    if (Boolean(file.validatedBy) !== Boolean(file.validatedAt)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'validatedBy y validatedAt deben ir juntos',
+        path: ['validatedBy'],
+      });
+    }
+    if (file.status === 'pendiente-validacion' && file.validatedBy) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Una secuencia pendiente de validación no puede tener validatedBy',
+        path: ['status'],
+      });
+    }
+    if (file.status === 'validada' && !file.validatedBy) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Una secuencia validada necesita validatedBy y validatedAt',
+        path: ['status'],
+      });
+    }
+    if (file.steps.some((step) => step.toggle) && !file.config) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Los pasos con toggle necesitan config',
+        path: ['config'],
+      });
+    }
+    const decisionIds = new Set<string>();
+    file.decisions.forEach((decision, i) => {
+      if (decisionIds.has(decision.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Decisión repetida: ${decision.id}`,
+          path: ['decisions', i, 'id'],
+        });
+      }
+      decisionIds.add(decision.id);
+      if (
+        decision.chosen &&
+        decision.chosen !== decision.proposed &&
+        !decision.alternatives.includes(decision.chosen)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'chosen debe ser la propuesta o una de las alternativas',
+          path: ['decisions', i, 'chosen'],
+        });
+      }
+    });
+  });
+export type ArPracticeFile = z.infer<typeof ArPracticeFileSchema>;
+
 export const CreditAssetSchema = z
   .object({
     id: IdSchema,

@@ -2,6 +2,7 @@
 // pixels: the torso is a grid whose edges follow shoulders → waist → hips → mid-calf, sleeves are
 // strips along shoulder → elbow → wrist, and cuffs, ties and neckline are trim pieces. The renderer
 // (gown-render.ts) maps the fabric texture onto every cell, so the cloth bends with the body.
+import type { GownMotion } from './gown-motion.ts';
 import type { BodyFrame, Vec } from './posture.ts';
 
 export interface Quad {
@@ -50,7 +51,7 @@ function hemPoint(frame: BodyFrame, hip: Vec, knee: Vec | null, ankle: Vec | nul
   return add(hip, scale(frame.down, frame.torsoHeight * 1.55));
 }
 
-export function gownMesh(frame: BodyFrame): GownMesh {
+export function gownMesh(frame: BodyFrame, motion?: GownMotion): GownMesh {
   const { across, down, shoulderWidth: sw, torsoHeight: th } = frame;
   const texel = TEXELS_PER_SHOULDER / sw;
   const L = frame.left.shoulder;
@@ -208,7 +209,7 @@ export function gownMesh(frame: BodyFrame): GownMesh {
   }
 
   const at = (p: Vec) => ({ x: p.x, y: p.y });
-  return {
+  const mesh: GownMesh = {
     body,
     sleeves,
     cuffs,
@@ -221,5 +222,47 @@ export function gownMesh(frame: BodyFrame): GownMesh {
       { id: 'punos', ...at(cuffCenters[0] ?? L) },
       { id: 'cierre-posterior', ...at(add(sideL[3] as Vec, scale(across, -sw * 0.04))) },
     ],
+  };
+  return motion ? withSecondaryMotion(mesh, frame, motion) : mesh;
+}
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+
+/**
+ * Offsets the skirt and sleeves by the spring motion. The falloff starts at the hips so the torso
+ * stays put, and the lower sleeve/cuff take the full lag while the shoulder end stays anchored.
+ */
+function withSecondaryMotion(mesh: GownMesh, frame: BodyFrame, motion: GownMotion): GownMesh {
+  const scale = frame.shoulderWidth;
+  const top = frame.hipMid.y;
+  const bottom = mesh.body.reduce((max, quad) => Math.max(max, ...quad.p.map((p) => p.y)), top);
+  const span = Math.max(1, bottom - top);
+  const falloff = (p: Vec) => clamp01((p.y - top) / span);
+  const move = (
+    quads: Quad[],
+    offset: Vec,
+    factor: (quad: Quad, index: number) => number,
+    withFalloff: boolean,
+  ) =>
+    quads.map((quad, index) => ({
+      ...quad,
+      p: quad.p.map((p) => {
+        const k = factor(quad, index) * (withFalloff ? falloff(p) : 1);
+        return { x: p.x + offset.x * scale * k, y: p.y + offset.y * scale * k };
+      }) as Quad['p'],
+    }));
+
+  const sleeveFactors = (_q: Quad, i: number) => (i === 0 ? 0.35 : 1);
+  const leftSleeves = move(mesh.sleeves.slice(0, 2), motion.sleeveLeft, sleeveFactors, false);
+  const rightSleeves = move(mesh.sleeves.slice(2), motion.sleeveRight, sleeveFactors, false);
+  const cuffs = mesh.cuffs.map((quad, index) =>
+    move([quad], index === 0 ? motion.sleeveLeft : motion.sleeveRight, () => 1, false),
+  );
+
+  return {
+    ...mesh,
+    body: move(mesh.body, motion.hem, () => 1, true),
+    sleeves: [...leftSleeves, ...rightSleeves],
+    cuffs: cuffs.flat(),
   };
 }

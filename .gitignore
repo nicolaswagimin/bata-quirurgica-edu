@@ -49,3 +49,6 @@ apps/web/.impeccable/*
 !apps/web/.impeccable/surfaces/
 apps/web/.impeccable/surfaces/*
 !apps/web/.impeccable/surfaces/src-routes-home-tsx.md
+
+# Reference derived from a manufacturer video: local only, never versioned
+tools/bata-3d/referencia/
