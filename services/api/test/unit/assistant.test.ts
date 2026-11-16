@@ -15,6 +15,7 @@ import {
   SYSTEM_PROMPT,
   type TranscribeDeps,
   UNSOURCED_NOTE,
+  WEB_SOURCED_NOTE,
 } from '../../src/routes/assistant.ts';
 
 const ORIGIN = 'http://localhost:4173';
@@ -200,6 +201,34 @@ describe('handleChatStream', () => {
     const msgs = create.mock.calls[0]?.[0]?.messages as { role: string; content: string }[];
     expect(msgs[1]?.content).toContain('ningún fragmento responde esta pregunta');
     expect(SYSTEM_PROMPT).toContain(UNSOURCED_NOTE);
+  });
+
+  it('searches the web with Groq browser search when retrieval finds nothing', async () => {
+    const browse = vi.fn(async () => 'La OMS recomienda higiene de manos antes de vestir.');
+    const { deps, create } = chatDeps({ retrieve: vi.fn(async () => []), browse });
+    const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
+    const evs = events(out.body);
+
+    const text = evs
+      .filter((e) => e.type === 'delta')
+      .map((e) => e.type === 'delta' && e.text)
+      .join('');
+    expect(text).toContain('La OMS recomienda higiene de manos antes de vestir.');
+    expect(text).toContain(WEB_SOURCED_NOTE);
+    // Ni citas inventadas ni segunda llamada al modelo: la búsqueda ya respondió.
+    expect(evs.find((e) => e.type === 'citations')).toEqual({ type: 'citations', items: [] });
+    expect(create).not.toHaveBeenCalled();
+    expect(browse).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to general knowledge when the web search returns nothing', async () => {
+    const browse = vi.fn(async () => null);
+    const { deps, create } = chatDeps({ retrieve: vi.fn(async () => []), browse });
+    const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
+
+    expect(events(out.body).filter((e) => e.type === 'delta').length).toBeGreaterThan(0);
+    expect(browse).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledOnce();
   });
 
   it('does not cite fragments that only passed the relaxed fallback', async () => {

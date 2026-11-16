@@ -27,10 +27,10 @@ import type { Metrics } from '../lib/metrics.ts';
 type GroqUsageChunk = { x_groq?: { usage?: { completion_tokens?: number } } };
 
 /**
- * Prefijo que el modelo antepone cuando responde sin fragmentos que lo respalden. No es un rechazo:
- * la respuesta siempre llega, pero el usuario puede distinguir si está citando el protocolo o si es
- * conocimiento general del asistente.
+ * Prefijo cuando la respuesta viene de la búsqueda web integrada de Groq y no del protocolo
+ * cargado. No es un rechazo: la respuesta siempre llega, pero el usuario distingue la procedencia.
  */
+export const WEB_SOURCED_NOTE = 'Sin respaldo en el protocolo cargado; información de fuentes web';
 export const UNSOURCED_NOTE = 'Sin respaldo en las normativas cargadas';
 export const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
 
@@ -49,6 +49,11 @@ export type ChatDeps = {
   consumeQuota: (uid: string) => Promise<boolean>;
   getGroq: () => Promise<Groq>;
   retrieve: (query: string) => Promise<RetrievedChunk[]>;
+  /**
+   * Búsqueda web integrada de Groq (browser search). Sólo se usa cuando ningún fragmento del
+   * protocolo respalda la pregunta. Devuelve `null` si no hay resultado o falla.
+   */
+  browse?: (question: string) => Promise<string | null>;
   model: string;
   metrics: Metrics;
   now: () => number;
@@ -147,6 +152,20 @@ export async function handleChatStream(
   const out = openStream(stream, 200, 'application/x-ndjson; charset=utf-8');
 
   try {
+    // Sin respaldo documental, el tercer nivel es la búsqueda web de Groq: cubre preguntas que
+    // las normativas cargadas no tratan, sin inventar citas del protocolo.
+    if (!grounded && deps.browse) {
+      const question = messages.at(-1)?.content ?? '';
+      const found = await deps.browse(question).catch(() => null);
+      if (found) {
+        writeEvent(out, { type: 'delta', text: `${WEB_SOURCED_NOTE}: ${found}` });
+        writeEvent(out, { type: 'citations', items: [] });
+        writeEvent(out, { type: 'done', latencyMs: deps.now() - startedAt });
+        await deps.metrics.flush();
+        out.end();
+        return;
+      }
+    }
     const groqStart = deps.now();
     let firstTokenAt: number | null = null;
     let completionTokens = 0;
