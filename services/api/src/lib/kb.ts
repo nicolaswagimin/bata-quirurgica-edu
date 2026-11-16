@@ -13,6 +13,12 @@ export type RetrievedChunk = {
   page: number;
   distance: number;
   source: { title: string; org: string; year: number };
+  /**
+   * `strong` si superó el umbral de distancia configurado; `weak` si sólo entró por el respaldo
+   * relajado. El asistente usa esta marca para decidir si puede citar o si debe responder con
+   * conocimiento general avisando que no hay respaldo documental.
+   */
+  relevance?: 'strong' | 'weak';
 };
 
 export interface Retriever {
@@ -161,7 +167,116 @@ export async function retrieveContext(
   return found
     .filter((chunk) => chunk.distance <= maxDistance)
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, k);
+    .slice(0, k)
+    .map((chunk) => ({ ...chunk, relevance: 'strong' as const }));
+}
+
+// Palabras vacías del español que no aportan a la coincidencia léxica.
+const STOPWORDS = new Set([
+  'para',
+  'porque',
+  'como',
+  'cuando',
+  'donde',
+  'sobre',
+  'entre',
+  'desde',
+  'hasta',
+  'tiene',
+  'tienen',
+  'debe',
+  'deben',
+  'puede',
+  'pueden',
+  'cual',
+  'cuales',
+  'este',
+  'esta',
+  'estos',
+  'estas',
+  'aquel',
+  'aquella',
+  'hola',
+  'gracias',
+  'favor',
+]);
+
+function tokenize(text: string): Set<string> {
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ');
+  const tokens = normalized.split(/\s+/).filter((t) => t.length > 3 && !STOPWORDS.has(t));
+  return new Set(tokens);
+}
+
+/**
+ * Coincidencia léxica entre pregunta y fragmento (Jaccard sobre palabras significativas).
+ * Corrige el caso típico de los embeddings multilingües: el fragmento correcto está cerca en
+ * significado pero el término clave —"enguantado", "solapa"— no coincide, y el vector lo descarta.
+ */
+export function lexicalOverlap(query: string, text: string): number {
+  const a = tokenize(query);
+  if (a.size === 0) return 0;
+  const b = tokenize(text);
+  let shared = 0;
+  for (const token of a) if (b.has(token)) shared += 1;
+  return shared / a.size;
+}
+
+function similarity(distance: number): number {
+  if (!Number.isFinite(distance)) return 0;
+  return Math.min(1, Math.max(0, 1 - distance));
+}
+
+/** Combina cercanía vectorial y coincidencia léxica. El vector manda; el léxico desempata. */
+export function rankingScore(query: string, chunk: RetrievedChunk): number {
+  return 0.75 * similarity(chunk.distance) + 0.25 * lexicalOverlap(query, chunk.text);
+}
+
+export function rankChunks(query: string, chunks: RetrievedChunk[], k: number): RetrievedChunk[] {
+  return [...chunks].sort((a, b) => rankingScore(query, b) - rankingScore(query, a)).slice(0, k);
+}
+
+export type FallbackOptions = {
+  embed: (text: string) => Promise<number[]>;
+  retriever: Retriever;
+  maxDistance: number;
+  k?: number;
+  /** Multiplicador del umbral en el segundo intento. Con 0.35 pasa a 0.525. */
+  relaxedFactor?: number;
+};
+
+/**
+ * Recuperación en tres niveles con una sola llamada al embedding:
+ *
+ * 1. estricto: distancia ≤ `maxDistance` (comportamiento original);
+ * 2. relajado: distancia ≤ `maxDistance × relaxedFactor`, reordenado con señal léxica;
+ * 3. respaldo: los `k` más cercanos aunque superen el umbral, también marcados `weak`.
+ *
+ * El nivel 3 nunca devuelve una lista vacía si el banco tiene fragmentos, que es lo que permite
+ * al asistente responder siempre. El consumidor distingue con `relevance` si puede citar.
+ */
+export async function retrieveWithFallback(
+  query: string,
+  { embed, retriever, maxDistance, k = 6, relaxedFactor = 1.6 }: FallbackOptions,
+): Promise<RetrievedChunk[]> {
+  const vector = await embed(query);
+  const nearest = await retriever.search(vector, k * 2);
+  if (nearest.length === 0) return [];
+
+  const strong = nearest.filter((chunk) => chunk.distance <= maxDistance);
+  if (strong.length > 0) {
+    return rankChunks(query, strong, k).map((chunk) => ({
+      ...chunk,
+      relevance: 'strong' as const,
+    }));
+  }
+
+  const relaxed = nearest.filter((chunk) => chunk.distance <= maxDistance * relaxedFactor);
+  const pool = relaxed.length > 0 ? relaxed : nearest;
+  return rankChunks(query, pool, k).map((chunk) => ({ ...chunk, relevance: 'weak' as const }));
 }
 
 /**

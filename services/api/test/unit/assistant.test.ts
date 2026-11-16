@@ -12,9 +12,9 @@ import {
   handleChatStream,
   handleTranscribe,
   MAX_AUDIO_BYTES,
-  REFUSAL_TEXT,
   SYSTEM_PROMPT,
   type TranscribeDeps,
+  UNSOURCED_NOTE,
 } from '../../src/routes/assistant.ts';
 
 const ORIGIN = 'http://localhost:4173';
@@ -185,16 +185,40 @@ describe('handleChatStream', () => {
     expect(deps.retrieve).not.toHaveBeenCalled();
   });
 
-  it('refuses without calling Groq when retrieval finds nothing', async () => {
+  it('answers with general knowledge instead of refusing when retrieval finds nothing', async () => {
     const { deps, create } = chatDeps({ retrieve: vi.fn(async () => []) });
     const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
     const evs = events(out.body);
-    expect(evs).toEqual([
-      { type: 'delta', text: REFUSAL_TEXT },
-      { type: 'citations', items: [] },
-      { type: 'done', latencyMs: expect.any(Number) },
-    ]);
-    expect(create).not.toHaveBeenCalled();
+
+    // Siempre responde algo: hay deltas y el flujo termina con `done`.
+    expect(evs.filter((e) => e.type === 'delta').length).toBeGreaterThan(0);
+    expect(evs.at(-1)).toMatchObject({ type: 'done' });
+    // Sin respaldo documental no se inventan citas.
+    expect(evs.find((e) => e.type === 'citations')).toEqual({ type: 'citations', items: [] });
+    // Y el modelo sí se invoca, con el marcador de que no hay fragmentos.
+    expect(create).toHaveBeenCalledOnce();
+    const msgs = create.mock.calls[0]?.[0]?.messages as { role: string; content: string }[];
+    expect(msgs[1]?.content).toContain('ningún fragmento responde esta pregunta');
+    expect(SYSTEM_PROMPT).toContain(UNSOURCED_NOTE);
+  });
+
+  it('does not cite fragments that only passed the relaxed fallback', async () => {
+    const weak: RetrievedChunk[] = [
+      {
+        text: 'Fragmento dudoso.',
+        page: 1,
+        distance: 0.9,
+        relevance: 'weak',
+        source: { title: 'Boletín', org: 'OMS', year: 2018 },
+      },
+    ];
+    const { deps, create } = chatDeps({ retrieve: vi.fn(async () => weak) });
+    const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
+    const evs = events(out.body);
+
+    expect(evs.find((e) => e.type === 'citations')).toEqual({ type: 'citations', items: [] });
+    const msgs = create.mock.calls[0]?.[0]?.messages as { role: string; content: string }[];
+    expect(msgs[1]?.content).toContain('ningún fragmento responde esta pregunta');
   });
 
   it.each([

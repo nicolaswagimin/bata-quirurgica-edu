@@ -1,7 +1,12 @@
 import Groq from 'groq-sdk';
 import { getSecretString, requireEnv } from './config.ts';
 import { getDb } from './identity.ts';
-import { createFirestoreRetriever, embedText, retrieveBilingual, retrieveContext } from './kb.ts';
+import {
+  createFirestoreRetriever,
+  embedText,
+  retrieveBilingual,
+  retrieveWithFallback,
+} from './kb.ts';
 import { createMetrics } from './metrics.ts';
 import { consumeQuotaTx } from './repos.ts';
 
@@ -54,9 +59,12 @@ export function defaultChatDeps() {
       const retriever = createFirestoreRetriever(await getDb());
       const maxDistance = Number(requireEnv('KB_MAX_DISTANCE'));
       const embed = (text: string) => embedText(text, { metrics });
+      // Tres niveles: estricto, relajado y respaldo. Sólo devuelve vacío si el banco no tiene
+      // fragmentos, y en ese caso el asistente responde igual con conocimiento general.
       return retrieveBilingual(query, {
-        search: (q) => retrieveContext(q, { embed, retriever, maxDistance }),
+        search: (q) => retrieveWithFallback(q, { embed, retriever, maxDistance, k: 6 }),
         translate: (q) => translateForSearch(model, q),
+        k: 6,
       });
     },
     model,
