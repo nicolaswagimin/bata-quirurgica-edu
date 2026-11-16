@@ -55,14 +55,7 @@ export function MentaDialogue() {
           speaking={state.mode === 'typing'}
           className="h-33 w-24 md:order-2 md:h-55 md:w-40 md:self-end"
         />
-        {/* The figure is intentionally not a button; equivalent keyboard controls follow it. */}
-        {/* biome-ignore lint/a11y/useKeyWithClickEvents: prose bubble with separate keyboard controls */}
-        <figure
-          onClick={() => {
-            if (!transcript) dispatch({ type: 'next' });
-          }}
-          className="relative min-w-0 flex-1 rounded-card bg-bg p-3 text-sm text-ink shadow-sheet before:absolute before:bottom-24 before:-left-1.5 before:size-3 before:rotate-45 before:bg-bg md:w-full md:flex-none md:p-4 md:text-base md:before:-bottom-1.5 md:before:left-auto md:before:right-20"
-        >
+        <figure className="relative min-w-0 flex-1 rounded-card bg-bg p-3 text-sm text-ink shadow-sheet before:absolute before:bottom-24 before:-left-1.5 before:size-3 before:rotate-45 before:bg-bg md:w-full md:flex-none md:p-4 md:text-base md:before:-bottom-1.5 md:before:left-auto md:before:right-20">
           <div id={transcriptId}>
             {transcript ? (
               <>
@@ -93,6 +86,16 @@ export function MentaDialogue() {
           <figcaption className="relative mt-2 font-pixel text-xs text-primary">
             {copy.signature}
           </figcaption>
+          {transcript ? null : (
+            // Mouse/touch shortcut over the bubble; keyboard and screen readers use "Siguiente".
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => dispatch({ type: 'next' })}
+              className="absolute inset-0 cursor-pointer rounded-card"
+            />
+          )}
         </figure>
       </div>
       <p className="sr-only" aria-live="polite" aria-atomic="true">
