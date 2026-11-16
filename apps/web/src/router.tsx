@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { ComingSoon } from './components/coming-soon.tsx';
+import { IndexGate } from './components/index-gate.tsx';
 import { RequireAdmin } from './components/require-admin.tsx';
 import { RequireAuth } from './components/require-auth.tsx';
 import { RootLayout } from './components/root-layout.tsx';
@@ -32,11 +33,26 @@ const rootRoute = createRootRoute({ component: RootLayout });
 
 const LoginSearchSchema = z.object({ redirect: z.string().optional().catch(undefined) });
 
+const ingresarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ingresar',
+  validateSearch: (search) => LoginSearchSchema.parse(search),
+  component: LoginPage,
+});
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   validateSearch: (search) => LoginSearchSchema.parse(search),
-  component: LoginPage,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/ingresar', search, replace: true });
+  },
+});
+const HomePage = page('home', 'Inicio');
+const LandingPage = page('landing', 'Inicio');
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: () => <IndexGate HomePage={HomePage} LandingPage={LandingPage} />,
 });
 const registroRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -62,14 +78,13 @@ const authRoute = createRoute({
   beforeLoad: async ({ location }) => {
     await auth.authStateReady();
     if (!auth.currentUser) {
-      throw redirect({ to: '/login', search: { redirect: location.href }, replace: true });
+      throw redirect({ to: '/ingresar', search: { redirect: location.href }, replace: true });
     }
   },
   component: RequireAuth,
 });
 
 const userRoutes = [
-  createRoute({ getParentRoute: () => authRoute, path: '/', component: page('home', 'Inicio') }),
   createRoute({
     getParentRoute: () => authRoute,
     path: '/mision/$missionId',
@@ -139,6 +154,8 @@ const adminRoutes = [
 ] as const;
 
 const routeTree = rootRoute.addChildren([
+  indexRoute,
+  ingresarRoute,
   loginRoute,
   registroRoute,
   privacidadRoute,

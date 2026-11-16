@@ -137,7 +137,7 @@ test('@emu registro, onboarding y examen perfecto: sella la misión y paga el XP
 test('@emu fallar el examen no sella la misión ni da XP', async ({ page }) => {
   const email = uniqueEmail('falla');
   await createEmulatorUser(email);
-  await page.goto('/login');
+  await page.goto('/ingresar');
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
@@ -172,7 +172,7 @@ test('@emu botón Salir con confirmación cierra el intento y regresa al inicio'
 }) => {
   const email = uniqueEmail('salir');
   await createEmulatorUser(email);
-  await page.goto('/login');
+  await page.goto('/ingresar');
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
@@ -218,12 +218,13 @@ test('@emu un segundo 401 cierra la sesión y avisa que expiró', async ({ page 
       body: JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Token inválido' } }),
     });
   });
-  await page.goto('/login');
+  // Exercise session expiry on a protected route; / now remains public after sign-out.
+  await page.goto('/ingresar?redirect=%2Fperfil');
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
   await expect(page.getByText('Tu sesión expiró, vuelve a iniciar sesión')).toBeVisible();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/ingresar/);
   await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible();
 });

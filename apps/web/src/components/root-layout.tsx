@@ -82,9 +82,9 @@ export function RootLayout() {
               </ul>
             ) : (
               <ul className="flex items-center">
-                {/* Below sm the login and sign-up cards already link to each other. */}
+                {/* Below sm the landing and auth cards link to each other. */}
                 <li className="hidden sm:block">
-                  <Link to="/login" className={publicLinkClass}>
+                  <Link to="/ingresar" className={publicLinkClass}>
                     Ingresar
                   </Link>
                 </li>

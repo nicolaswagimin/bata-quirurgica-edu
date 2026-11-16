@@ -5,14 +5,15 @@ paths:
 ---
 
 - Rutas: todas declaradas en `apps/web/src/router.tsx` desde el paso 2. Las páginas públicas
-  `/login`, `/registro` y `/privacidad` son exports con nombre de `src/routes/public-pages.tsx`.
+  `/ingresar`, `/registro` y `/privacidad` son exports con nombre de `src/routes/public-pages.tsx`.
   Las demás páginas son `src/routes/<nombre>.tsx` con `export default function`, cargadas con
   `import.meta.glob('./routes/*.tsx')`; si el archivo aún no existe el router muestra "Próximamente".
   Agregar una de esas páginas NO requiere editar el router.
-- Mapa ruta → archivo: `/` home · `/mision/$missionId` mision · `/ranking` ranking · `/perfil` perfil ·
+- Mapa ruta → archivo: `/` (visitante) landing · `/` (con sesión) home · `/mision/$missionId` mision · `/ranking` ranking · `/perfil` perfil ·
   `/bata-3d` bata-3d · `/bata-ar` bata-ar · `/aprende` aprende · `/aprende/lista`
   aprende-lista · `/aprende/$missionId` aprende-leccion · `/bata-espacio` bata-espacio · `/creditos` creditos
   (pública) · `/admin/preguntas` admin-preguntas · `/admin/grupos` admin-grupos.
+- `/` se resuelve en `components/index-gate.tsx`: landing para visitantes, home con sesión.
 - El panel del asistente se monta igual: `import.meta.glob('./assistant/assistant-panel.tsx')`.
 - Colores solo con utilidades generadas por los tokens de `src/styles.css` (`bg-primary`,
   `text-ink`, `border-border`, `bg-xp`…). Ningún hex en componentes.

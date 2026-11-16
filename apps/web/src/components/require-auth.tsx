@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '../lib/firebase.tsx';
 import { LoadingState } from './loading-state.tsx';
 
-// Cosmetic guard: the redirect to /login happens in the route's beforeLoad (router.tsx);
+// Cosmetic guard: the redirect to /ingresar happens in the route's beforeLoad (router.tsx);
 // the API authorizer and Firestore rules enforce access on the server. The effect covers a
 // sign-out while already inside (e.g. apiFetch after a second 401).
 export function RequireAuth() {
@@ -16,7 +16,7 @@ export function RequireAuth() {
 
   useEffect(() => {
     if (loading || user) return;
-    void navigate({ to: '/login', search: { redirect: lastHref.current }, replace: true });
+    void navigate({ to: '/ingresar', search: { redirect: lastHref.current }, replace: true });
   }, [loading, user, navigate]);
 
   if (loading || !user) return <LoadingState />;

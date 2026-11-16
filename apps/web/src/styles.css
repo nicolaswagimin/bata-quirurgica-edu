@@ -270,3 +270,53 @@ html {
     }
   }
 }
+
+/* Dra. Menta's briefing: whole-cell motion, with the original sprite as the rest pose. */
+:root {
+  --duration-menta-breathe: 3600ms;
+  --duration-menta-blink: 4600ms;
+  --ease-pixel: steps(1, end);
+}
+
+@keyframes menta-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  55% {
+    transform: translateY(1px);
+  }
+}
+@keyframes menta-blink {
+  0%,
+  83%,
+  100% {
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+}
+@keyframes menta-talk {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.menta-head {
+  transform: translateY(0);
+  animation: menta-breathe var(--duration-menta-breathe) var(--ease-pixel) infinite;
+}
+.menta-blink {
+  opacity: 0;
+  animation: menta-blink var(--duration-menta-blink) var(--ease-pixel) infinite;
+}
+.menta-talk {
+  opacity: 0;
+}
+[data-speaking="true"] .menta-talk {
+  animation: menta-talk var(--duration-base) var(--ease-pixel) infinite;
+}

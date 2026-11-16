@@ -43,12 +43,13 @@ test('@emu eliminar la cuenta cierra sesión y bloquea el siguiente ingreso', as
 
   await page.getByRole('button', { name: 'Eliminar mi cuenta' }).click();
   await dialog.getByRole('button', { name: 'Sí, eliminar mi cuenta' }).click();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL((url) => url.pathname === '/');
+  await page.goto('/ingresar');
   await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible();
 
   await page.getByLabel('Correo electrónico').fill(user.email);
   await page.getByLabel('Contraseña').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/ingresar/);
 });
