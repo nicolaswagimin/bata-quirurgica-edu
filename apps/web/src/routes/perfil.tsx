@@ -1,7 +1,7 @@
 import { type JoinGroup, JoinGroupSchema } from '@bata/shared/schemas';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { useForm } from 'react-hook-form';
 import { Achievements } from '../components/achievements.tsx';
 import { FormField } from '../components/form-field.tsx';
@@ -15,6 +15,7 @@ import {
 import { achievementsFor } from '../lib/achievements.ts';
 import { ApiError, apiFetch, type Profile, useMe } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
+import { isMentaMuted, setMentaMuted } from '../lib/menta-events.ts';
 import { loadMissionProgress, loadMissions } from '../lib/missions.ts';
 
 function unexpected(error: unknown): string {
@@ -164,7 +165,17 @@ function SignOutButton() {
   );
 }
 
+function subscribeMenta(listener: () => void) {
+  window.addEventListener('menta:muted', listener);
+  window.addEventListener('storage', listener);
+  return () => {
+    window.removeEventListener('menta:muted', listener);
+    window.removeEventListener('storage', listener);
+  };
+}
+
 function ProfileDetails({ profile }: { profile: Profile }) {
+  const muted = useSyncExternalStore(subscribeMenta, isMentaMuted, () => false);
   const missions = useQuery({ queryKey: ['missions'], queryFn: loadMissions });
   const progress = useQuery({
     queryKey: ['progress', profile.uid],
@@ -189,6 +200,21 @@ function ProfileDetails({ profile }: { profile: Profile }) {
         <StatsBar profile={profile} />
       </header>
       <Achievements achievements={achievements} />
+      <label className="flex min-h-11 items-center justify-between gap-4">
+        <span>Mensajes de la Dra. Menta</span>
+        <span className="flex items-center gap-2">
+          <span>{muted ? 'Silenciados' : 'Activados'}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Mensajes de la Dra. Menta"
+            aria-checked={!muted}
+            checked={!muted}
+            onChange={(event) => setMentaMuted(!event.target.checked)}
+            className="size-6 accent-primary"
+          />
+        </span>
+      </label>
       <section className="flex flex-col gap-3 rounded-card bg-surface p-6">
         <h2 className="text-lg font-extrabold">Grupo</h2>
         <p className="text-sm text-muted">

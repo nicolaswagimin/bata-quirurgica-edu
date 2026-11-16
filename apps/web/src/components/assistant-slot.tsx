@@ -1,5 +1,6 @@
 import { type ComponentType, lazy, Suspense } from 'react';
 import { useAuth } from '../lib/firebase.tsx';
+import { MentaCompanion } from './menta-companion.tsx';
 
 // The panel is optional: until src/assistant/assistant-panel.tsx exists the glob is empty.
 const panels = import.meta.glob<{ default: ComponentType }>('../assistant/assistant-panel.tsx');
@@ -8,12 +9,17 @@ const AssistantPanel = loader ? lazy(loader) : null;
 
 export function AssistantSlot() {
   const { user } = useAuth();
-  if (!user || !AssistantPanel) return null;
+  if (!user) return null;
   return (
-    <div className="fixed top-2 left-2 z-40 print:hidden">
-      <Suspense fallback={null}>
-        <AssistantPanel />
-      </Suspense>
-    </div>
+    <>
+      <MentaCompanion key={user.uid} />
+      {AssistantPanel ? (
+        <div className="fixed top-2 left-2 z-40 print:hidden">
+          <Suspense fallback={null}>
+            <AssistantPanel />
+          </Suspense>
+        </div>
+      ) : null}
+    </>
   );
 }

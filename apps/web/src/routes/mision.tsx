@@ -28,6 +28,7 @@ import {
 } from '../components/ui-classes.ts';
 import { ApiError, apiFetch, useMe } from '../lib/api.ts';
 import { db } from '../lib/firebase.tsx';
+import { queueMentaEvent } from '../lib/menta-events.ts';
 import { MissionSchema } from '../lib/missions.ts';
 
 type QuizPhase =
@@ -152,6 +153,11 @@ export default function MisionPage() {
         await apiFetch<unknown>('/quiz/finish', { method: 'POST', body: { attemptId } }),
       ),
     onSuccess: (result) => {
+      if (result.passed && me.data)
+        queueMentaEvent(me.data.uid, {
+          type: 'mission',
+          title: missionQuery.data?.title ?? missionId,
+        });
       queryClient.invalidateQueries({ queryKey: ['me'] });
       queryClient.invalidateQueries({ queryKey: ['progress'] });
       setPhase((prev) =>

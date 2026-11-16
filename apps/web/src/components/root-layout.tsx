@@ -101,7 +101,7 @@ export function RootLayout() {
       <main
         id="contenido"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8"
+        className={`mx-auto w-full max-w-6xl flex-1 px-4 pt-8 md:px-8 ${user ? 'pb-28 md:pb-32' : 'pb-8'}`}
       >
         <Outlet />
       </main>
