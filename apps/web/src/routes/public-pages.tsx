@@ -77,7 +77,7 @@ function FormAlert({ message }: { message: string | null }) {
 
 export function LoginPage() {
   const router = useRouter();
-  const { redirect } = useSearch({ from: '/login' });
+  const { redirect } = useSearch({ from: '/ingresar' });
   const [formError, setFormError] = useState<string | null>(readAuthNotice);
   const [notice, setNotice] = useState<string | null>(null);
   const { register, handleSubmit, setError, getValues, formState } = useForm<LoginForm>({
@@ -264,7 +264,7 @@ export function RegistroPage() {
       </form>
       <p className="text-sm text-muted">
         ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className={linkClass}>
+        <Link to="/ingresar" className={linkClass}>
           Iniciar sesión
         </Link>
       </p>

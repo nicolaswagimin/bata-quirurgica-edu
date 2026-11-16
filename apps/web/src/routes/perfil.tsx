@@ -95,7 +95,7 @@ function DeleteAccount() {
     dialogRef.current?.close();
     await signOut();
     queryClient.clear();
-    await navigate({ to: '/login' });
+    await navigate({ to: '/' });
   }
 
   return (
@@ -151,7 +151,7 @@ function SignOutButton() {
   async function onSignOut() {
     await signOut();
     queryClient.clear();
-    await navigate({ to: '/login' });
+    await navigate({ to: '/' });
   }
   return (
     <button

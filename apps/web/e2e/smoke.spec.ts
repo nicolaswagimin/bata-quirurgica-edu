@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import privacidad from '../../../content/legal/privacidad.json' with { type: 'json' };
 
-for (const path of ['/login', '/registro', '/privacidad']) {
+for (const path of ['/ingresar', '/registro', '/privacidad']) {
   test(`${path} responde 200 y tiene un solo h1`, async ({ page }) => {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
@@ -9,10 +9,29 @@ for (const path of ['/login', '/registro', '/privacidad']) {
   });
 }
 
-for (const path of ['/', '/perfil']) {
-  test(`un visitante anónimo en ${path} es redirigido a /login`, async ({ page }) => {
+test('un visitante anónimo en /perfil es redirigido a /ingresar', async ({ page }) => {
+  await page.goto('/perfil');
+  await expect(page).toHaveURL(
+    (url) => url.pathname === '/ingresar' && url.searchParams.get('redirect') === '/perfil',
+  );
+  await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible();
+});
+
+test('un visitante anónimo en / permanece en /', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  await expect(page).toHaveURL((url) => url.pathname === '/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toHaveCount(0);
+});
+
+for (const path of ['/login', '/login?redirect=%2Franking']) {
+  test(`${path} redirige a /ingresar y conserva redirect`, async ({ page }) => {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/login(\?|$)/);
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === '/ingresar' &&
+        url.searchParams.get('redirect') === (path.includes('?') ? '/ranking' : null),
+    );
     await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' })).toBeVisible();
   });
 }
@@ -37,8 +56,8 @@ test('/registro sin consentimiento muestra el error y no llama a Firebase Auth',
   expect(authRequests).toEqual([]);
 });
 
-test('/login expone correo, contraseña y el botón Iniciar sesión', async ({ page }) => {
-  await page.goto('/login');
+test('/ingresar expone correo, contraseña y el botón Iniciar sesión', async ({ page }) => {
+  await page.goto('/ingresar');
   await expect(page.getByLabel('Correo electrónico')).toBeVisible();
   await expect(page.getByLabel('Contraseña')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();

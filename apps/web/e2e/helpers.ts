@@ -1,5 +1,5 @@
 // Shared e2e helpers for specs tagged @emu (they run inside `firebase emulators:exec`).
-// UI contract these helpers rely on (built in step 2): the /login page has inputs labelled
+// UI contract these helpers rely on (built in step 2): the /ingresar page has inputs labelled
 // "Correo electrónico" and "Contraseña" and a button named "Iniciar sesión".
 import { POLICY_VERSION } from '@bata/shared/schemas';
 import type { Page } from '@playwright/test';
@@ -41,11 +41,11 @@ export async function loginViaUi(
   email: string,
   password: string = TEST_PASSWORD,
 ): Promise<void> {
-  await page.goto('/login');
+  await page.goto('/ingresar');
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(password);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+  await page.waitForURL((url) => !url.pathname.startsWith('/ingresar'));
 }
 
 // Waits until the home page has settled its GET /me: the consent form when the local API is up
