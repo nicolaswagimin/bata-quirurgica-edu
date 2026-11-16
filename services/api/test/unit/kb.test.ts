@@ -12,7 +12,9 @@ import {
   EMBED_MODEL_ID,
   embedText,
   type MemoryChunk,
+  rankChunks,
   retrieveContext,
+  retrieveWithFallback,
 } from '../../src/lib/kb.ts';
 
 const SOURCE = { title: 'Guía', org: 'OMS', year: 2009 };
@@ -161,5 +163,85 @@ describe('ingestKb --dry-run', () => {
     expect(collection).not.toHaveBeenCalled();
     expect(doc).not.toHaveBeenCalled();
     expect(batch).not.toHaveBeenCalled();
+  });
+});
+
+describe('retrieveWithFallback', () => {
+  // Banco con un fragmento correcto lejos en el espacio (distancia 0.5) y uno ruido muy cerca.
+  const chunks: MemoryChunk[] = [
+    { text: 'El enguantado es de técnica cerrada.', page: 4, source: SOURCE, embedding: unit(0) },
+    { text: 'Texto sin relación con la consulta.', page: 9, source: SOURCE, embedding: unit(1.5) },
+  ];
+  // Consulta girada respecto a ambos fragmentos: nada coincide exactamente con el vector.
+  const embed = async () => unit(0.7);
+  const retriever = createMemoryRetriever(chunks);
+
+  it('uses the strict threshold first and marks the result as strong', async () => {
+    const found = await retrieveWithFallback('enguantado tecnica cerrada', {
+      embed,
+      retriever,
+      maxDistance: 0.6,
+      k: 2,
+    });
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0]?.relevance).toBe('strong');
+  });
+
+  it('relaxes the threshold instead of returning nothing', async () => {
+    const found = await retrieveWithFallback('enguantado tecnica cerrada', {
+      embed,
+      retriever,
+      maxDistance: 0.05,
+      k: 2,
+    });
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((c) => c.relevance === 'weak')).toBe(true);
+  });
+
+  it('always returns the nearest chunks when nothing passes any threshold', async () => {
+    const found = await retrieveWithFallback('consulta sin relación', {
+      embed,
+      retriever,
+      maxDistance: 0,
+      k: 2,
+      relaxedFactor: 1,
+    });
+    expect(found).toHaveLength(2);
+    expect(found.every((c) => c.relevance === 'weak')).toBe(true);
+  });
+
+  it('returns an empty list only when the bank is empty', async () => {
+    const found = await retrieveWithFallback('cualquier cosa', {
+      embed,
+      retriever: createMemoryRetriever([]),
+      maxDistance: 0.3,
+    });
+    expect(found).toEqual([]);
+  });
+});
+
+describe('rankChunks', () => {
+  it('prefers a chunk that shares the query terms over a slightly closer one', () => {
+    const lexical: MemoryChunk = {
+      text: 'La solapa envolvente se cierra al final.',
+      page: 6,
+      source: SOURCE,
+      embedding: unit(0),
+    };
+    const near: MemoryChunk = {
+      text: 'Contenido genérico sobre higiene.',
+      page: 1,
+      source: SOURCE,
+      embedding: unit(0),
+    };
+    const ranked = rankChunks(
+      'solapa envolvente',
+      [
+        { text: near.text, page: near.page, distance: 0.3, source: SOURCE },
+        { text: lexical.text, page: lexical.page, distance: 0.34, source: SOURCE },
+      ],
+      2,
+    );
+    expect(ranked[0]?.text).toBe(lexical.text);
   });
 });

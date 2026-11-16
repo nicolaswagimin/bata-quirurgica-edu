@@ -12,9 +12,10 @@ import {
   handleChatStream,
   handleTranscribe,
   MAX_AUDIO_BYTES,
-  REFUSAL_TEXT,
   SYSTEM_PROMPT,
   type TranscribeDeps,
+  UNSOURCED_NOTE,
+  WEB_SOURCED_NOTE,
 } from '../../src/routes/assistant.ts';
 
 const ORIGIN = 'http://localhost:4173';
@@ -185,16 +186,68 @@ describe('handleChatStream', () => {
     expect(deps.retrieve).not.toHaveBeenCalled();
   });
 
-  it('refuses without calling Groq when retrieval finds nothing', async () => {
+  it('answers with general knowledge instead of refusing when retrieval finds nothing', async () => {
     const { deps, create } = chatDeps({ retrieve: vi.fn(async () => []) });
     const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
     const evs = events(out.body);
-    expect(evs).toEqual([
-      { type: 'delta', text: REFUSAL_TEXT },
-      { type: 'citations', items: [] },
-      { type: 'done', latencyMs: expect.any(Number) },
-    ]);
+
+    // Siempre responde algo: hay deltas y el flujo termina con `done`.
+    expect(evs.filter((e) => e.type === 'delta').length).toBeGreaterThan(0);
+    expect(evs.at(-1)).toMatchObject({ type: 'done' });
+    // Sin respaldo documental no se inventan citas.
+    expect(evs.find((e) => e.type === 'citations')).toEqual({ type: 'citations', items: [] });
+    // Y el modelo sí se invoca, con el marcador de que no hay fragmentos.
+    expect(create).toHaveBeenCalledOnce();
+    const msgs = create.mock.calls[0]?.[0]?.messages as { role: string; content: string }[];
+    expect(msgs[1]?.content).toContain('ningún fragmento responde esta pregunta');
+    expect(SYSTEM_PROMPT).toContain(UNSOURCED_NOTE);
+  });
+
+  it('searches the web with Groq browser search when retrieval finds nothing', async () => {
+    const browse = vi.fn(async () => 'La OMS recomienda higiene de manos antes de vestir.');
+    const { deps, create } = chatDeps({ retrieve: vi.fn(async () => []), browse });
+    const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
+    const evs = events(out.body);
+
+    const text = evs
+      .filter((e) => e.type === 'delta')
+      .map((e) => e.type === 'delta' && e.text)
+      .join('');
+    expect(text).toContain('La OMS recomienda higiene de manos antes de vestir.');
+    expect(text).toContain(WEB_SOURCED_NOTE);
+    // Ni citas inventadas ni segunda llamada al modelo: la búsqueda ya respondió.
+    expect(evs.find((e) => e.type === 'citations')).toEqual({ type: 'citations', items: [] });
     expect(create).not.toHaveBeenCalled();
+    expect(browse).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to general knowledge when the web search returns nothing', async () => {
+    const browse = vi.fn(async () => null);
+    const { deps, create } = chatDeps({ retrieve: vi.fn(async () => []), browse });
+    const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
+
+    expect(events(out.body).filter((e) => e.type === 'delta').length).toBeGreaterThan(0);
+    expect(browse).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it('does not cite fragments that only passed the relaxed fallback', async () => {
+    const weak: RetrievedChunk[] = [
+      {
+        text: 'Fragmento dudoso.',
+        page: 1,
+        distance: 0.9,
+        relevance: 'weak',
+        source: { title: 'Boletín', org: 'OMS', year: 2018 },
+      },
+    ];
+    const { deps, create } = chatDeps({ retrieve: vi.fn(async () => weak) });
+    const out = await capture((s) => handleChatStream(makeEvent(VALID), s, deps));
+    const evs = events(out.body);
+
+    expect(evs.find((e) => e.type === 'citations')).toEqual({ type: 'citations', items: [] });
+    const msgs = create.mock.calls[0]?.[0]?.messages as { role: string; content: string }[];
+    expect(msgs[1]?.content).toContain('ningún fragmento responde esta pregunta');
   });
 
   it.each([
