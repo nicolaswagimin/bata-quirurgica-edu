@@ -28,7 +28,9 @@ test('diálogo: completar, avanzar con controles y burbuja, saltar y reiniciar',
   const dialogue = page.getByRole('region', { name: copy.dialogueLabel });
   const live = dialogue.locator('[aria-live="polite"]');
   await expect(live).toHaveText(DIALOGUE_LINES[0]);
-  await page.clock.pauseAt(new Date());
+  // Pause slightly ahead of the page clock: a slow runner may already be past Node time.
+  const pageNow = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(pageNow + 200);
   const next = page.getByRole('button', { name: copy.next, exact: true });
   await next.click();
   await expect(page.getByTestId('dialogue-text')).toHaveText(DIALOGUE_LINES[0]);
