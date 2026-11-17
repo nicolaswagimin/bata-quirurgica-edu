@@ -9,11 +9,9 @@ export type BootResult =
   | { kind: 'model-error'; stream: MediaStream }
   | { kind: 'cancelled' };
 
-export async function bootCameraAndPose(
-  video: HTMLVideoElement,
-  isCancelled: () => boolean,
-): Promise<BootResult> {
-  const cameraPromise = navigator.mediaDevices.getUserMedia({
+/** Shared constraints for initial capture and recovery. */
+export function acquireCamera(): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia({
     video: {
       facingMode: 'user',
       width: { ideal: 640 },
@@ -22,6 +20,13 @@ export async function bootCameraAndPose(
     },
     audio: false,
   });
+}
+
+export async function bootCameraAndPose(
+  video: HTMLVideoElement,
+  isCancelled: () => boolean,
+): Promise<BootResult> {
+  const cameraPromise = acquireCamera();
   const modelPromise = createPoseLandmarker(
     preferredDelegate({
       userAgent: navigator.userAgent,

@@ -183,6 +183,22 @@ export default function BataArPage() {
         className="fixed inset-0 z-[70] overflow-hidden bg-ink text-bg"
       >
         <h1 className="sr-only">AR espejo</h1>
+        <video
+          key="ar-camera"
+          ref={videoRef}
+          playsInline
+          muted
+          className={`absolute inset-0 size-full -scale-x-100 object-cover ${cameraError ? 'opacity-0' : ''}`}
+          aria-label="Vista de tu cámara en modo espejo"
+        />
+        {game.diagnostics ? (
+          <pre
+            data-testid="ar-diagnostics"
+            className="pointer-events-none absolute bottom-24 left-3 z-10 rounded-card bg-bg/90 p-2 font-mono text-xs text-ink"
+          >
+            {game.diagnostics}
+          </pre>
+        ) : null}
         {cameraError ? (
           <div role="alert" className="grid h-full place-items-center p-6">
             <div className="max-w-sm rounded-card bg-bg p-6 text-ink">
@@ -197,13 +213,6 @@ export default function BataArPage() {
           </div>
         ) : (
           <>
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className="absolute inset-0 size-full -scale-x-100 object-cover"
-              aria-label="Vista de tu cámara en modo espejo"
-            />
             {gown3dEnabled || gownRigEnabled ? (
               <canvas
                 ref={gown3dCanvasRef}
