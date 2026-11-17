@@ -153,7 +153,18 @@ export class GownRigRenderer {
     if (rootBone)
       model.position.sub(new THREE.Vector3().setFromMatrixPosition(rootBone.matrixWorld));
     this.root.add(model);
-    this.ready = true;
+    this.root.visible = true;
+    for (const mesh of this.occluders) mesh.visible = true;
+    void this.renderer
+      ?.compileAsync(this.scene, this.camera)
+      .then(() => {
+        this.root.visible = false;
+        for (const mesh of this.occluders) mesh.visible = false;
+        if (!this.disposed && !this.failed) this.ready = true;
+      })
+      .catch(() => {
+        this.failed = true;
+      });
   }
 
   /** Depth-only spheres at the hands: the video hands show in front of the gown. */

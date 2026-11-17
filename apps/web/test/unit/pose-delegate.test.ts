@@ -47,3 +47,10 @@ describe('shouldFallbackToCpu', () => {
     expect(shouldFallbackToCpu([1, 2, 3, 51, 70, 100, 100, 100], 'GPU')).toBe(true);
   });
 });
+
+it('switches GPU immediately after any detection over one second, including warmup', () => {
+  expect(shouldFallbackToCpu([1001], 'GPU')).toBe(true);
+  expect(shouldFallbackToCpu([1000], 'GPU')).toBe(false);
+  expect(shouldFallbackToCpu([1001], 'CPU')).toBe(false);
+  expect(shouldFallbackToCpu([...Array(8).fill(10), 1001], 'GPU')).toBe(true);
+});

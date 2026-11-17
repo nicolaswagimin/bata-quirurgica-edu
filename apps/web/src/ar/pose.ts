@@ -21,11 +21,15 @@ export function preferredDelegate(env: {
 const WASM_PATH = '/mediapipe/wasm';
 const MODEL_PATH = '/mediapipe/pose_landmarker_lite.task';
 
-export async function createPoseLandmarker(preferred: PoseDelegate): Promise<{
+export async function createPoseLandmarker(
+  preferred: PoseDelegate,
+  moduleWorker = false,
+): Promise<{
   landmarker: PoseLandmarker;
   delegate: PoseDelegate;
 }> {
-  const fileset = await FilesetResolver.forVisionTasks(WASM_PATH);
+  // Module workers need the ESM glue: importScripts throws and MediaPipe uses import().
+  const fileset = await FilesetResolver.forVisionTasks(WASM_PATH, moduleWorker);
   const create = (delegate: PoseDelegate) =>
     PoseLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MODEL_PATH, delegate },
