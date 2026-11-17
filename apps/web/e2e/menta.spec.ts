@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import lessons from '../../../content/lecciones/lecciones.json' with { type: 'json' };
 import { createUserWithProfile, loginViaUi } from './helpers.ts';
 
-const mascotName = 'Dra. Menta, asistente virtual: mostrar un mensaje';
+const mascotName = 'Hablar con la Dra. Menta, asistente virtual';
 
 test.beforeEach(async ({ page }) => {
   const { email } = await createUserWithProfile('Menta estudiante');
@@ -24,24 +24,19 @@ test('@emu Menta saluda y permite cerrar el mensaje', async ({ page }) => {
   await expect(page.getByTestId('menta-status')).toBeEmpty();
 });
 
-test('@emu Menta muestra un dato literal con fuente al pulsarla', async ({ page }) => {
+test('@emu pulsar Menta abre el chat y pausa los mensajes proactivos', async ({ page }) => {
+  await expect(page.getByTestId('menta-status')).not.toBeEmpty();
   await page.getByRole('button', { name: mascotName }).click();
-  const bubble = page.getByTestId('menta-bubble');
-  await expect(bubble).toContainText('¿Sabías que…?');
-  await expect(bubble).toContainText('Fuente:');
-  const text = await bubble.innerText();
-  expect(
-    lessons.lessons
-      .flatMap((lesson) => lesson.keyPoints)
-      .some((point) => {
-        const fact = point.text.length <= 140 ? point.text : `${point.text.split('. ')[0]}.`;
-        return text.includes(fact);
-      }),
-  ).toBe(true);
+  await expect(page.getByRole('dialog', { name: 'Dra. Menta' })).toBeVisible();
+  await expect(page.getByTestId('menta-status')).toBeEmpty();
+  await expect(page.getByTestId('menta-bubble')).toHaveAttribute('data-open', 'false');
+  await page.clock.install();
+  await page.clock.fastForward(6 * 60_000);
+  await expect(page.getByTestId('menta-status')).toBeEmpty();
 });
 
 test('@emu silenciar persiste y el perfil permite reactivar', async ({ page }) => {
-  await page.getByRole('button', { name: mascotName }).click();
+  await expect(page.getByTestId('menta-status')).not.toBeEmpty();
   await page
     .getByTestId('menta-bubble')
     .getByRole('button', { name: 'Silenciar a la Dra. Menta', exact: true })
@@ -52,7 +47,9 @@ test('@emu silenciar persiste y el perfil permite reactivar', async ({ page }) =
   await page.waitForTimeout(6000);
   await expect(page.getByTestId('menta-status')).toBeEmpty();
   await page.getByRole('button', { name: mascotName }).click();
-  await expect(page.getByTestId('menta-bubble')).toContainText('¿Sabías que…?');
+  await expect(page.getByRole('dialog', { name: 'Dra. Menta' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Dra. Menta' })).not.toBeVisible();
   await page
     .getByRole('navigation', { name: 'Principal' })
     .getByRole('link', { name: 'Perfil' })
@@ -134,7 +131,7 @@ test('@emu el dato más largo cabe en una burbuja de 150 px en móvil', async ({
         key,
         JSON.stringify({
           greeted: true,
-          lastShownAt: Date.now(),
+          lastShownAt: null,
           seenFacts: facts.filter((fact) => fact.id !== longest.id).map((fact) => fact.id),
         }),
       );
@@ -142,7 +139,6 @@ test('@emu el dato más largo cabe en una burbuja de 150 px en móvil', async ({
     { facts, longest },
   );
   await page.reload();
-  await page.getByRole('button', { name: mascotName }).click();
   const bubble = page.getByTestId('menta-bubble');
   await expect(bubble).toContainText(longest.text);
   await bubble.hover();

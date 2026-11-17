@@ -14,6 +14,10 @@ const MAX_SENT_MESSAGES = 10;
 
 type FormValues = { question: string };
 
+export function canSendQuestion(busy: boolean, recording: boolean, transcribing: boolean): boolean {
+  return !busy && !recording && !transcribing;
+}
+
 export function streamErrorMessage(code: ErrorCode): string {
   if (code === 'QUOTA_EXCEEDED') return messageForStatus(429);
   if (code === 'UNAUTHORIZED') return messageForStatus(401);
@@ -53,6 +57,7 @@ export function useAssistantChat() {
   const [streaming, setStreaming] = useState(false);
   const [ttsSpeaking, setTtsSpeaking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const voiceActive = useRef(false);
   const recordingRef = useRef<RecordingHandle | null>(null);
   const recordingEndedAt = useRef<number | null>(null);
   const nextQuestionId = useRef(0);
@@ -69,14 +74,27 @@ export function useAssistantChat() {
     defaultValues: { question: '' },
   });
 
+  function supersedeVoice() {
+    const request = ++generation.current;
+    recordingRef.current?.stop();
+    recordingRef.current = null;
+    voiceActive.current = false;
+    setRecording(false);
+    setTranscribing(false);
+    return request;
+  }
+
   async function ask(values: FormValues) {
+    if (
+      !canSendQuestion(busy || !!abortRef.current, recording || voiceActive.current, transcribing)
+    )
+      return;
     const parsed = ChatMessageSchema.shape.content.safeParse(values.question.trim());
     if (!parsed.success) {
       setError('question', { message: 'Escribe una pregunta de 1 a 2000 caracteres' });
       return;
     }
-    if (abortRef.current) return;
-    const request = ++generation.current;
+    const request = supersedeVoice();
     speechAbort.current?.abort();
     setTtsSpeaking(false);
     const startedAt = recordingEndedAt.current ?? performance.now();
@@ -150,14 +168,21 @@ export function useAssistantChat() {
   }
 
   async function toggleRecording() {
-    const { ApiError, apiFetch } = await import('../lib/api.ts');
     if (recordingRef.current) {
       recordingRef.current.stop();
       return;
     }
+    if (busy || abortRef.current || voiceActive.current) return;
     const request = generation.current;
+    voiceActive.current = true;
+    setRecording(true);
     setErrorText(null);
+    let ApiError: typeof import('../lib/api.ts').ApiError | undefined;
     try {
+      const api = await import('../lib/api.ts');
+      if (request !== generation.current) return;
+      ApiError = api.ApiError;
+      const { apiFetch } = api;
       const handle = await recordUpTo30s();
       if (request !== generation.current) {
         handle.stop();
@@ -180,12 +205,13 @@ export function useAssistantChat() {
     } catch (err) {
       if (request !== generation.current) return;
       setErrorText(
-        err instanceof ApiError
+        ApiError && err instanceof ApiError
           ? err.message
           : 'No pudimos usar el micrófono. Escribe tu pregunta.',
       );
     } finally {
       if (request === generation.current) {
+        voiceActive.current = false;
         recordingRef.current = null;
         setRecording(false);
         setTranscribing(false);
@@ -194,16 +220,12 @@ export function useAssistantChat() {
   }
 
   function close() {
-    generation.current++;
+    supersedeVoice();
     speechAbort.current?.abort();
     abortRef.current?.abort();
-    recordingRef.current?.stop();
     abortRef.current = null;
-    recordingRef.current = null;
     recordingEndedAt.current = null;
     setBusy(false);
-    setRecording(false);
-    setTranscribing(false);
     setStreaming(false);
     setTtsSpeaking(false);
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();

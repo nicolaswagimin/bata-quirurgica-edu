@@ -320,3 +320,51 @@ html {
 [data-speaking="true"] .menta-talk {
   animation: menta-talk var(--duration-base) var(--ease-pixel) infinite;
 }
+
+/* Menta grows from her floating corner into the chat; only opacity and transform move. */
+.menta-dialog {
+  --menta-backdrop: rgb(23 58 47 / 0.32);
+  transform-origin: bottom right;
+  transition:
+    opacity var(--duration-spring) var(--ease-out),
+    transform var(--duration-spring) var(--ease-out);
+}
+.menta-dialog[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.menta-dialog[open][data-closing="true"] {
+  opacity: 0;
+  transform: translateY(8px) scale(0.9);
+  transition-duration: var(--duration-fast);
+}
+.menta-dialog::backdrop {
+  background: var(--menta-backdrop);
+  opacity: 1;
+  transition: opacity var(--duration-spring) var(--ease-out);
+}
+.menta-dialog[data-closing="true"]::backdrop {
+  opacity: 0;
+  transition-duration: var(--duration-fast);
+}
+@starting-style {
+  .menta-dialog[open] {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  .menta-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menta-dialog[open],
+  .menta-dialog[open][data-closing="true"] {
+    transform: none;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+  @starting-style {
+    .menta-dialog[open] {
+      transform: none;
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { useLocation } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { type ComponentType, Suspense, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { useMe } from '../lib/api.ts';
 import { useAuth } from '../lib/firebase.tsx';
@@ -30,7 +30,16 @@ function readState(uid: string) {
   return { lastShownAt: null, greeted: false, seenFacts: [] };
 }
 
-export function MentaCompanion() {
+export function MentaCompanion({
+  ChatPanel,
+  prefetch,
+}: {
+  ChatPanel: ComponentType<{ open: boolean; onClose: () => void }>;
+  prefetch: () => void;
+}) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatLoaded, setChatLoaded] = useState(false);
+  const chatOpenRef = useRef(false);
   const { pathname } = useLocation();
   const me = useMe();
   const { user } = useAuth();
@@ -53,38 +62,34 @@ export function MentaCompanion() {
   const serial = useRef(0);
   const openRef = useRef(false);
   const mascot = useRef<HTMLButtonElement>(null);
+  const spaceArmed = useRef(false);
 
-  const run = (explicit = false) => {
+  const run = () => {
     if (
-      !explicit &&
-      (openRef.current ||
-        Date.now() < readyAt.current ||
-        !current.current.mainScreen ||
-        document.hidden ||
-        isMentaMuted())
+      chatOpenRef.current ||
+      openRef.current ||
+      Date.now() < readyAt.current ||
+      !current.current.mainScreen ||
+      document.hidden ||
+      isMentaMuted()
     )
       return;
-    if (!explicit) pending.current.push(...takeMentaEvents(uid));
-    const result = pickMessage(
-      explicit ? { ...scheduler.current, greeted: true, lastShownAt: null } : scheduler.current,
-      {
-        now: Date.now(),
-        muted: false,
-        visible: true,
-        mainScreen: true,
-        profile: current.current.profile ?? null,
-        pending: explicit ? [] : pending.current,
-      },
-    );
-    if (!explicit) pending.current = result.pending;
+    pending.current.push(...takeMentaEvents(uid));
+    const result = pickMessage(scheduler.current, {
+      now: Date.now(),
+      muted: false,
+      visible: true,
+      mainScreen: true,
+      profile: current.current.profile ?? null,
+      pending: pending.current,
+    });
+    pending.current = result.pending;
     if (!result.message) return;
     scheduler.current = result.state;
     try {
       sessionStorage.setItem(`bata.menta.state.${uid}`, JSON.stringify(result.state));
-      if (!explicit) {
-        sessionStorage.setItem(`bata.menta.pending.${uid}`, JSON.stringify(result.pending));
-        pending.current = [];
-      }
+      sessionStorage.setItem(`bata.menta.pending.${uid}`, JSON.stringify(result.pending));
+      pending.current = [];
     } catch {
       /* Optional storage. */
     }
@@ -98,6 +103,8 @@ export function MentaCompanion() {
 
   useEffect(() => {
     if (!pathname) return;
+    chatOpenRef.current = false;
+    setChatOpen(false);
     openRef.current = false;
     setOpen(false);
     readyAt.current = Date.now() + 2500;
@@ -159,7 +166,7 @@ export function MentaCompanion() {
   };
 
   if (hidden) return null;
-  const visible = open && shown?.path === pathname && mainScreen;
+  const visible = !chatOpen && open && shown?.path === pathname && mainScreen;
   const message = shown?.message;
   const announcement = message
     ? `${message.kind === 'fact' ? '¿Sabías que…? ' : ''}${message.text}${message.kind === 'fact' ? ` Fuente: ${message.source}` : ''}`
@@ -189,12 +196,49 @@ export function MentaCompanion() {
       <button
         ref={mascot}
         type="button"
-        aria-label="Dra. Menta, asistente virtual: mostrar un mensaje"
-        className="pressable block h-[66px] w-12 rounded-card md:h-[88px] md:w-16"
-        onClick={() => run(true)}
+        aria-label="Hablar con la Dra. Menta, asistente virtual"
+        aria-haspopup="dialog"
+        aria-expanded={chatOpen}
+        onMouseEnter={prefetch}
+        onFocus={prefetch}
+        onKeyDown={(event) => {
+          if (event.key !== ' ' && event.key !== 'Enter') return;
+          if (event.repeat) event.preventDefault();
+          else if (event.key === ' ') spaceArmed.current = true;
+        }}
+        onKeyUp={(event) => {
+          if (event.key !== ' ') return;
+          // A key released after focus returns from the dialog must not activate us.
+          if (!spaceArmed.current) event.preventDefault();
+          spaceArmed.current = false;
+        }}
+        onBlur={() => {
+          spaceArmed.current = false;
+        }}
+        style={{ opacity: chatOpen ? 0 : 1, transform: chatOpen ? 'scale(.97)' : undefined }}
+        className="pressable motion-reduce:!transform-none transition-[transform,opacity] duration-(--duration-press) ease-(--ease-out) block h-[66px] w-12 rounded-card md:h-[88px] md:w-16"
+        onClick={() => {
+          if (chatOpenRef.current) return;
+          chatOpenRef.current = true;
+          close();
+          setChatLoaded(true);
+          setChatOpen(true);
+        }}
       >
         <MascotAnimated speaking={!!visible && speaking} className="h-full w-full" />
       </button>
+      {chatLoaded && (
+        <Suspense fallback={null}>
+          <ChatPanel
+            open={chatOpen}
+            onClose={() => {
+              chatOpenRef.current = false;
+              setChatOpen(false);
+              mascot.current?.focus();
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
