@@ -36,7 +36,8 @@ import { GownSprings } from './gown-motion.ts';
 import { GownRigDriver } from './gown-rig-driver.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
-import type { PoseDelegate } from './pose.ts';
+import { createPoseLandmarker, type PoseDelegate } from './pose.ts';
+import { shouldFallbackToCpu } from './pose-performance.ts';
 import {
   bodyFrame,
   detectViolations,
@@ -212,10 +213,33 @@ export function useArGame<S extends PracticeStepLike>(
       landmarker = result.landmarker;
       setDelegate(result.delegate);
       setStatus('detecting');
-      loop(video, result.landmarker);
+      loop(video, result.delegate);
     }
 
-    function loop(video: HTMLVideoElement, pose: PoseLandmarker) {
+    function loop(video: HTMLVideoElement, initialDelegate: PoseDelegate) {
+      let activeDelegate = initialDelegate;
+      const detectionDurations: number[] = [];
+      let fallbackAttempted = false;
+
+      async function fallbackToCpu() {
+        fallbackAttempted = true;
+        const previous = landmarker;
+        landmarker = null;
+        previous?.close();
+        try {
+          const replacement = await createPoseLandmarker('CPU');
+          if (cancelled) {
+            replacement.landmarker.close();
+            return;
+          }
+          landmarker = replacement.landmarker;
+          activeDelegate = replacement.delegate;
+          setDelegate(replacement.delegate);
+        } catch {
+          if (!cancelled) setStatus('model-error');
+        }
+      }
+
       const monitor = new FpsMonitor();
       const smoother = new LandmarkSmoother();
       const tracker = new ViolationTracker();
@@ -275,11 +299,18 @@ export function useArGame<S extends PracticeStepLike>(
       const tick = () => {
         if (cancelled) return;
         const now = performance.now();
-        if (video.readyState >= 2 && video.currentTime !== lastVideoTime && now >= nextDetectAt) {
+        if (
+          landmarker &&
+          video.readyState >= 2 &&
+          video.currentTime !== lastVideoTime &&
+          now >= nextDetectAt
+        ) {
           lastVideoTime = video.currentTime;
-          const result = pose.detectForVideo(video, now);
+          const result = landmarker.detectForVideo(video, now);
+          const detectedAt = performance.now();
+          if (detectionDurations.length < 8) detectionDurations.push(detectedAt - now);
           // Detection blocks the main thread; on slow devices wait as long as it took.
-          nextDetectAt = performance.now() + (performance.now() - now);
+          nextDetectAt = detectedAt + (detectedAt - now);
           const raw = simulate ? syntheticPose(now, simulate) : (result.landmarks[0] ?? []);
           const landmarks = smoother.smooth(raw);
           const size = { width: video.videoWidth, height: video.videoHeight };
@@ -454,7 +485,11 @@ export function useArGame<S extends PracticeStepLike>(
               setQuality(report);
             }
           }
+          if (!fallbackAttempted && shouldFallbackToCpu(detectionDurations, activeDelegate)) {
+            void fallbackToCpu();
+          }
         }
+        // Keep yielding frames even while the replacement model loads.
         frameId = requestAnimationFrame(tick);
       };
       frameId = requestAnimationFrame(tick);
