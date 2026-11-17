@@ -35,3 +35,46 @@ test('@emu AR juego: pantalla completa, controles sin tocar y XP de práctica de
   await page.getByRole('button', { name: 'Jugar de nuevo' }).click();
   await expect(page.getByText(/Ya sumaste el XP de práctica de hoy/)).toBeVisible();
 });
+
+test('@emu AR recupera reproducción y pista sin reemplazar el video', async ({ page }) => {
+  test.setTimeout(90_000);
+  const { email } = await createUserWithProfile('Prueba Cámara');
+  await loginViaUi(page, email);
+  await page.goto('/bata-ar?diag=1');
+  await expect(page.getByTestId('ar-status')).toHaveText('Detectando', { timeout: 30_000 });
+  const original = await page.locator('video').elementHandle();
+  await page.getByRole('button', { name: 'Comenzar' }).click();
+  await expect(page.getByTestId('ar-instruction')).toHaveText('Aléjate hasta que se vea tu cuerpo');
+  expect(
+    await original?.evaluate(
+      (video: HTMLVideoElement) => video === document.querySelector('video'),
+    ),
+  ).toBe(true);
+  await page.locator('video').evaluate((video: HTMLVideoElement) => video.pause());
+  await expect
+    .poll(() => page.locator('video').evaluate((video: HTMLVideoElement) => video.paused))
+    .toBe(false);
+  const before = await page
+    .locator('video')
+    .evaluate((video: HTMLVideoElement) => video.currentTime);
+  await expect
+    .poll(() => page.locator('video').evaluate((video: HTMLVideoElement) => video.currentTime))
+    .toBeGreaterThan(before);
+  await page.locator('video').evaluate((video: HTMLVideoElement) => {
+    (video.srcObject as MediaStream).getVideoTracks()[0]?.stop();
+  });
+  await expect
+    .poll(() =>
+      page
+        .locator('video')
+        .evaluate(
+          (video: HTMLVideoElement) =>
+            (video.srcObject as MediaStream).getVideoTracks()[0]?.readyState,
+        ),
+    )
+    .toBe('live');
+  await expect(page.getByTestId('ar-diagnostics')).toContainText('AudioContext:');
+  await page.goto('/bata-ar');
+  await expect(page.getByTestId('ar-status')).toHaveText('Detectando', { timeout: 30_000 });
+  await expect(page.getByTestId('ar-diagnostics')).toHaveCount(0);
+});

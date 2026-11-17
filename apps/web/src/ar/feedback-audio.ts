@@ -27,6 +27,10 @@ export class ArFeedback {
   private ctx: AudioContext | null = null;
   private lastSpoken = '';
 
+  get audioState(): string {
+    return this.ctx?.state ?? 'sin iniciar';
+  }
+
   /** Call from a tap: creates the audio context and primes speech synthesis. */
   unlock(): void {
     try {

@@ -48,6 +48,7 @@ import {
 import { type AssistView, PracticeAssist, readAssistColors } from './practice-assist.ts';
 import { pressTargets, type TargetMap } from './press-targets.ts';
 import { syntheticPose } from './synthetic-pose.ts';
+import { watchVideo } from './video-watchdog.ts';
 
 /** Called with the raw pose of every processed frame; used by the dev-only capture mode. */
 export type ArFrameHook = (landmarks: readonly Landmark[], size: FrameSize, now: number) => void;
@@ -109,6 +110,7 @@ export function useArGame<S extends PracticeStepLike>(
   const [framing, setFraming] = useState<FramingAdvice | null>(null);
   const [status, setStatus] = useState<ArStatus>('loading');
   const [delegate, setDelegate] = useState<PoseDelegate | null>(null);
+  const [diagnostics, setDiagnostics] = useState<string | null>(null);
   const [fps, setFps] = useState(0);
   const [drawMs, setDrawMs] = useState(0);
   const [lowPerformance, setLowPerformance] = useState(() => e2eFlag('simularFpsBajo'));
@@ -145,8 +147,9 @@ export function useArGame<S extends PracticeStepLike>(
   );
 
   /** Start or restart: from `ready` the first tap also unlocks audio and voice. */
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     feedback.unlock();
+    await videoRef.current?.play().catch(() => undefined);
     feedback.tick();
     setRun((n) => n + 1);
     setErrors({});
@@ -161,7 +164,7 @@ export function useArGame<S extends PracticeStepLike>(
     }
     flowRef.current.start();
     setFlow({ phase: 'framing', secondsLeft: 0 });
-  }, [feedback, steps]);
+  }, [feedback, steps, videoRef]);
 
   /** "Saltar paso" (v2): the current step is left as not completed and earns no XP. */
   const skip = useCallback(
@@ -201,6 +204,10 @@ export function useArGame<S extends PracticeStepLike>(
     let gown3d: Gown3DRenderer | null = null;
     let rig: GownRigDriver | null = null;
     let frameId = 0;
+    let watchdog: ReturnType<typeof watchVideo> | null = null;
+    const diagnosticMode = new URLSearchParams(window.location.search).get('diag') === '1';
+    let lastDiagnosticAt = -Infinity;
+    let lastDetectMs = 0;
 
     async function boot() {
       const video = videoRef.current;
@@ -209,6 +216,7 @@ export function useArGame<S extends PracticeStepLike>(
       if (result.kind === 'cancelled') return;
       if (result.kind === 'camera-error') return setStatus('camera-error');
       stream = result.stream;
+      watchdog = watchVideo(video, stream);
       if (result.kind === 'model-error') return setStatus('model-error');
       landmarker = result.landmarker;
       setDelegate(result.delegate);
@@ -299,6 +307,16 @@ export function useArGame<S extends PracticeStepLike>(
       const tick = () => {
         if (cancelled) return;
         const now = performance.now();
+        watchdog?.tick(now);
+        if (diagnosticMode && watchdog && now - lastDiagnosticAt >= 250) {
+          lastDiagnosticAt = now;
+          const d = watchdog.snapshot();
+          setDiagnostics(`paused: ${d.paused} · readyState: ${d.readyState}
+currentTime: ${d.currentTime.toFixed(2)}
+track: ${d.trackState} · muted: ${d.muted}
+delegate: ${activeDelegate} · detect: ${lastDetectMs.toFixed(1)} ms
+kicks: ${d.kicks} · AudioContext: ${feedback.audioState}`);
+        }
         if (
           landmarker &&
           video.readyState >= 2 &&
@@ -308,6 +326,7 @@ export function useArGame<S extends PracticeStepLike>(
           lastVideoTime = video.currentTime;
           const result = landmarker.detectForVideo(video, now);
           const detectedAt = performance.now();
+          lastDetectMs = detectedAt - now;
           if (detectionDurations.length < 8) detectionDurations.push(detectedAt - now);
           // Detection blocks the main thread; on slow devices wait as long as it took.
           nextDetectAt = detectedAt + (detectedAt - now);
@@ -501,6 +520,7 @@ export function useArGame<S extends PracticeStepLike>(
       cancelAnimationFrame(frameId);
       gown3d?.dispose();
       rig?.dispose();
+      watchdog?.dispose();
       stopTracks(stream);
       landmarker?.close();
       feedback.dispose();
@@ -508,6 +528,7 @@ export function useArGame<S extends PracticeStepLike>(
   }, [videoRef, canvasRef, stageRef, hotspotRef, feedback, steps]);
 
   return {
+    diagnostics,
     status,
     delegate,
     fps,
