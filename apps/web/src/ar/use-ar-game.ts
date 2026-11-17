@@ -2,7 +2,6 @@
 // model and the canvas and are never uploaded. React state only changes when something visible
 // changes; per-frame values (dwell rings, drawing) bypass React.
 import type { ArGameStep, PracticeKind } from '@bata/shared/schemas';
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArTargetRegistry } from '../components/ar-hover-button.tsx';
 import { ArRenderer, readArColors } from './ar-render.ts';
@@ -36,8 +35,8 @@ import { GownSprings } from './gown-motion.ts';
 import { GownRigDriver } from './gown-rig-driver.ts';
 import { DwellTracker } from './hover-targets.ts';
 import { FpsMonitor, type FrameSize, type Landmark } from './overlay-math.ts';
-import { createPoseLandmarker, type PoseDelegate } from './pose.ts';
-import { shouldFallbackToCpu } from './pose-performance.ts';
+import type { PoseDelegate } from './pose.ts';
+import type { PoseDetector } from './pose-detector.ts';
 import {
   bodyFrame,
   detectViolations,
@@ -200,7 +199,7 @@ export function useArGame<S extends PracticeStepLike>(
   useEffect(() => {
     let cancelled = false;
     let stream: MediaStream | null = null;
-    let landmarker: PoseLandmarker | null = null;
+    let detector: PoseDetector | null = null;
     let gown3d: Gown3DRenderer | null = null;
     let rig: GownRigDriver | null = null;
     let frameId = 0;
@@ -218,36 +217,17 @@ export function useArGame<S extends PracticeStepLike>(
       stream = result.stream;
       watchdog = watchVideo(video, stream);
       if (result.kind === 'model-error') return setStatus('model-error');
-      landmarker = result.landmarker;
+      detector = result.detector;
+      detector.onDelegateChange = setDelegate;
+      detector.onError = () => {
+        if (!cancelled) setStatus('model-error');
+      };
       setDelegate(result.delegate);
       setStatus('detecting');
-      loop(video, result.delegate);
+      loop(video);
     }
 
-    function loop(video: HTMLVideoElement, initialDelegate: PoseDelegate) {
-      let activeDelegate = initialDelegate;
-      const detectionDurations: number[] = [];
-      let fallbackAttempted = false;
-
-      async function fallbackToCpu() {
-        fallbackAttempted = true;
-        const previous = landmarker;
-        landmarker = null;
-        previous?.close();
-        try {
-          const replacement = await createPoseLandmarker('CPU');
-          if (cancelled) {
-            replacement.landmarker.close();
-            return;
-          }
-          landmarker = replacement.landmarker;
-          activeDelegate = replacement.delegate;
-          setDelegate(replacement.delegate);
-        } catch {
-          if (!cancelled) setStatus('model-error');
-        }
-      }
-
+    function loop(video: HTMLVideoElement) {
       const monitor = new FpsMonitor();
       const smoother = new LandmarkSmoother();
       const tracker = new ViolationTracker();
@@ -292,7 +272,6 @@ export function useArGame<S extends PracticeStepLike>(
       const showcase = e2eFlag('simularBataPuesta');
       const simulate = simulatedPoseVariant();
       let lastVideoTime = -1;
-      let nextDetectAt = 0;
       let lastFpsUpdate = 0;
       let found = false;
       let anchored = false;
@@ -314,23 +293,22 @@ export function useArGame<S extends PracticeStepLike>(
           setDiagnostics(`paused: ${d.paused} · readyState: ${d.readyState}
 currentTime: ${d.currentTime.toFixed(2)}
 track: ${d.trackState} · muted: ${d.muted}
-delegate: ${activeDelegate} · detect: ${lastDetectMs.toFixed(1)} ms
+delegate: ${detector?.delegate} · modo: ${detector?.mode} · detect: ${lastDetectMs.toFixed(1)} ms
 kicks: ${d.kicks} · AudioContext: ${feedback.audioState}`);
         }
         if (
-          landmarker &&
+          detector &&
+          !detector.busy &&
           video.readyState >= 2 &&
-          video.currentTime !== lastVideoTime &&
-          now >= nextDetectAt
+          video.currentTime !== lastVideoTime
         ) {
           lastVideoTime = video.currentTime;
-          const result = landmarker.detectForVideo(video, now);
-          const detectedAt = performance.now();
-          lastDetectMs = detectedAt - now;
-          if (detectionDurations.length < 8) detectionDurations.push(detectedAt - now);
-          // Detection blocks the main thread; on slow devices wait as long as it took.
-          nextDetectAt = detectedAt + (detectedAt - now);
-          const raw = simulate ? syntheticPose(now, simulate) : (result.landmarks[0] ?? []);
+          detector.submit(video, now);
+        }
+        const result = detector?.take();
+        if (result) {
+          lastDetectMs = result.detectMs;
+          const raw = simulate ? syntheticPose(now, simulate) : result.landmarks;
           const landmarks = smoother.smooth(raw);
           const size = { width: video.videoWidth, height: video.videoHeight };
           onFrameRef.current?.(raw, size, now);
@@ -410,9 +388,7 @@ kicks: ${d.kicks} · AudioContext: ${feedback.audioState}`);
           // The 3D gown first, so the 2D renderer knows this frame's result (never both, never neither).
           if (rig) {
             // Metric pose for the 3D gown; the synthetic e2e pose has none, so approximate it.
-            const world = simulate
-              ? approxWorldFromImage(landmarks, size)
-              : (result.worldLandmarks?.[0] ?? null);
+            const world = simulate ? approxWorldFromImage(landmarks, size) : result.worldLandmarks;
             rigDrew = rig.frame({
               world: liveBody ? world : null,
               image: landmarks,
@@ -504,9 +480,6 @@ kicks: ${d.kicks} · AudioContext: ${feedback.audioState}`);
               setQuality(report);
             }
           }
-          if (!fallbackAttempted && shouldFallbackToCpu(detectionDurations, activeDelegate)) {
-            void fallbackToCpu();
-          }
         }
         // Keep yielding frames even while the replacement model loads.
         frameId = requestAnimationFrame(tick);
@@ -522,7 +495,7 @@ kicks: ${d.kicks} · AudioContext: ${feedback.audioState}`);
       rig?.dispose();
       watchdog?.dispose();
       stopTracks(stream);
-      landmarker?.close();
+      detector?.close();
       feedback.dispose();
     };
   }, [videoRef, canvasRef, stageRef, hotspotRef, feedback, steps]);

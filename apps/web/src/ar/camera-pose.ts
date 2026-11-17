@@ -1,10 +1,11 @@
 // Opens the front camera and loads the pose model in parallel. Frames stay on the device: the
 // stream only feeds a <video> element that the in-browser model reads.
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
-import { createPoseLandmarker, type PoseDelegate, preferredDelegate } from './pose.ts';
+
+import { type PoseDelegate, preferredDelegate } from './pose.ts';
+import { createPoseDetector, type PoseDetector } from './pose-detector.ts';
 
 export type BootResult =
-  | { kind: 'ready'; stream: MediaStream; landmarker: PoseLandmarker; delegate: PoseDelegate }
+  | { kind: 'ready'; stream: MediaStream; detector: PoseDetector; delegate: PoseDelegate }
   | { kind: 'camera-error' }
   | { kind: 'model-error'; stream: MediaStream }
   | { kind: 'cancelled' };
@@ -27,7 +28,7 @@ export async function bootCameraAndPose(
   isCancelled: () => boolean,
 ): Promise<BootResult> {
   const cameraPromise = acquireCamera();
-  const modelPromise = createPoseLandmarker(
+  const modelPromise = createPoseDetector(
     preferredDelegate({
       userAgent: navigator.userAgent,
       maxTouchPoints: navigator.maxTouchPoints,
@@ -39,24 +40,29 @@ export async function bootCameraAndPose(
   try {
     stream = await cameraPromise;
   } catch {
-    modelPromise.then(({ landmarker }) => landmarker.close()).catch(() => undefined);
-    return { kind: 'camera-error' };
+    modelPromise.then((detector) => detector.close()).catch(() => undefined);
+    return { kind: isCancelled() ? 'cancelled' : 'camera-error' };
   }
   if (isCancelled()) {
+    modelPromise.then((detector) => detector.close()).catch(() => undefined);
     stopTracks(stream);
     return { kind: 'cancelled' };
   }
   video.srcObject = stream;
   await video.play().catch(() => undefined);
   try {
-    const { landmarker, delegate } = await modelPromise;
+    const detector = await modelPromise;
     if (isCancelled()) {
-      landmarker.close();
+      detector.close();
       stopTracks(stream);
       return { kind: 'cancelled' };
     }
-    return { kind: 'ready', stream, landmarker, delegate };
+    return { kind: 'ready', stream, detector, delegate: detector.delegate };
   } catch {
+    if (isCancelled()) {
+      stopTracks(stream);
+      return { kind: 'cancelled' };
+    }
     return { kind: 'model-error', stream };
   }
 }
