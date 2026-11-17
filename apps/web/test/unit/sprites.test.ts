@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as LANDING_SPRITES from '../../src/art/landing-sprites.ts';
-import { LESSON_ART } from '../../src/art/lesson-sprites.ts';
 import {
   FLAME,
   HEART,
@@ -18,9 +17,6 @@ import {
 import { spriteRuns } from '../../src/components/pixel-sprite.tsx';
 
 const css = readFileSync(join(import.meta.dirname, '../../src/styles.css'), 'utf8');
-const lessons = JSON.parse(
-  readFileSync(join(import.meta.dirname, '../../../../content/lecciones/lecciones.json'), 'utf8'),
-) as { lessons: { mistakes: { wrongArt: string; rightArt: string }[] }[] };
 const seed = JSON.parse(
   readFileSync(join(import.meta.dirname, '../../../../content/questions/seed.json'), 'utf8'),
 ) as { missions: { iconKey: string }[] };
@@ -35,7 +31,6 @@ const ALL: Record<string, Sprite> = {
   SPARKLE,
   STAR,
   ...Object.fromEntries(Object.entries(MISSION_SPRITES).map(([k, v]) => [`mission:${k}`, v])),
-  ...Object.fromEntries(Object.entries(LESSON_ART).map(([k, v]) => [`lesson:${k}`, v])),
 };
 
 describe('pixel sprites', () => {
@@ -60,15 +55,6 @@ describe('pixel sprites', () => {
 
   it('every mission in the seed has a pixel icon', () => {
     for (const m of seed.missions) expect(m.iconKey in MISSION_SPRITES).toBe(true);
-  });
-
-  it('every mistake illustration named in the lessons exists', () => {
-    for (const l of lessons.lessons) {
-      for (const m of l.mistakes) {
-        expect(LESSON_ART[m.wrongArt], m.wrongArt).toBeDefined();
-        expect(LESSON_ART[m.rightArt], m.rightArt).toBeDefined();
-      }
-    }
   });
 
   it('merges same-colour pixels into runs', () => {

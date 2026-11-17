@@ -1,8 +1,7 @@
 import type { LessonMistake } from '@bata/shared/schemas';
-import { LESSON_ART } from '../art/lesson-sprites.ts';
+import { MISTAKE_ART } from '../art/mistake-art.ts';
 import { citation, LESSONS_FILE, type NumberedSource } from '../lib/lessons.ts';
-import { Pictogram } from './pictogram.tsx';
-import { PixelSprite } from './pixel-sprite.tsx';
+import { MistakePair as IllustrationPair } from './mistake-pair.tsx';
 
 /** The draft banner every "Aprende" page carries until the thesis director validates it. */
 export function DraftNote({ className = '' }: { className?: string }) {
@@ -63,32 +62,6 @@ export function SourceList({ numbered }: { numbered: NumberedSource[] }) {
   );
 }
 
-function Verdict({ ok, art, text }: { ok: boolean; art: string; text: string }) {
-  const sprite = LESSON_ART[art];
-  return (
-    <figure className="flex flex-col items-center gap-3 text-center">
-      <span
-        className={`tile-grid grid size-28 place-items-center rounded-card ring-2 ring-inset ${
-          ok ? 'ring-success' : 'ring-danger'
-        }`}
-      >
-        {sprite ? <PixelSprite sprite={sprite} className="h-20 w-auto max-w-24" /> : null}
-      </span>
-      <figcaption className="flex flex-col gap-1">
-        <span
-          className={`inline-flex items-center justify-center gap-1.5 text-sm font-extrabold ${
-            ok ? 'text-success' : 'text-danger'
-          }`}
-        >
-          <Pictogram name={ok ? 'check' : 'close'} className="size-4" strokeWidth={3} />
-          {ok ? 'Así sí' : 'Así no'}
-        </span>
-        <span className="text-sm text-ink">{text}</span>
-      </figcaption>
-    </figure>
-  );
-}
-
 /** One frequent mistake as a wrong / right pair of pixel illustrations. */
 export function MistakePair({
   mistake,
@@ -97,11 +70,17 @@ export function MistakePair({
   mistake: LessonMistake;
   numbered: NumberedSource[];
 }) {
+  const pair = MISTAKE_ART.find(({ id }) => id === mistake.id);
   return (
     <li className="flex flex-col gap-3 border-b border-border pb-6 last:border-b-0 last:pb-0">
-      <div className="grid grid-cols-2 gap-4">
-        <Verdict ok={false} art={mistake.wrongArt} text={mistake.wrong} />
-        <Verdict ok art={mistake.rightArt} text={mistake.right} />
+      {pair ? <IllustrationPair pair={pair} /> : null}
+      <div className="grid grid-cols-2 gap-2 text-sm text-ink">
+        <p>
+          <strong>Así no:</strong> {mistake.wrong}
+        </p>
+        <p>
+          <strong>Así sí:</strong> {mistake.right}
+        </p>
       </div>
       <p className="text-center text-xs text-muted">
         Respaldo

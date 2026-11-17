@@ -10,3 +10,5 @@ Codex implementa. Sin merge ni despliegue.
 | P1-C compacto | Datos ≤ 140 caracteres (punto clave o su primera frase textual), fuente corta, íconos, 8 s | Codex | Claude: ancho del globo y firma en una línea |
 | P2-A hook | `use-assistant-chat.ts` con `speaking` (stream o voz) | Codex | — |
 | P2-B asistente | Menta abre el chat (sin "Pregúntale"), panel con Menta grande, animación de crecer/encoger | Codex (cupo agotado a mitad; retomado) | Codex: cierre del dialog con Espacio. Claude: aserción e2e. Revisión Codex: envío durante transcripción, grabación tras cerrar, franja vacía (corregido por Codex) |
+| P3-A lámina | 11 parejas incorrecto/correcto a doble resolución, zona resaltada, lámina HTML para aprobar | Codex | Usuario aprobó con 3 mejoras |
+| P3-B integración | Figuras más grandes, indicador y puños más claros, `MistakePair` en Aprende, e2e | Codex | Revisión Codex: sin hallazgos materiales |
