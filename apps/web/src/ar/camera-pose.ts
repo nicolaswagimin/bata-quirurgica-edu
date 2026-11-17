@@ -1,7 +1,7 @@
 // Opens the front camera and loads the pose model in parallel. Frames stay on the device: the
 // stream only feeds a <video> element that the in-browser model reads.
 import type { PoseLandmarker } from '@mediapipe/tasks-vision';
-import { createPoseLandmarker, type PoseDelegate } from './pose.ts';
+import { createPoseLandmarker, type PoseDelegate, preferredDelegate } from './pose.ts';
 
 export type BootResult =
   | { kind: 'ready'; stream: MediaStream; landmarker: PoseLandmarker; delegate: PoseDelegate }
@@ -14,10 +14,21 @@ export async function bootCameraAndPose(
   isCancelled: () => boolean,
 ): Promise<BootResult> {
   const cameraPromise = navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'user' },
+    video: {
+      facingMode: 'user',
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      frameRate: { ideal: 30, max: 30 },
+    },
     audio: false,
   });
-  const modelPromise = createPoseLandmarker();
+  const modelPromise = createPoseLandmarker(
+    preferredDelegate({
+      userAgent: navigator.userAgent,
+      maxTouchPoints: navigator.maxTouchPoints,
+      search: window.location.search,
+    }),
+  );
   modelPromise.catch(() => undefined); // the camera may fail first
   let stream: MediaStream;
   try {
