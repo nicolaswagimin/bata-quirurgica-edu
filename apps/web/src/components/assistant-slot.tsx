@@ -1,19 +1,20 @@
-import { type ComponentType, lazy, Suspense } from 'react';
+import { type ComponentType, lazy } from 'react';
 import { useAuth } from '../lib/firebase.tsx';
+import { MentaCompanion } from './menta-companion.tsx';
 
-// The panel is optional: until src/assistant/assistant-panel.tsx exists the glob is empty.
-const panels = import.meta.glob<{ default: ComponentType }>('../assistant/assistant-panel.tsx');
+// Menta owns the trigger; the chat stays in a separate, prefetched chunk.
+const panels = import.meta.glob<{
+  default: ComponentType<{ open: boolean; onClose: () => void }>;
+}>('../assistant/menta-chat-panel.tsx');
 const loader = Object.values(panels)[0];
-const AssistantPanel = loader ? lazy(loader) : null;
+if (!loader) throw new Error('Falta el panel de la Dra. Menta');
+const MentaChatPanel = lazy(loader);
+const prefetch = () => {
+  void loader();
+};
 
 export function AssistantSlot() {
   const { user } = useAuth();
-  if (!user || !AssistantPanel) return null;
-  return (
-    <div className="fixed top-2 left-2 z-40 print:hidden">
-      <Suspense fallback={null}>
-        <AssistantPanel />
-      </Suspense>
-    </div>
-  );
+  if (!user) return null;
+  return <MentaCompanion key={user.uid} ChatPanel={MentaChatPanel} prefetch={prefetch} />;
 }

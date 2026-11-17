@@ -1,22 +1,12 @@
-import { bogotaDate, DAILY_GOAL_XP, dailyXp } from '@bata/shared/gamification';
+import { DAILY_GOAL_XP, dailyXp } from '@bata/shared/gamification';
 import { XP_GEM } from '../art/sprites.ts';
 import type { Profile } from '../lib/api.ts';
 import { FlameIcon } from './flame-icon.tsx';
-import { MascotNote } from './mascot.tsx';
 import { PixelSprite } from './pixel-sprite.tsx';
 
 /** XP needed to reach `level` (inverse of levelForXp: level = floor(sqrt(xp / 50)) + 1). */
 function xpForLevel(level: number): number {
   return 50 * (level - 1) ** 2;
-}
-
-function streakHint(profile: Profile): string {
-  if (profile.lastActiveDate === bogotaDate(new Date())) {
-    return 'Tu racha está a salvo hoy. Sigue cuando quieras.';
-  }
-  return profile.streakDays === 0
-    ? 'Aprueba una misión hoy para empezar tu racha.'
-    : 'Aprueba una misión hoy para mantenerla.';
 }
 
 /** Today's XP against the daily goal; the counter resets at midnight in Bogotá. */
@@ -82,7 +72,6 @@ export function HomeBand({ profile }: { profile: Profile }) {
               {profile.xp} XP
             </li>
           </ul>
-          <MascotNote className="mt-1">{streakHint(profile)}</MascotNote>
         </div>
         <div className="flex flex-col gap-2 md:col-span-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">

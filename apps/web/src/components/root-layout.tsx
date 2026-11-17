@@ -38,16 +38,8 @@ export function RootLayout() {
       </a>
       <AssistantSlot />
       <header className="bg-band text-ink print:hidden">
-        {/* The assistant trigger is fixed top-left; signed-in headers reserve its slot. */}
-        <div
-          // Full-width row whose edges line up with the centred 72rem content column, while
-          // never letting the brand slide under the fixed assistant trigger (min 10rem).
-          className={`flex min-h-17 items-center gap-4 pr-4 md:pr-[max(2rem,calc(50vw-34rem))] ${
-            user
-              ? 'pl-40 md:pl-[max(10rem,calc(50vw-34rem))]'
-              : 'pl-4 md:pl-[max(2rem,calc(50vw-34rem))]'
-          }`}
-        >
+        {/* Shared gutters align visitor and signed-in headers with the content column. */}
+        <div className="flex min-h-17 items-center gap-4 px-4 md:px-[max(2rem,calc(50vw-34rem))]">
           <Link
             to="/"
             className={`inline-flex items-center gap-2 text-sm font-extrabold tracking-tight whitespace-nowrap md:ml-0 md:text-base ${user ? 'ml-auto' : ''}`}
@@ -101,7 +93,7 @@ export function RootLayout() {
       <main
         id="contenido"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8"
+        className={`mx-auto w-full max-w-6xl flex-1 px-4 pt-8 md:px-8 ${user ? 'pb-28 md:pb-32' : 'pb-8'}`}
       >
         <Outlet />
       </main>

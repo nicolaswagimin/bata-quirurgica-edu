@@ -70,40 +70,48 @@ async function signIn(page: Page): Promise<void> {
 }
 
 async function ask(page: Page, question: string): Promise<void> {
-  await page.getByRole('button', { name: 'Abrir asistente' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Asistente de bioseguridad' });
+  await page.getByRole('button', { name: 'Hablar con la Dra. Menta, asistente virtual' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Dra. Menta' });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel('Tu pregunta').fill(question);
   await dialog.getByRole('button', { name: 'Enviar' }).click();
 }
 
-test('@emu el avatar del asistente está fijo arriba a la izquierda sin tocar la navegación', async ({
+test('@emu Menta abre el diálogo con clic, Enter y Espacio y recupera el foco', async ({
   page,
 }) => {
   await signIn(page);
-  for (const path of ['/', '/ranking', '/perfil']) {
-    await page.goto(path);
-    const avatar = page.getByRole('button', { name: 'Abrir asistente' });
-    await expect(avatar).toBeVisible();
-    const box = await avatar.boundingBox();
-    const nav = await page.getByRole('navigation', { name: 'Principal' }).boundingBox();
-    if (!box || !nav) throw new Error('Sin caja del avatar o de la navegación');
-    expect(box.x).toBeLessThanOrEqual(16);
-    expect(box.y).toBeLessThanOrEqual(16);
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    const intersects =
-      box.x < nav.x + nav.width &&
-      nav.x < box.x + box.width &&
-      box.y < nav.y + nav.height &&
-      nav.y < box.y + box.height;
-    expect(intersects).toBe(false);
-    const style = await avatar.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return { position: s.position, zIndex: Number(s.zIndex) };
-    });
-    expect(style.position).toBe('fixed');
-    expect(style.zIndex).toBeGreaterThanOrEqual(50);
+  const mascot = page.getByRole('button', { name: 'Hablar con la Dra. Menta, asistente virtual' });
+  const dialog = page.getByRole('dialog', { name: 'Dra. Menta' });
+  await expect(page.getByRole('button', { name: /Pregúntale/ })).toHaveCount(0);
+  await expect(mascot).toHaveAttribute('aria-haspopup', 'dialog');
+  await mascot.click();
+  await expect(dialog).toBeVisible();
+  await expect(mascot).toHaveAttribute('aria-expanded', 'true');
+  await dialog.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(mascot).toBeFocused();
+  await expect(mascot).toHaveAttribute('aria-expanded', 'false');
+  for (const key of ['Enter', 'Space']) {
+    await mascot.press(key);
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(mascot).toBeFocused();
   }
+  // Space starts on the dialog's close button and is released on the restored trigger.
+  await mascot.click();
+  await dialog.getByRole('button', { name: 'Cerrar', exact: true }).focus();
+  await page.keyboard.down('Space');
+  await page.keyboard.press('Escape');
+  // A closed dialog leaves the accessibility tree, so check the element itself.
+  await expect(page.locator('dialog.menta-dialog')).not.toHaveAttribute('open', '', {
+    timeout: 500,
+  });
+  await expect(mascot).toBeFocused();
+  await page.keyboard.up('Space');
+  await expect(mascot).toHaveAttribute('aria-expanded', 'false');
+  await expect(dialog).not.toBeVisible();
 });
 
 test('@emu la respuesta llega en streaming con citas y se lee en voz alta una vez', async ({
@@ -112,8 +120,8 @@ test('@emu la respuesta llega en streaming con citas y se lee en voz alta una ve
   await stubSpeech(page);
   await mockChat(page, 200);
   await signIn(page);
-  await page.getByRole('button', { name: 'Abrir asistente' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Asistente de bioseguridad' });
+  await page.getByRole('button', { name: 'Hablar con la Dra. Menta, asistente virtual' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Dra. Menta' });
   await dialog.getByRole('switch', { name: 'Leer en voz alta' }).check();
   await dialog.getByLabel('Tu pregunta').fill('¿Cómo se amarra la bata?');
   await dialog.getByRole('button', { name: 'Enviar' }).click();

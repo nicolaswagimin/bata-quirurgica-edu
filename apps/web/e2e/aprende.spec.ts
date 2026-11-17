@@ -17,8 +17,16 @@ test('@emu Aprende: lección por misión, errores frecuentes, glosario y lista i
   ).toBeVisible();
   await expect(page.getByRole('note')).toContainText('pendiente de validación del director');
   await expect(page.getByRole('heading', { name: 'Errores frecuentes' })).toBeVisible();
-  await expect(page.getByText('Así no').first()).toBeVisible();
-  await expect(page.getByText('Así sí').first()).toBeVisible();
+  const pair = page.locator('[data-mistake-id="m1-caida"]');
+  await expect(pair.getByText('Incorrecto', { exact: true })).toBeVisible();
+  await expect(pair.getByText('Correcto', { exact: true })).toBeVisible();
+  await expect(pair.getByText('La pinza toca el piso.', { exact: true })).toBeVisible();
+  await expect(
+    pair.getByText('Separar la pinza y pedir otra estéril.', { exact: true }),
+  ).toBeVisible();
+  await expect(pair.getByRole('img')).toHaveCount(2);
+  await expect(page.getByText('Así no:', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Así sí:', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Fuentes' })).toBeVisible();
   await expect(page.getByText(/OMS \(2018\)/).first()).toBeVisible();
 
