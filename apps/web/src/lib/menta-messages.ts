@@ -5,7 +5,7 @@ import { citation, LESSONS_FILE } from './lessons.ts';
 
 export type MentaMessage =
   | { kind: 'streak'; text: string }
-  | { kind: 'fact'; id: string; text: string; source: string }
+  | { kind: 'fact'; id: string; text: string; source: string; shortSource: string }
   | { kind: 'motivation'; text: string };
 export type FactMessage = Extract<MentaMessage, { kind: 'fact' }>;
 
@@ -17,27 +17,40 @@ export type MotivationEvent = z.infer<typeof MotivationEventSchema>;
 
 export function streakMessage(profile: Profile, now: Date): MentaMessage {
   if (profile.lastActiveDate === bogotaDate(now)) {
-    return { kind: 'streak', text: 'Tu racha está a salvo hoy, sigue cuando quieras.' };
+    return { kind: 'streak', text: 'Tu racha está a salvo hoy.' };
   }
   const n = profile.streakDays;
   return {
     kind: 'streak',
     text:
       n > 0
-        ? `Aún no salvas tu racha de hoy: aprueba una misión antes de la medianoche para mantener tus ${n} ${n === 1 ? 'día' : 'días'}.`
-        : 'Aprueba una misión hoy y empiezas tu racha.',
+        ? `Aún no salvas tu racha: aprueba una misión hoy para mantener tus ${n} ${n === 1 ? 'día' : 'días'}.`
+        : 'Aprueba una misión hoy y empieza tu racha.',
   };
+}
+
+/** Keep only a verbatim short point or its first complete sentence. */
+export function compactFact(text: string): string | null {
+  if (text.length <= 140) return text;
+  const end = text.indexOf('. ');
+  if (end === -1) return null;
+  const sentence = text.slice(0, end + 1);
+  return sentence.length >= 40 && sentence.length <= 140 ? sentence : null;
 }
 
 export const MENTA_FACTS: readonly FactMessage[] = LESSONS_FILE.lessons.flatMap((lesson) =>
   lesson.keyPoints.flatMap((point, index): FactMessage[] => {
     const sources = point.sourceIds.map((id) => LESSONS_FILE.sources[id]);
-    if (point.text.length > 220 || sources.length === 0 || sources.some((ref) => !ref)) return [];
+    const text = compactFact(point.text);
+    if (!text || sources.length === 0 || sources.some((ref) => !ref)) return [];
     return [
       {
         kind: 'fact',
         id: `${lesson.missionId}-${index}`,
-        text: point.text,
+        text,
+        shortSource: sources
+          .flatMap((ref) => (ref ? [`${ref.org} (${ref.year})`] : []))
+          .join(' · '),
         source: sources.flatMap((ref) => (ref ? [citation(ref)] : [])).join(' · '),
       },
     ];
@@ -49,8 +62,8 @@ export function motivationMessage(event: MotivationEvent): MentaMessage {
     kind: 'motivation',
     text:
       event.type === 'level'
-        ? `¡Subiste al nivel ${event.level}! Cada misión te acerca a dominar la bata.`
-        : `¡Aprobaste «${event.title}»! Sigue así.`,
+        ? `¡Nivel ${event.level}! Vas muy bien.`
+        : `¡Aprobaste «${event.title}»!`,
   };
 }
 

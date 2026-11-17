@@ -80,13 +80,40 @@ function loadVoices(synth: SpeechSynthesis): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
-export async function speak(text: string): Promise<void> {
+export type SpeakOptions = {
+  signal?: AbortSignal;
+  onStart?: () => void;
+  onEnd?: () => void;
+  onBoundary?: (event: SpeechSynthesisEvent) => void;
+};
+
+export async function speak(text: string, options: SpeakOptions = {}): Promise<void> {
   if (!('speechSynthesis' in window)) return;
   const synth = window.speechSynthesis;
   const voice = pickSpanishVoice(await loadVoices(synth));
+  if (options.signal?.aborted) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = voice?.lang ?? 'es-CO';
   if (voice) utterance.voice = voice;
   synth.cancel();
-  synth.speak(utterance);
+  await new Promise<void>((resolve) => {
+    utterance.onstart = () => options.onStart?.();
+    utterance.onboundary = (event) => options.onBoundary?.(event);
+    let finished = false;
+    const cancel = () => {
+      synth.cancel();
+      finish();
+    };
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      options.signal?.removeEventListener('abort', cancel);
+      options.onEnd?.();
+      resolve();
+    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    options.signal?.addEventListener('abort', cancel, { once: true });
+    synth.speak(utterance);
+  });
 }

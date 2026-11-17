@@ -9,6 +9,7 @@ import {
   takeMentaEvents,
 } from '../../src/lib/menta-events.ts';
 import {
+  compactFact,
   MENTA_FACTS,
   MENTA_INTERVAL_MS,
   type MentaInput,
@@ -40,42 +41,52 @@ const input: MentaInput = {
 };
 
 describe('Menta messages', () => {
-  it('includes exactly the eligible verbatim key points and resolved citations', () => {
-    const expected = lessons.lessons.flatMap((lesson) =>
-      lesson.keyPoints.flatMap((point, index) => {
-        const sources = point.sourceIds.map((id) => LESSONS_FILE.sources[id]);
-        if (point.text.length > 220 || !sources.length || sources.some((source) => !source))
-          return [];
-        return [
-          {
-            kind: 'fact',
-            id: `${lesson.missionId}-${index}`,
-            text: point.text,
-            source: sources.flatMap((source) => (source ? [citation(source)] : [])).join(' · '),
-          },
-        ];
-      }),
-    );
-    expect(MENTA_FACTS).toEqual(expected);
+  it('keeps verbatim facts up to 140 characters with both citations', () => {
     expect(MENTA_FACTS.length).toBeGreaterThan(1);
     for (const fact of MENTA_FACTS) {
-      expect(fact.source.length).toBeGreaterThan(0);
-      expect(fact.text.length).toBeLessThanOrEqual(220);
+      const point = lessons.lessons
+        .flatMap((lesson) =>
+          lesson.keyPoints.map((point, index) => ({
+            ...point,
+            id: `${lesson.missionId}-${index}`,
+          })),
+        )
+        .find((point) => point.id === fact.id);
+      expect(point).toBeDefined();
+      if (!point) throw new Error('Missing source');
+      expect(point.text.includes(fact.text)).toBe(true);
+      expect(fact.text.length).toBeLessThanOrEqual(140);
+      const refs = point.sourceIds.map((id) => {
+        const ref = LESSONS_FILE.sources[id];
+        if (!ref) throw new Error('Missing citation');
+        return ref;
+      });
+      expect(fact.source).toBe(refs.map(citation).join(' · '));
+      expect(fact.shortSource).toBe(refs.map((ref) => `${ref.org} (${ref.year})`).join(' · '));
     }
+  });
+
+  it('uses only a qualifying first sentence, preserving its period', () => {
+    expect(compactFact('a'.repeat(140))).toBe('a'.repeat(140));
+    expect(compactFact('a'.repeat(141))).toBeNull();
+    expect(compactFact(`${'a'.repeat(39)}. ${'b'.repeat(150)}`)).toBe(`${'a'.repeat(39)}.`);
+    expect(compactFact(`${'a'.repeat(139)}. ${'b'.repeat(150)}`)).toBe(`${'a'.repeat(139)}.`);
+    expect(compactFact(`Corta. ${'b'.repeat(150)}`)).toBeNull();
+    expect(compactFact(`${'a'.repeat(140)}. Otra.`)).toBeNull();
   });
 
   it('switches from saved to unsaved at Bogotá midnight', () => {
     const active = { ...profile, streakDays: 2, lastActiveDate: '2026-11-15' };
     expect(streakMessage(active, new Date(now - 1))).toEqual({
       kind: 'streak',
-      text: 'Tu racha está a salvo hoy, sigue cuando quieras.',
+      text: 'Tu racha está a salvo hoy.',
     });
     expect(streakMessage(active, new Date(now)).text).toBe(
-      'Aún no salvas tu racha de hoy: aprueba una misión antes de la medianoche para mantener tus 2 días.',
+      'Aún no salvas tu racha: aprueba una misión hoy para mantener tus 2 días.',
     );
     expect(streakMessage({ ...active, streakDays: 1 }, new Date(now)).text).toContain('tus 1 día.');
     expect(streakMessage(profile, new Date(now)).text).toBe(
-      'Aprueba una misión hoy y empiezas tu racha.',
+      'Aprueba una misión hoy y empieza tu racha.',
     );
   });
 
@@ -119,12 +130,10 @@ describe('Menta messages', () => {
     expect(first.pending).toEqual([pending[1]]);
     expect(first.state.greeted).toBe(false);
     const second = pickMessage(first.state, { ...input, pending: first.pending });
-    expect(second.message?.text).toBe('¡Aprobaste «Bata»! Sigue así.');
+    expect(second.message?.text).toBe('¡Aprobaste «Bata»!');
     expect(second.pending).toEqual([]);
     expect({ initial, pending }).toEqual(original);
-    expect(first.message?.text).toBe(
-      '¡Subiste al nivel 2! Cada misión te acerca a dominar la bata.',
-    );
+    expect(first.message?.text).toBe('¡Nivel 2! Vas muy bien.');
     expect(pickMessage(second.state, input).message?.kind).toBe('streak');
   });
 

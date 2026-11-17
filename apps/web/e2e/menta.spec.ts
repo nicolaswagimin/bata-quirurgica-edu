@@ -11,12 +11,14 @@ test.beforeEach(async ({ page }) => {
 
 test('@emu Menta saluda y permite cerrar el mensaje', async ({ page }) => {
   await expect(page.getByTestId('menta-status')).toContainText(
-    'Aprueba una misión hoy y empiezas tu racha.',
+    'Aprueba una misión hoy y empieza tu racha.',
     { timeout: 5000 },
   );
   const bubble = page.getByTestId('menta-bubble');
-  await expect(bubble.getByRole('button', { name: 'Silenciar', exact: true })).toBeVisible();
-  await bubble.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await expect(
+    bubble.getByRole('button', { name: 'Silenciar a la Dra. Menta', exact: true }),
+  ).toBeVisible();
+  await bubble.getByRole('button', { name: 'Cerrar mensaje', exact: true }).click();
   await expect(bubble).toHaveAttribute('data-open', 'false');
   await expect(page.getByRole('button', { name: mascotName })).toBeFocused();
   await expect(page.getByTestId('menta-status')).toBeEmpty();
@@ -31,7 +33,10 @@ test('@emu Menta muestra un dato literal con fuente al pulsarla', async ({ page 
   expect(
     lessons.lessons
       .flatMap((lesson) => lesson.keyPoints)
-      .some((point) => text.includes(point.text)),
+      .some((point) => {
+        const fact = point.text.length <= 140 ? point.text : `${point.text.split('. ')[0]}.`;
+        return text.includes(fact);
+      }),
   ).toBe(true);
 });
 
@@ -39,7 +44,7 @@ test('@emu silenciar persiste y el perfil permite reactivar', async ({ page }) =
   await page.getByRole('button', { name: mascotName }).click();
   await page
     .getByTestId('menta-bubble')
-    .getByRole('button', { name: 'Silenciar', exact: true })
+    .getByRole('button', { name: 'Silenciar a la Dra. Menta', exact: true })
     .click();
   await expect(page.getByRole('button', { name: mascotName })).toBeFocused();
   await page.reload();
@@ -102,7 +107,49 @@ test('@emu conserva eventos mientras la burbuja está abierta', async ({ page })
   expect(
     await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? '[]'), pendingKey),
   ).toEqual([{ type: 'level', level: 2 }]);
-  await bubble.getByRole('button', { name: 'Cerrar', exact: true }).click();
-  await expect(status).toContainText('¡Subiste al nivel 2!');
+  await bubble.getByRole('button', { name: 'Cerrar mensaje', exact: true }).click();
+  await expect(status).toContainText('¡Nivel 2! Vas muy bien.');
   await expect(page.getByRole('button', { name: mascotName })).toBeFocused();
+});
+
+test('@emu el dato más largo cabe en una burbuja de 150 px en móvil', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const facts = lessons.lessons.flatMap((lesson) =>
+    lesson.keyPoints.flatMap((point, index) => {
+      const end = point.text.indexOf('. ');
+      const text =
+        point.text.length <= 140 ? point.text : end >= 0 ? point.text.slice(0, end + 1) : '';
+      if (!text || text.length > 140 || (point.text.length > 140 && text.length < 40)) return [];
+      return [{ id: `${lesson.missionId}-${index}`, text }];
+    }),
+  );
+  const longest = [...facts].sort((a, b) => b.text.length - a.text.length)[0];
+  if (!longest) throw new Error('Faltan datos');
+  await expect(page.getByTestId('menta-status')).not.toBeEmpty();
+  await page.evaluate(
+    ({ facts, longest }) => {
+      const key = Object.keys(sessionStorage).find((key) => key.startsWith('bata.menta.state.'));
+      if (!key) throw new Error('Falta estado');
+      sessionStorage.setItem(
+        key,
+        JSON.stringify({
+          greeted: true,
+          lastShownAt: Date.now(),
+          seenFacts: facts.filter((fact) => fact.id !== longest.id).map((fact) => fact.id),
+        }),
+      );
+    },
+    { facts, longest },
+  );
+  await page.reload();
+  await page.getByRole('button', { name: mascotName }).click();
+  const bubble = page.getByTestId('menta-bubble');
+  await expect(bubble).toContainText(longest.text);
+  await bubble.hover();
+  await page.evaluate(() => document.fonts.ready);
+  const box = await bubble.boundingBox();
+  const nav = await page.getByRole('navigation', { name: 'Principal' }).boundingBox();
+  if (!box || !nav) throw new Error('Faltan los límites de burbuja o navegación');
+  expect(box.height).toBeLessThanOrEqual(150);
+  expect(box.y + box.height).toBeLessThanOrEqual(nav.y);
 });

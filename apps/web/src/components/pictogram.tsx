@@ -44,6 +44,7 @@ const PATHS = {
   ),
   check: <path d="M5 13l4 4L19 6" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  mute: <path d="M11 5 6 9H3v6h3l5 4V5ZM21 3 15 21" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   book: (
     <>
